@@ -1,0 +1,46 @@
+/* Custom styles for Sporgates */
+
+/* Hide scrollbar for stories */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Leaflet map container fixes */
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+/* Smooth transitions for cards */
+.card-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Better focus styles */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Slider thumb styling */
+input[type="range"] {
+  accent-color: var(--primary);
+}
+
+/* Improved selection color */
+::selection {
+  background-color: rgba(0, 60, 102, 0.15);
+}
