@@ -31,6 +31,7 @@ const settingsGroups = [
     items: [
       { label: "Payment Methods", icon: CreditCard, page: "settings-payment" as PageRoute, description: "Add or manage payment methods" },
       { label: "Wallet & Transactions", icon: Wallet, page: "settings-wallet" as PageRoute, description: "View your wallet balance and history" },
+      { label: "Transaction History", icon: CreditCard, page: "settings-transactions" as PageRoute, description: "View receipts and payment history" },
     ],
   },
   {
@@ -43,6 +44,7 @@ const settingsGroups = [
     title: "Safety",
     items: [
       { label: "Blocked Users", icon: Shield, page: "settings-blocked" as PageRoute, description: "Manage blocked accounts" },
+      { label: "Data Permissions", icon: Shield, page: "settings-data-permissions" as PageRoute, description: "Control how your data is used and shared" },
     ],
   },
   {
