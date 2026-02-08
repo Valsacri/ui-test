@@ -124,13 +124,13 @@ export function BusinessProfile({
               <div className="relative">
                 <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
                   <AvatarImage src={businessData.avatar} />
-                  <AvatarFallback className="bg-[#003C66] text-white text-2xl">
+                  <AvatarFallback className="bg-primary text-white text-2xl">
                     {getInitials(businessData.name)}
                   </AvatarFallback>
                 </Avatar>
                 <Button
                   size="sm"
-                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full p-0 bg-[#FC8936] hover:bg-[#E67A2E]"
+                  className="absolute bottom-0 right-0 h-8 w-8 rounded-full p-0 bg-secondary hover:bg-[#E67A2E]"
                 >
                   <Camera className="w-4 h-4" />
                 </Button>
@@ -142,7 +142,7 @@ export function BusinessProfile({
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h1 className="text-2xl font-bold">{businessData.name}</h1>
-                      <Badge className="bg-[#FC8936]">
+                      <Badge className="bg-secondary">
                         <Award className="w-3 h-3 mr-1" />
                         Pro
                       </Badge>
@@ -208,15 +208,15 @@ export function BusinessProfile({
                 {/* Stats */}
                 <div className="grid grid-cols-4 gap-4 pt-4 border-t">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-[#003C66]">${businessData.stats.totalRevenue}</p>
+                    <p className="text-2xl font-bold text-primary">${businessData.stats.totalRevenue}</p>
                     <p className="text-xs text-muted-foreground">Revenue</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-[#003C66]">{businessData.stats.activeEvents}</p>
+                    <p className="text-2xl font-bold text-primary">{businessData.stats.activeEvents}</p>
                     <p className="text-xs text-muted-foreground">Events</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-[#003C66]">{businessData.stats.totalCustomers}</p>
+                    <p className="text-2xl font-bold text-primary">{businessData.stats.totalCustomers}</p>
                     <p className="text-xs text-muted-foreground">Customers</p>
                   </div>
                   <div className="text-center">
@@ -290,7 +290,7 @@ export function BusinessProfile({
               <Card>
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-[#FC8936]" />
+                    <Trophy className="w-5 h-5 text-secondary" />
                     Recent Events
                   </h3>
                   <div className="space-y-3">
@@ -358,7 +358,7 @@ export function BusinessProfile({
                           <span className="font-semibold">85%</span>
                         </div>
                         <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#003C66] rounded-full" style={{ width: '85%' }} />
+                          <div className="h-full bg-primary rounded-full" style={{ width: '85%' }} />
                         </div>
                       </div>
                       <div>
@@ -367,7 +367,7 @@ export function BusinessProfile({
                           <span className="font-semibold">65%</span>
                         </div>
                         <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#FC8936] rounded-full" style={{ width: '65%' }} />
+                          <div className="h-full bg-secondary rounded-full" style={{ width: '65%' }} />
                         </div>
                       </div>
                       <div>
@@ -427,7 +427,7 @@ export function BusinessProfile({
                     </div>
                     <Button
                       onClick={() => setShowPortfolioModal(true)}
-                      className="bg-[#FC8936] hover:bg-[#e07830]"
+                      className="bg-secondary hover:bg-[#e07830]"
                     >
                       <Briefcase className="w-4 h-4 mr-2" />
                       View Full Portfolio
@@ -472,7 +472,7 @@ export function BusinessProfile({
                   <div className="mt-6 p-4 bg-gray-50 rounded-lg border-2 border-dashed">
                     <div className="flex items-start gap-3">
                       <div className="p-2 bg-white rounded-lg">
-                        <Briefcase className="w-5 h-5 text-[#003C66]" />
+                        <Briefcase className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium mb-1">For Sponsors Only</h4>
@@ -596,7 +596,7 @@ export function BusinessProfile({
                   </div>
 
                   <div className="pt-4">
-                    <Button className="w-full bg-[#003C66] hover:bg-[#002A4A]">
+                    <Button className="w-full bg-primary hover:bg-primary/90">
                       Save Changes
                     </Button>
                   </div>

@@ -26,7 +26,7 @@ export function PrivacySettings({ onBack }: PrivacySettingsProps) {
     <button
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        enabled ? 'bg-[#003C66]' : 'bg-gray-300'
+        enabled ? 'bg-primary' : 'bg-gray-300'
       }`}
     >
       <span
@@ -87,7 +87,7 @@ export function PrivacySettings({ onBack }: PrivacySettingsProps) {
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                       profileVisibility === option
-                        ? 'border-[#003C66] bg-[#003C66]'
+                        ? 'border-[#003C66] bg-primary'
                         : 'border-gray-300'
                     }`}
                   >
@@ -152,7 +152,7 @@ export function PrivacySettings({ onBack }: PrivacySettingsProps) {
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                       activityVisibility === option
-                        ? 'border-[#003C66] bg-[#003C66]'
+                        ? 'border-[#003C66] bg-primary'
                         : 'border-gray-300'
                     }`}
                   >
@@ -228,7 +228,7 @@ export function PrivacySettings({ onBack }: PrivacySettingsProps) {
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                       allowMessages === option
-                        ? 'border-[#003C66] bg-[#003C66]'
+                        ? 'border-[#003C66] bg-primary'
                         : 'border-gray-300'
                     }`}
                   >
@@ -245,7 +245,7 @@ export function PrivacySettings({ onBack }: PrivacySettingsProps) {
         {/* Save Button */}
         <div className="sticky bottom-0 bg-white border-t p-4 -mx-4">
           <Button
-            className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+            className="w-full bg-primary hover:bg-primary/90"
             onClick={handleSave}
           >
             Save Changes

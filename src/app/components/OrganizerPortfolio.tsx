@@ -122,14 +122,14 @@ export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
                   <Calendar className="h-4 w-4" />
                   <span>Total Events</span>
                 </div>
-                <p className="text-2xl font-semibold text-[#003C66]">{pastEvents.length}</p>
+                <p className="text-2xl font-semibold text-primary">{pastEvents.length}</p>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-gray-500 text-sm">
                   <Users className="h-4 w-4" />
                   <span>Total Attendance</span>
                 </div>
-                <p className="text-2xl font-semibold text-[#003C66]">
+                <p className="text-2xl font-semibold text-primary">
                   {formatNumber(pastEvents.reduce((sum, event) => sum + event.metrics.attendance, 0))}
                 </p>
               </div>
@@ -138,7 +138,7 @@ export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
                   <Eye className="h-4 w-4" />
                   <span>Media Reach</span>
                 </div>
-                <p className="text-2xl font-semibold text-[#003C66]">
+                <p className="text-2xl font-semibold text-primary">
                   {formatNumber(pastEvents.reduce((sum, event) => sum + event.metrics.mediaReach, 0))}
                 </p>
               </div>
@@ -147,7 +147,7 @@ export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
                   <TrendingUp className="h-4 w-4" />
                   <span>Avg Engagement</span>
                 </div>
-                <p className="text-2xl font-semibold text-[#003C66]">
+                <p className="text-2xl font-semibold text-primary">
                   {(pastEvents.reduce((sum, event) => sum + event.metrics.engagementRate, 0) / pastEvents.length).toFixed(1)}%
                 </p>
               </div>
@@ -160,7 +160,7 @@ export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
           <h2 className="text-lg font-semibold text-gray-900">Past Events</h2>
           <Button
             onClick={() => setIsAddingEvent(true)}
-            className="bg-[#FC8936] hover:bg-[#e07830]"
+            className="bg-secondary hover:bg-[#e07830]"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -280,7 +280,7 @@ export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
                               href={link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="block text-sm text-[#003C66] hover:underline truncate"
+                              className="block text-sm text-primary hover:underline truncate"
                             >
                               {link}
                             </a>
@@ -433,7 +433,7 @@ export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
                     Cancel
                   </Button>
                   <Button
-                    className="flex-1 bg-[#003C66] hover:bg-[#002a4a]"
+                    className="flex-1 bg-primary hover:bg-[#002a4a]"
                   >
                     Add Event
                   </Button>

@@ -124,7 +124,7 @@ export function AddResourceModal({ onClose }: AddResourceModalProps) {
                 <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-1 bg-[#003C66] hover:bg-[#002A4A]">
+                <Button type="submit" className="flex-1 bg-primary hover:bg-[#002A4A]">
                   Add {resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}
                 </Button>
               </div>

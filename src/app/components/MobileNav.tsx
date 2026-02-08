@@ -39,7 +39,7 @@ export function MobileNav({ items, activeItem, onItemClick }: MobileNavProps) {
                 item.onClick();
               }}
               className={`flex flex-col items-center justify-center ${touchTarget.md} px-3 py-2 relative transition-colors ${
-                isActive ? 'text-[#003C66]' : 'text-gray-500'
+                isActive ? 'text-primary' : 'text-gray-500'
               }`}
             >
               <div className="relative">
@@ -50,13 +50,13 @@ export function MobileNav({ items, activeItem, onItemClick }: MobileNavProps) {
                   </span>
                 )}
               </div>
-              <span className={`text-xs mt-1 font-medium ${isActive ? 'text-[#003C66]' : 'text-gray-500'}`}>
+              <span className={`text-xs mt-1 font-medium ${isActive ? 'text-primary' : 'text-gray-500'}`}>
                 {item.label}
               </span>
               {isActive && (
                 <motion.div
                   layoutId="activeNavIndicator"
-                  className="absolute -top-[1px] left-0 right-0 h-0.5 bg-[#003C66]"
+                  className="absolute -top-[1px] left-0 right-0 h-0.5 bg-primary"
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}

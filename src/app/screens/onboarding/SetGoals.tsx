@@ -44,7 +44,7 @@ export function SetGoals({ onComplete, onBack }: SetGoalsProps) {
                   <div
                     key={step}
                     className={`h-1 flex-1 rounded-full transition-colors ${
-                      step <= 2 ? 'bg-[#003C66]' : 'bg-gray-200'
+                      step <= 2 ? 'bg-primary' : 'bg-gray-200'
                     }`}
                   />
                 ))}

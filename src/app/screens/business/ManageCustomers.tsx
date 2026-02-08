@@ -245,7 +245,7 @@ export function ManageCustomers({
                     {/* Avatar */}
                     <Avatar className="w-12 h-12">
                       <AvatarImage src={customer.avatar} />
-                      <AvatarFallback className="bg-[#003C66] text-white">
+                      <AvatarFallback className="bg-primary text-white">
                         {getInitials(customer.name)}
                       </AvatarFallback>
                     </Avatar>

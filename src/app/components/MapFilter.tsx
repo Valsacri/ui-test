@@ -104,7 +104,7 @@ export function MapFilter({
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
             {/* Center marker */}
-            <div className="w-3 h-3 bg-[#003C66] rounded-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 border-2 border-white shadow-lg" />
+            <div className="w-3 h-3 bg-primary rounded-full absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 border-2 border-white shadow-lg" />
             {/* Radius circle visualization */}
             <div 
               className="rounded-full border-2 border-[#FC8936] bg-[#FC8936]/10 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300"
@@ -168,7 +168,7 @@ export function MapFilter({
           variant="ghost"
           size="sm"
           onClick={onViewMap}
-          className="w-full mt-4 text-[#003C66] hover:text-[#003C66] hover:bg-[#003C66]/5"
+          className="w-full mt-4 text-[#003C66] hover:text-[#003C66] hover:bg-primary/5"
         >
           <Maximize2 className="w-3.5 h-3.5 mr-2" />
           View results on map

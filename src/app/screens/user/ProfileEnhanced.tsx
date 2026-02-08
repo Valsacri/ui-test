@@ -212,7 +212,7 @@ export function ProfileEnhanced({
               <div className="relative">
                 <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
                   <AvatarImage src={userData.avatar} />
-                  <AvatarFallback className="bg-[#003C66] text-white text-3xl">
+                  <AvatarFallback className="bg-primary text-white text-3xl">
                     {getInitials(userData.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -275,15 +275,15 @@ export function ProfileEnhanced({
                 {/* Stats */}
                 <div className="grid grid-cols-4 gap-4 pt-4 border-t">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-[#003C66]">{userData.stats.activitiesJoined}</p>
+                    <p className="text-2xl font-bold text-primary">{userData.stats.activitiesJoined}</p>
                     <p className="text-xs text-muted-foreground">Activities</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-[#003C66]">{userData.stats.goalsCompleted}</p>
+                    <p className="text-2xl font-bold text-primary">{userData.stats.goalsCompleted}</p>
                     <p className="text-xs text-muted-foreground">Goals</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-[#003C66]">{userData.stats.connections}</p>
+                    <p className="text-2xl font-bold text-primary">{userData.stats.connections}</p>
                     <p className="text-xs text-muted-foreground">Connections</p>
                   </div>
                 </div>
@@ -307,7 +307,7 @@ export function ProfileEnhanced({
               <Card>
                 <CardContent className="p-6">
                   <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Trophy className="w-5 h-5 text-[#FC8936]" />
+                    <Trophy className="w-5 h-5 text-secondary" />
                     Recent Achievements
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
@@ -394,7 +394,7 @@ export function ProfileEnhanced({
                 </div>
                 <Button 
                   size="sm" 
-                  className="bg-[#003C66] hover:bg-[#002A4A]">
+                  className="bg-primary hover:bg-primary/90">
                   <Plus className="w-4 h-4 mr-1" />
                   New Goal
                 </Button>
@@ -455,14 +455,14 @@ export function ProfileEnhanced({
                       <div className="grid grid-cols-2 gap-4">
                         <div className="bg-muted/50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <Ruler className="w-4 h-4 text-[#003C66]" />
+                            <Ruler className="w-4 h-4 text-primary" />
                             <span className="text-xs text-muted-foreground">Height</span>
                           </div>
                           <p className="text-lg font-semibold">{MOCK_PERSONAL_PROFILE.height || '5\'10"'}</p>
                         </div>
                         <div className="bg-muted/50 rounded-lg p-3">
                           <div className="flex items-center gap-2 mb-1">
-                            <Weight className="w-4 h-4 text-[#003C66]" />
+                            <Weight className="w-4 h-4 text-primary" />
                             <span className="text-xs text-muted-foreground">Current Weight</span>
                           </div>
                           <p className="text-lg font-semibold">{MOCK_PERSONAL_PROFILE.currentWeight || '185 lbs'}</p>
@@ -471,7 +471,7 @@ export function ProfileEnhanced({
 
                       {/* Goal Weight */}
                       <div className="flex items-center gap-2 text-sm">
-                        <Target className="w-4 h-4 text-[#FC8936]" />
+                        <Target className="w-4 h-4 text-secondary" />
                         <span className="text-muted-foreground">Goal:</span>
                         <span className="font-semibold">{MOCK_PERSONAL_PROFILE.targetWeight || '175 lbs'}</span>
                       </div>
@@ -602,7 +602,7 @@ export function ProfileEnhanced({
                   </div>
 
                   <div className="pt-4">
-                    <Button className="w-full bg-[#003C66] hover:bg-[#002A4A]">
+                    <Button className="w-full bg-primary hover:bg-primary/90">
                       Save Changes
                     </Button>
                   </div>

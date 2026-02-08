@@ -123,7 +123,7 @@ export function MarketplaceFilterSidebar({
             <SlidersHorizontal className="w-5 h-5 text-[#003C66]" />
             <CardTitle className="text-lg">Filters</CardTitle>
             {activeFiltersCount > 0 && (
-              <span className="text-xs bg-[#003C66] text-white px-2 py-0.5 rounded-full">
+              <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full">
                 {activeFiltersCount}
               </span>
             )}
@@ -201,7 +201,7 @@ export function MarketplaceFilterSidebar({
                   className="relative flex flex-col items-center group"
                 >
                   {isSelected && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#003C66] rounded-full flex items-center justify-center z-10">
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center z-10">
                       <Check className="w-3 h-3 text-white" />
                     </div>
                   )}
@@ -289,7 +289,7 @@ export function MarketplaceFilterSidebar({
         <div className="space-y-2 pt-2">
           <Button
             onClick={handleApply}
-            className="w-full bg-[#003C66] hover:bg-[#002D4D] text-white"
+            className="w-full bg-primary hover:bg-[#002D4D] text-white"
           >
             Apply Filters
           </Button>

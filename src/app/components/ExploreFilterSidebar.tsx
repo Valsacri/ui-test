@@ -140,7 +140,7 @@ export function ExploreFilterSidebar({ activeTab, onFilterChange }: ExploreFilte
                   onClick={() => setSelectedTimeSlot(slot.time)}
                   className={`flex flex-col items-start h-auto py-2 px-3 ${
                     selectedTimeSlot === slot.time
-                      ? 'bg-[#003C66] hover:bg-[#002A4A] text-white'
+                      ? 'bg-primary hover:bg-primary/90 text-white'
                       : 'hover:border-[#FC8936]'
                   } ${!slot.available ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -181,7 +181,7 @@ export function ExploreFilterSidebar({ activeTab, onFilterChange }: ExploreFilte
                   Solo Activities
                 </Label>
               </div>
-              <Badge variant="outline" className="text-xs border-[#003C66] text-[#003C66]">
+              <Badge variant="outline" className="text-xs border-[#003C66] text-primary">
                 Individual
               </Badge>
             </div>
@@ -619,7 +619,7 @@ export function ExploreFilterSidebar({ activeTab, onFilterChange }: ExploreFilte
             variant="ghost"
             size="sm"
             onClick={() => setSelectedCategories([])}
-            className="w-full mt-3 text-xs text-[#003C66]"
+            className="w-full mt-3 text-xs text-primary"
           >
             Clear all ({selectedCategories.length} selected)
           </Button>

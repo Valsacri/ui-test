@@ -244,7 +244,7 @@ export function BusinessTeam({ onAddTeamMember }: BusinessTeamProps) {
                       <h3 className="font-semibold">{member.name}</h3>
                       <Badge 
                         variant={member.role === 'Owner' ? 'default' : 'secondary'}
-                        className={member.role === 'Owner' ? 'bg-[#003C66]' : ''}
+                        className={member.role === 'Owner' ? 'bg-primary' : ''}
                       >
                         {member.role}
                       </Badge>

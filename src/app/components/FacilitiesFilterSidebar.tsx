@@ -128,7 +128,7 @@ export function FacilitiesFilterSidebar({
                   onClick={() => handleTimeSlotChange(slot.time)}
                   className={`flex flex-col items-start h-auto py-2 px-3 ${
                     selectedTimeSlot === slot.time
-                      ? 'bg-[#003C66] hover:bg-[#002A4A] text-white'
+                      ? 'bg-primary hover:bg-[#002A4A] text-white'
                       : 'hover:border-[#FC8936]'
                   } ${!slot.available ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >

@@ -72,19 +72,19 @@ export function SportSelector({
                 "relative flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all",
                 "hover:shadow-md active:scale-95",
                 isSelected
-                  ? "border-[#FC8936] bg-[#FC8936]/5 shadow-sm"
+                  ? "border-[#FC8936] bg-secondary/5 shadow-sm"
                   : "border-gray-200 bg-white hover:border-gray-300"
               )}
             >
               {isSelected && (
-                <div className="absolute top-2 right-2 w-5 h-5 bg-[#FC8936] rounded-full flex items-center justify-center">
+                <div className="absolute top-2 right-2 w-5 h-5 bg-secondary rounded-full flex items-center justify-center">
                   <Check className="w-3 h-3 text-white" />
                 </div>
               )}
               <div className="text-3xl mb-2">{sport.icon}</div>
               <span className={cn(
                 "text-sm font-medium text-center",
-                isSelected ? "text-[#003C66]" : "text-gray-700"
+                isSelected ? "text-primary" : "text-gray-700"
               )}>
                 {sport.name}
               </span>
@@ -103,7 +103,7 @@ export function SportSelector({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-6">
             <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-[#003C66]">
+              <h3 className="text-xl font-semibold text-primary">
                 Select your experience level
               </h3>
               <p className="text-sm text-muted-foreground">
@@ -116,9 +116,9 @@ export function SportSelector({
                 <button
                   key={level.id}
                   onClick={() => handleLevelSelect(showLevelSelector, level.id)}
-                  className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-[#FC8936] hover:bg-[#FC8936]/5 transition-all"
+                  className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-[#FC8936] hover:bg-secondary/5 transition-all"
                 >
-                  <div className="font-medium text-[#003C66]">{level.label}</div>
+                  <div className="font-medium text-primary">{level.label}</div>
                   <div className="text-sm text-muted-foreground">{level.description}</div>
                 </button>
               ))}

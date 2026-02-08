@@ -142,21 +142,21 @@ export function TransactionHistory({ onBack }: TransactionHistoryProps) {
             <Button
               variant={filterType === 'all' ? 'default' : 'outline'}
               onClick={() => setFilterType('all')}
-              className={filterType === 'all' ? 'bg-[#003C66] hover:bg-[#002A4A]' : ''}
+              className={filterType === 'all' ? 'bg-primary hover:bg-primary/90' : ''}
             >
               All
             </Button>
             <Button
               variant={filterType === 'income' ? 'default' : 'outline'}
               onClick={() => setFilterType('income')}
-              className={filterType === 'income' ? 'bg-[#003C66] hover:bg-[#002A4A]' : ''}
+              className={filterType === 'income' ? 'bg-primary hover:bg-primary/90' : ''}
             >
               Income
             </Button>
             <Button
               variant={filterType === 'expense' ? 'default' : 'outline'}
               onClick={() => setFilterType('expense')}
-              className={filterType === 'expense' ? 'bg-[#003C66] hover:bg-[#002A4A]' : ''}
+              className={filterType === 'expense' ? 'bg-primary hover:bg-primary/90' : ''}
             >
               Expense
             </Button>

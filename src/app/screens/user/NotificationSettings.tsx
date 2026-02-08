@@ -31,7 +31,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
     <button
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        enabled ? 'bg-[#003C66]' : 'bg-gray-300'
+        enabled ? 'bg-primary' : 'bg-gray-300'
       }`}
     >
       <span
@@ -248,7 +248,7 @@ export function NotificationSettings({ onBack }: NotificationSettingsProps) {
         {/* Save Button */}
         <div className="sticky bottom-0 bg-white border-t p-4 -mx-4">
           <Button
-            className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+            className="w-full bg-primary hover:bg-primary/90"
             onClick={handleSave}
           >
             Save Changes

@@ -82,7 +82,7 @@ export function AddResource({ onBack, onSubmit }: AddResourceProps) {
               onClick={() => setResourceType('facility')}
               className={`p-4 rounded-xl border-2 transition-all ${
                 resourceType === 'facility'
-                  ? 'border-[#003C66] bg-[#003C66]/5'
+                  ? 'border-[#003C66] bg-primary/5'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >

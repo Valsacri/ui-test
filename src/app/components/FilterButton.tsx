@@ -25,7 +25,7 @@ export function FilterButton({ label, value, icon, children, onClear }: FilterBu
         {icon && <span className="text-gray-600">{icon}</span>}
         <span className="font-medium text-gray-700">{label}</span>
         {hasValue ? (
-          <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-[#003C66] text-white">
+          <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-primary text-white">
             {value}
           </Badge>
         ) : (

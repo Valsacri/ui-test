@@ -197,7 +197,7 @@ export function AddCampaignModal({ onClose }: AddCampaignModalProps) {
                     {/* Simulated map marker */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                       <div 
-                        className="rounded-full bg-[#003C66]/20 border-2 border-[#003C66]"
+                        className="rounded-full bg-primary/20 border-2 border-[#003C66]"
                         style={{ 
                           width: `${Math.min(radius * 2, 150)}px`, 
                           height: `${Math.min(radius * 2, 150)}px` 
@@ -263,7 +263,7 @@ export function AddCampaignModal({ onClose }: AddCampaignModalProps) {
                         variant={gender === 'all' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setGender('all')}
-                        className={gender === 'all' ? 'bg-[#003C66] hover:bg-[#002A4A]' : ''}
+                        className={gender === 'all' ? 'bg-primary hover:bg-primary/90' : ''}
                       >
                         All
                       </Button>
@@ -272,7 +272,7 @@ export function AddCampaignModal({ onClose }: AddCampaignModalProps) {
                         variant={gender === 'male' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setGender('male')}
-                        className={gender === 'male' ? 'bg-[#003C66] hover:bg-[#002A4A]' : ''}
+                        className={gender === 'male' ? 'bg-primary hover:bg-primary/90' : ''}
                       >
                         Male
                       </Button>
@@ -281,7 +281,7 @@ export function AddCampaignModal({ onClose }: AddCampaignModalProps) {
                         variant={gender === 'female' ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setGender('female')}
-                        className={gender === 'female' ? 'bg-[#003C66] hover:bg-[#002A4A]' : ''}
+                        className={gender === 'female' ? 'bg-primary hover:bg-primary/90' : ''}
                       >
                         Female
                       </Button>
@@ -299,7 +299,7 @@ export function AddCampaignModal({ onClose }: AddCampaignModalProps) {
                         variant={selectedSports.includes(sport) ? 'default' : 'outline'}
                         className={`cursor-pointer ${
                           selectedSports.includes(sport) 
-                            ? 'bg-[#003C66] hover:bg-[#002A4A]' 
+                            ? 'bg-primary hover:bg-primary/90' 
                             : 'hover:bg-gray-100'
                         }`}
                         onClick={() => toggleSport(sport)}
@@ -380,7 +380,7 @@ export function AddCampaignModal({ onClose }: AddCampaignModalProps) {
                             {forecasts.audienceDensity}
                           </Badge>
                         </div>
-                        <p className="text-2xl font-bold text-[#003C66]">
+                        <p className="text-2xl font-bold text-primary">
                           {forecasts.potentialAudience.toLocaleString()}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -457,7 +457,7 @@ export function AddCampaignModal({ onClose }: AddCampaignModalProps) {
                   <div className="flex flex-col gap-2">
                     <Button 
                       type="submit" 
-                      className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+                      className="w-full bg-primary hover:bg-primary/90"
                     >
                       Create Campaign
                     </Button>

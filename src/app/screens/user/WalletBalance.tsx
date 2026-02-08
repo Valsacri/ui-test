@@ -140,7 +140,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
                   setShowTopUp(true);
                   setShowWithdraw(false);
                 }}
-                className="flex-1 bg-white text-[#003C66] hover:bg-blue-50"
+                className="flex-1 bg-white text-primary hover:bg-blue-50"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Funds
@@ -164,7 +164,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="w-5 h-5 text-[#003C66]" />
+              <TrendingUp className="w-5 h-5 text-primary" />
               Quick Top-Up
             </CardTitle>
           </CardHeader>
@@ -175,7 +175,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
                   key={amount}
                   variant="outline"
                   onClick={() => handleQuickAdd(amount)}
-                  className="hover:bg-[#003C66] hover:text-white hover:border-[#003C66]"
+                  className="hover:bg-primary hover:text-white hover:border-[#003C66]"
                 >
                   ${amount}
                 </Button>
@@ -189,7 +189,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
           <Card className="border-[#003C66]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-[#003C66]" />
+                <Plus className="w-5 h-5 text-primary" />
                 Add Funds to Wallet
               </CardTitle>
             </CardHeader>
@@ -236,7 +236,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
                 </Button>
                 <Button
                   onClick={handleTopUp}
-                  className="flex-1 bg-[#003C66] hover:bg-[#002A4A]"
+                  className="flex-1 bg-primary hover:bg-primary/90"
                 >
                   Add Funds
                 </Button>
@@ -250,7 +250,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
           <Card className="border-[#FC8936]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Minus className="w-5 h-5 text-[#FC8936]" />
+                <Minus className="w-5 h-5 text-secondary" />
                 Withdraw Funds
               </CardTitle>
             </CardHeader>
@@ -300,7 +300,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
                 </Button>
                 <Button
                   onClick={handleWithdraw}
-                  className="flex-1 bg-[#FC8936] hover:bg-[#E07830]"
+                  className="flex-1 bg-secondary hover:bg-[#E07830]"
                 >
                   Withdraw
                 </Button>
@@ -313,7 +313,7 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <ArrowUpRight className="w-5 h-5 text-[#003C66]" />
+              <ArrowUpRight className="w-5 h-5 text-primary" />
               Recent Transactions
             </CardTitle>
           </CardHeader>
@@ -388,19 +388,19 @@ export function WalletBalance({ onBack }: WalletBalanceProps) {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <ul className="text-sm text-gray-700 space-y-2">
                 <li className="flex items-start gap-2">
-                  <span className="text-[#003C66] mt-0.5">•</span>
+                  <span className="text-primary mt-0.5">•</span>
                   <span>Use your wallet balance for faster checkouts on activities, facilities, and products</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#003C66] mt-0.5">•</span>
+                  <span className="text-primary mt-0.5">•</span>
                   <span>Earn wallet credits through sponsorships, referrals, and achievements</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#003C66] mt-0.5">•</span>
+                  <span className="text-primary mt-0.5">•</span>
                   <span>Withdraw funds to your bank account at any time (processing takes 3-5 business days)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#003C66] mt-0.5">•</span>
+                  <span className="text-primary mt-0.5">•</span>
                   <span>Your wallet balance never expires</span>
                 </li>
               </ul>

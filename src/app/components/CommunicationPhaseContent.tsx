@@ -84,7 +84,7 @@ export function CommunicationPhaseContent({
       {/* Section 1: Communication Strategy */}
       <div className="bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-200 p-4">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-full bg-[#003C66] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
             <Megaphone className="w-4 h-4 text-white" />
           </div>
           <div>

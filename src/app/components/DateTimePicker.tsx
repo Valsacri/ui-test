@@ -154,7 +154,7 @@ export function DateTimePicker({
               : 'hover:bg-gray-100 cursor-pointer'
             }
             ${isSelected 
-              ? 'bg-[#003C66] text-white hover:bg-[#002A4A]' 
+              ? 'bg-primary text-white hover:bg-[#002A4A]' 
               : ''
             }
             ${isToday && !isSelected 
@@ -267,7 +267,7 @@ export function DateTimePicker({
               className={`
                 w-full px-4 py-2.5 text-left text-sm transition-colors
                 ${selectedTime === slot.value 
-                  ? 'bg-[#003C66] text-white' 
+                  ? 'bg-primary text-white' 
                   : 'hover:bg-gray-100'
                 }
               `}

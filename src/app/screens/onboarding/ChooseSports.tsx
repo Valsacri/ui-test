@@ -57,7 +57,7 @@ export function ChooseSports({ onComplete, onBack }: ChooseSportsProps) {
                   <div
                     key={step}
                     className={`h-1 flex-1 rounded-full transition-colors ${
-                      step === 1 ? 'bg-[#003C66]' : 'bg-gray-200'
+                      step === 1 ? 'bg-primary' : 'bg-gray-200'
                     }`}
                   />
                 ))}

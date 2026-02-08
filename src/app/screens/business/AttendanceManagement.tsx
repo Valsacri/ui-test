@@ -304,7 +304,7 @@ export function AttendanceManagement({
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#003C66] rounded-full flex items-center justify-center text-white font-semibold">
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
                           {attendee.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>

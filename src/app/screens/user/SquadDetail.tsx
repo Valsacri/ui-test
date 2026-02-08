@@ -143,7 +143,7 @@ export function SquadDetail({
             <div className="grid grid-cols-2 gap-3 mb-4">
               <Button
                 onClick={handleJoinSquad}
-                className={isJoined ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-[#003C66] hover:bg-[#002A4A]'}
+                className={isJoined ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-primary hover:bg-[#002A4A]'}
               >
                 {isJoined ? (
                   <>

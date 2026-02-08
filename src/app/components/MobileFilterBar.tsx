@@ -327,7 +327,7 @@ export function MobileFilterBar({
                     className={`
                       p-3 rounded-lg border-2 text-sm transition-all
                       ${selectedTimeSlot === slot.time
-                        ? 'border-[#003C66] bg-[#003C66]/5'
+                        ? 'border-[#003C66] bg-primary/5'
                         : slot.available
                         ? 'border-gray-200 hover:border-[#003C66]/30'
                         : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
@@ -366,7 +366,7 @@ export function MobileFilterBar({
                     className={`
                       w-full p-3 rounded-lg border-2 text-sm transition-all flex items-center justify-between
                       ${selectedRating === rating
-                        ? 'border-[#003C66] bg-[#003C66]/5'
+                        ? 'border-[#003C66] bg-primary/5'
                         : 'border-gray-200 hover:border-[#003C66]/30'
                       }
                     `}

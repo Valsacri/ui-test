@@ -243,7 +243,7 @@ export function QRScanner({
           {!isScanning ? (
             <Button
               onClick={startScanning}
-              className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+              className="w-full bg-primary hover:bg-[#002A4A]"
             >
               <Camera className="w-4 h-4 mr-2" />
               Start Scanner

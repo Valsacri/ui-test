@@ -202,7 +202,7 @@ export function ManageResources({
             {/* Add New Button */}
             <Button
               onClick={handleAddNew}
-              className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+              className="w-full bg-primary hover:bg-primary/90"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add New {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
@@ -412,7 +412,7 @@ export function ManageResources({
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 bg-[#003C66] hover:bg-[#002A4A]"
+                  className="flex-1 bg-primary hover:bg-primary/90"
                   onClick={handleSave}
                 >
                   <Save className="w-4 h-4 mr-2" />

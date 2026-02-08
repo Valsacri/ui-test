@@ -70,7 +70,7 @@ export function PaymentMethods({ onBack }: PaymentMethodsProps) {
               Manage your saved payment methods
             </p>
           </div>
-          <Button className="bg-[#003C66] hover:bg-[#002A4A]">
+          <Button className="bg-primary hover:bg-[#002A4A]">
             <Plus className="w-4 h-4 mr-2" />
             Add Card
           </Button>

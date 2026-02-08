@@ -130,7 +130,7 @@ export function BusinessPartners({ onNavigate }: BusinessPartnersProps) {
         </div>
         <Button 
           onClick={() => onNavigate('business-partners-add-collab')}
-          className="bg-[#FC8936] hover:bg-[#E67A2F]"
+          className="bg-secondary hover:bg-[#E67A2F]"
         >
           <Plus className="w-4 h-4 mr-2" />
           New Partnership
@@ -194,7 +194,7 @@ export function BusinessPartners({ onNavigate }: BusinessPartnersProps) {
               variant={selectedCategory === null ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedCategory(null)}
-              className={selectedCategory === null ? "bg-[#003C66]" : ""}
+              className={selectedCategory === null ? "bg-primary" : ""}
             >
               All Categories
             </Button>
@@ -204,7 +204,7 @@ export function BusinessPartners({ onNavigate }: BusinessPartnersProps) {
                 variant={selectedCategory === category ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCategory(category)}
-                className={selectedCategory === category ? "bg-[#003C66]" : ""}
+                className={selectedCategory === category ? "bg-primary" : ""}
               >
                 {category}
               </Button>
@@ -294,7 +294,7 @@ export function BusinessPartners({ onNavigate }: BusinessPartnersProps) {
               {/* Actions */}
               <div className="p-4 space-y-2">
                 <Button 
-                  className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+                  className="w-full bg-primary hover:bg-primary/90"
                   onClick={() => onNavigate('business-partners-add-collab', { business })}
                 >
                   <Handshake className="w-4 h-4 mr-2" />

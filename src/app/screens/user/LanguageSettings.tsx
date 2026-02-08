@@ -165,7 +165,7 @@ export function LanguageSettings({ onBack }: LanguageSettingsProps) {
         {/* Save Button */}
         <div className="sticky bottom-0 bg-white border-t p-4 -mx-4">
           <Button
-            className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+            className="w-full bg-primary hover:bg-[#002A4A]"
             onClick={handleSave}
           >
             Save Changes

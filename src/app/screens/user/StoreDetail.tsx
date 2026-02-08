@@ -193,7 +193,7 @@ export function StoreDetail({
           <div className="bg-white rounded-lg p-6 -mt-16 relative z-10 shadow-lg mb-6">
             {/* Logo & Header */}
             <div className="flex items-start gap-4 mb-4">
-              <div className="w-20 h-20 bg-[#003C66] rounded-xl flex items-center justify-center text-4xl shadow-lg">
+              <div className="w-20 h-20 bg-primary rounded-xl flex items-center justify-center text-4xl shadow-lg">
                 {store.logo}
               </div>
               <div className="flex-1">
@@ -226,7 +226,7 @@ export function StoreDetail({
             <div className="grid grid-cols-2 gap-3 mb-4">
               <Button
                 onClick={() => setIsFollowing(!isFollowing)}
-                className={isFollowing ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-[#003C66] hover:bg-[#002A4A]'}
+                className={isFollowing ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-primary hover:bg-primary/90'}
               >
                 {isFollowing ? (
                   <>
@@ -267,7 +267,7 @@ export function StoreDetail({
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Globe className="w-4 h-4" />
-                <a href={`https://${store.website}`} className="text-[#003C66] hover:underline">
+                <a href={`https://${store.website}`} className="text-primary hover:underline">
                   {store.website}
                 </a>
               </div>
@@ -289,7 +289,7 @@ export function StoreDetail({
                 {store.offerings.activities && (
                   <TabsContent value="activities" className="space-y-3">
                     <div className="flex items-center gap-2 mb-3">
-                      <Calendar className="w-5 h-5 text-[#FC8936]" />
+                      <Calendar className="w-5 h-5 text-secondary" />
                       <h2 className="font-bold text-lg">Upcoming Activities</h2>
                     </div>
                     <div className="space-y-3">
@@ -318,7 +318,7 @@ export function StoreDetail({
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <Badge variant="secondary">{activity.sport}</Badge>
-                                  <span className="font-semibold text-[#003C66]">
+                                  <span className="font-semibold text-primary">
                                     ${activity.price}
                                   </span>
                                 </div>
@@ -335,7 +335,7 @@ export function StoreDetail({
                 {store.offerings.facilities && (
                   <TabsContent value="facilities" className="space-y-3">
                     <div className="flex items-center gap-2 mb-3">
-                      <Building2 className="w-5 h-5 text-[#FC8936]" />
+                      <Building2 className="w-5 h-5 text-secondary" />
                       <h2 className="font-bold text-lg">Available Facilities</h2>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
@@ -354,7 +354,7 @@ export function StoreDetail({
                                 <h3 className="font-semibold mb-2">{facility.name}</h3>
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-muted-foreground">Hourly Rate</span>
-                                  <span className="font-bold text-[#003C66]">
+                                  <span className="font-bold text-primary">
                                     ${facility.pricePerHour}/hr
                                   </span>
                                 </div>
@@ -371,7 +371,7 @@ export function StoreDetail({
                 {store.offerings.services && (
                   <TabsContent value="services" className="space-y-3">
                     <div className="flex items-center gap-2 mb-3">
-                      <Wrench className="w-5 h-5 text-[#FC8936]" />
+                      <Wrench className="w-5 h-5 text-secondary" />
                       <h2 className="font-bold text-lg">Services Offered</h2>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
@@ -390,7 +390,7 @@ export function StoreDetail({
                                 <h3 className="font-semibold mb-2">{service.name}</h3>
                                 <div className="flex items-center justify-between">
                                   <Button size="sm" variant="outline">Book Now</Button>
-                                  <span className="font-bold text-[#003C66]">
+                                  <span className="font-bold text-primary">
                                     ${service.price}
                                   </span>
                                 </div>
@@ -407,7 +407,7 @@ export function StoreDetail({
                 {store.offerings.products && (
                   <TabsContent value="products" className="space-y-3">
                     <div className="flex items-center gap-2 mb-3">
-                      <Package className="w-5 h-5 text-[#FC8936]" />
+                      <Package className="w-5 h-5 text-secondary" />
                       <h2 className="font-bold text-lg">Products</h2>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -428,7 +428,7 @@ export function StoreDetail({
                             <div className="p-3">
                               <h3 className="font-semibold text-sm mb-2 line-clamp-2">{product.name}</h3>
                               <div className="flex items-center justify-between">
-                                <span className="font-bold text-[#003C66]">${product.price}</span>
+                                <span className="font-bold text-primary">${product.price}</span>
                               </div>
                             </div>
                           </CardContent>

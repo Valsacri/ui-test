@@ -106,7 +106,7 @@ export function AddCollaboration({ onBack, partnerData, partnerType }: AddCollab
                         onClick={() => handleInputChange('type', type)}
                         className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
                           formData.type === type
-                            ? 'border-[#003C66] bg-[#003C66] text-white'
+                            ? 'border-[#003C66] bg-primary text-white'
                             : 'border-gray-200 hover:border-[#003C66]'
                         }`}
                       >
@@ -229,7 +229,7 @@ export function AddCollaboration({ onBack, partnerData, partnerType }: AddCollab
                         onClick={() => handleInputChange('paymentStructure', option.value)}
                         className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
                           formData.paymentStructure === option.value
-                            ? 'border-[#003C66] bg-[#003C66] text-white'
+                            ? 'border-[#003C66] bg-primary text-white'
                             : 'border-gray-200 hover:border-[#003C66]'
                         }`}
                       >
@@ -429,7 +429,7 @@ export function AddCollaboration({ onBack, partnerData, partnerType }: AddCollab
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
                     step >= s.num
-                      ? 'bg-[#003C66] text-white'
+                      ? 'bg-primary text-white'
                       : 'bg-gray-200 text-gray-500'
                   }`}
                 >
@@ -437,7 +437,7 @@ export function AddCollaboration({ onBack, partnerData, partnerType }: AddCollab
                 </div>
                 <p
                   className={`text-xs mt-1 ${
-                    step >= s.num ? 'text-[#003C66] font-medium' : 'text-gray-500'
+                    step >= s.num ? 'text-primary font-medium' : 'text-gray-500'
                   }`}
                 >
                   {s.label}
@@ -446,7 +446,7 @@ export function AddCollaboration({ onBack, partnerData, partnerType }: AddCollab
               {index < 3 && (
                 <div
                   className={`h-1 flex-1 -mx-2 ${
-                    step > s.num ? 'bg-[#003C66]' : 'bg-gray-200'
+                    step > s.num ? 'bg-primary' : 'bg-gray-200'
                   }`}
                 />
               )}
@@ -474,14 +474,14 @@ export function AddCollaboration({ onBack, partnerData, partnerType }: AddCollab
         {step < 4 ? (
           <Button
             onClick={() => setStep(Math.min(4, step + 1))}
-            className="bg-[#003C66] hover:bg-[#002A4A]"
+            className="bg-primary hover:bg-primary/90"
           >
             Next Step
           </Button>
         ) : (
           <Button
             onClick={handleSubmit}
-            className="bg-[#FC8936] hover:bg-[#E67A2F]"
+            className="bg-secondary hover:bg-[#E67A2F]"
           >
             <Handshake className="w-4 h-4 mr-2" />
             Submit Proposal

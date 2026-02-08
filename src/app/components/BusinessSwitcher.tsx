@@ -35,7 +35,7 @@ export function BusinessSwitcher({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
       >
-        <div className="w-8 h-8 rounded-lg bg-[#003C66] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           {currentBusiness?.logo ? (
             <img src={currentBusiness.logo} alt="" className="w-full h-full rounded-lg object-cover" />
           ) : (
@@ -84,7 +84,7 @@ export function BusinessSwitcher({
                           : 'hover:bg-gray-100'
                       }`}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-[#003C66] flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
                         {business.logo ? (
                           <img src={business.logo} alt="" className="w-full h-full rounded-lg object-cover" />
                         ) : (

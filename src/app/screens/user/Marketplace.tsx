@@ -348,7 +348,7 @@ export function Marketplace({
                 onClick={() => onStoreDetail(store.id)}
               >
                 <CardContent className="p-4 text-center">
-                  <div className="w-12 h-12 bg-[#003C66] rounded-full flex items-center justify-center text-2xl mx-auto mb-2">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-2xl mx-auto mb-2">
                     {store.logo}
                   </div>
                   <h3 className="font-semibold text-sm mb-1">{store.name}</h3>
@@ -446,7 +446,7 @@ export function Marketplace({
                   variant={activeSubcategory === 'all' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setActiveSubcategory('all')}
-                  className={activeSubcategory === 'all' ? 'bg-[#003C66]' : ''}
+                  className={activeSubcategory === 'all' ? 'bg-primary' : ''}
                 >
                   All {productTypes[activeProductType as keyof typeof productTypes].label}
                 </Button>
@@ -456,7 +456,7 @@ export function Marketplace({
                     variant={activeSubcategory === subcat ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setActiveSubcategory(subcat)}
-                    className={activeSubcategory === subcat ? 'bg-[#003C66]' : ''}
+                    className={activeSubcategory === subcat ? 'bg-primary' : ''}
                   >
                     {subcat}
                   </Button>

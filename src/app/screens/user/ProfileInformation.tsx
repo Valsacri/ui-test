@@ -161,7 +161,7 @@ export function ProfileInformation({
             {isEditing && (
               <div className="pt-2">
                 <Button 
-                  className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+                  className="w-full bg-primary hover:bg-primary/90"
                   onClick={handleSave}
                 >
                   Save Changes
@@ -295,7 +295,7 @@ export function ProfileInformation({
 
             <div className="pt-2">
               <Button 
-                className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+                className="w-full bg-primary hover:bg-primary/90"
                 onClick={handleChangePassword}
                 disabled={!formData.currentPassword || !formData.newPassword || !formData.confirmPassword}
               >

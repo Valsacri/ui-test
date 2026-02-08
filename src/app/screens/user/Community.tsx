@@ -290,7 +290,7 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
         <PageHeader
           title="Community"
           subtitle="Connect with people and join squads"
-          icon={<Users className="w-7 h-7 text-[#FC8936]" />}
+          icon={<Users className="w-7 h-7 text-secondary" />}
           showSearch
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
@@ -333,7 +333,7 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="outline" 
-                    className="flex-1 border-[#003C66] text-[#003C66] hover:bg-[#003C66] hover:text-white justify-between"
+                    className="flex-1 border-[#003C66] text-primary hover:bg-primary hover:text-white justify-between"
                   >
                     {mainTab === 'squads' 
                       ? (squadTab === 'all-squads' ? 'All Squads' : 'My Squads')
@@ -348,12 +348,12 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
                       <DropdownMenuItem onClick={() => setSquadTab('all-squads')}>
                         <Users className="w-4 h-4 mr-2" />
                         All Squads
-                        {squadTab === 'all-squads' && <Check className="w-4 h-4 ml-auto text-[#FC8936]" />}
+                        {squadTab === 'all-squads' && <Check className="w-4 h-4 ml-auto text-secondary" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSquadTab('my-squads')}>
                         <Users className="w-4 h-4 mr-2" />
                         My Squads
-                        {squadTab === 'my-squads' && <Check className="w-4 h-4 ml-auto text-[#FC8936]" />}
+                        {squadTab === 'my-squads' && <Check className="w-4 h-4 ml-auto text-secondary" />}
                       </DropdownMenuItem>
                     </>
                   ) : (
@@ -361,12 +361,12 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
                       <DropdownMenuItem onClick={() => setGroupTab('all-groups')}>
                         <Users className="w-4 h-4 mr-2" />
                         All Groups
-                        {groupTab === 'all-groups' && <Check className="w-4 h-4 ml-auto text-[#FC8936]" />}
+                        {groupTab === 'all-groups' && <Check className="w-4 h-4 ml-auto text-secondary" />}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setGroupTab('my-groups')}>
                         <Users className="w-4 h-4 mr-2" />
                         My Groups
-                        {groupTab === 'my-groups' && <Check className="w-4 h-4 ml-auto text-[#FC8936]" />}
+                        {groupTab === 'my-groups' && <Check className="w-4 h-4 ml-auto text-secondary" />}
                       </DropdownMenuItem>
                     </>
                   )}
@@ -425,7 +425,7 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
 
                   {/* Squad Info */}
                   <div className="p-5">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-[#FC8936] transition-colors">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-secondary transition-colors">
                       {squad.name}
                     </h3>
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2">{squad.description}</p>
@@ -520,7 +520,7 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
 
                   {/* Person Info */}
                   <div className="pt-14 p-5">
-                    <h3 className="text-lg font-bold text-gray-900 text-center mb-1 group-hover:text-[#003C66] transition-colors">
+                    <h3 className="text-lg font-bold text-gray-900 text-center mb-1 group-hover:text-primary transition-colors">
                       {person.name}
                     </h3>
                     <div className="flex items-center justify-center gap-1 text-sm text-gray-600 mb-3">
@@ -562,7 +562,7 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="border-[#003C66] text-[#003C66] hover:bg-[#003C66] hover:text-white"
+                            className="border-[#003C66] text-primary hover:bg-primary hover:text-white"
                             onClick={(e) => {
                               e.stopPropagation();
                               // Handle message
@@ -586,7 +586,7 @@ export function Community({ onSquadClick, onPersonClick }: CommunityProps) {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="border-[#FC8936] text-[#FC8936] hover:bg-[#FC8936] hover:text-white"
+                            className="border-[#FC8936] text-secondary hover:bg-secondary hover:text-white"
                             onClick={(e) => {
                               e.stopPropagation();
                               onPersonClick?.(person.id);

@@ -79,7 +79,7 @@ export function CreateBusiness({ onBack, onComplete }: CreateBusinessProps) {
           </div>
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-[#003C66] transition-all duration-300"
+              className="h-full bg-primary transition-all duration-300"
               style={{ width: `${(step / 3) * 100}%` }}
             />
           </div>
@@ -249,7 +249,7 @@ export function CreateBusiness({ onBack, onComplete }: CreateBusinessProps) {
           <Button
             onClick={handleNext}
             disabled={!isStepValid()}
-            className="flex-1 bg-[#003C66] hover:bg-[#002A4A]"
+            className="flex-1 bg-primary hover:bg-primary/90"
           >
             {step === 3 ? 'Create Business' : 'Next'}
           </Button>

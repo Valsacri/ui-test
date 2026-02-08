@@ -76,7 +76,7 @@ export function ActivityCard({
           <div className="mb-3">
             <h3 className="font-semibold text-lg leading-tight mb-1 text-gray-900">{title}</h3>
             {organizer && <p className="text-xs text-[#FC8936] font-medium mb-1">{organizer}</p>}
-            <p className="text-sm text-[#003C66] font-medium">{sport}</p>
+            <p className="text-sm text-primary font-medium">{sport}</p>
           </div>
 
           {/* Details */}
@@ -111,7 +111,7 @@ export function ActivityCard({
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <Badge 
               variant="outline" 
-              className="border-[#003C66] text-[#003C66] font-medium"
+              className="border-[#003C66] text-primary font-medium"
             >
               {level}
             </Badge>
@@ -127,7 +127,7 @@ export function ActivityCard({
                 isJoined ? (
                   <Button
                     variant="outline"
-                    className="w-full border-[#003C66] text-[#003C66] hover:bg-[#003C66] hover:text-white transition-colors"
+                    className="w-full border-[#003C66] text-primary hover:bg-primary hover:text-white transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                     }}
@@ -156,7 +156,7 @@ export function ActivityCard({
               ) : (
                 <Button
                   variant="outline"
-                  className="w-full border-[#003C66] text-[#003C66] hover:bg-[#003C66] hover:text-white"
+                  className="w-full border-[#003C66] text-primary hover:bg-primary hover:text-white"
                   onClick={(e) => {
                     e.stopPropagation();
                   }}

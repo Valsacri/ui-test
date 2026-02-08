@@ -217,9 +217,9 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                           isCompleted
-                            ? 'bg-[#003C66] text-white'
+                            ? 'bg-primary text-white'
                             : isCurrent
-                            ? 'bg-[#FC8936]/10 text-[#FC8936] border-2 border-[#FC8936]'
+                            ? 'bg-secondary/10 text-[#FC8936] border-2 border-[#FC8936]'
                             : 'bg-gray-200 text-gray-400'
                         }`}
                       >
@@ -240,7 +240,7 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                     {index < STEPS.length - 1 && (
                       <div
                         className={`h-0.5 flex-1 mx-2 ${
-                          isCompleted ? 'bg-[#003C66]' : 'bg-gray-200'
+                          isCompleted ? 'bg-primary' : 'bg-gray-200'
                         }`}
                       />
                     )}
@@ -655,8 +655,8 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#003C66]/10 flex items-center justify-center">
-                      <Check className="w-5 h-5 text-[#003C66]" />
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-primary" />
                     </div>
                     <div className="text-left">
                       <h3 className="font-semibold">Activity Details</h3>
@@ -929,7 +929,7 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                           <div className="flex items-center justify-between mb-2">
                             <div>
                               <p className="font-medium">{tier.name}</p>
-                              <p className="text-sm text-[#003C66] font-semibold">${tier.price.toLocaleString()}</p>
+                              <p className="text-sm text-primary font-semibold">${tier.price.toLocaleString()}</p>
                             </div>
                           </div>
                           <div className="space-y-1 text-xs">
@@ -985,7 +985,7 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
           {currentStep < STEPS.length ? (
             <Button
               onClick={handleNext}
-              className="flex-1 bg-[#003C66] hover:bg-[#002A4A]"
+              className="flex-1 bg-primary hover:bg-primary/90"
               disabled={!canProceed()}
             >
               Next
@@ -994,7 +994,7 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
           ) : (
             <Button
               onClick={handleSubmit}
-              className="flex-1 bg-[#003C66] hover:bg-[#002A4A]"
+              className="flex-1 bg-primary hover:bg-primary/90"
             >
               <Check className="w-4 h-4 mr-2" />
               Create Activity

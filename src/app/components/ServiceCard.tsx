@@ -65,7 +65,7 @@ export function ServiceCard({
             </div>
           </div>
           {/* Price Badge */}
-          <div className="absolute -bottom-3 right-3 bg-[#003C66]/95 text-white px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm z-10">
+          <div className="absolute -bottom-3 right-3 bg-primary/95 text-white px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm z-10">
             <div className="text-center">
               <div className="font-bold text-lg leading-tight">${price}</div>
               <div className="w-full h-px bg-white/30 my-1"></div>

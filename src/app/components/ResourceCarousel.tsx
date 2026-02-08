@@ -56,7 +56,7 @@ export function ResourceCarousel({
       border: 'border-gray-200',
       selectedBorder: 'border-[#003C66]',
       selectedBg: 'bg-blue-50',
-      checkBg: 'bg-[#003C66]',
+      checkBg: 'bg-primary',
       price: 'text-[#003C66]'
     },
     orange: {

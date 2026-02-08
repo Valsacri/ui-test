@@ -298,7 +298,7 @@ export function HelpSupport({ onBack }: HelpSupportProps) {
             </div>
 
             <Button
-              className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+              className="w-full bg-primary hover:bg-[#002A4A]"
               onClick={handleSubmitContact}
             >
               Send Message

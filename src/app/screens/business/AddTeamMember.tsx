@@ -260,7 +260,7 @@ export function AddTeamMember({ onBack }: AddTeamMemberProps) {
                             <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                           </Avatar>
                           {isSelected && (
-                            <div className="w-6 h-6 bg-[#003C66] rounded-full flex items-center justify-center">
+                            <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
                               <Check className="w-4 h-4 text-white" />
                             </div>
                           )}

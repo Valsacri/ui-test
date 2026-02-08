@@ -189,7 +189,7 @@ export function CollectionsModal({ open, onClose }: CollectionsModalProps) {
                                 <p className="text-xs text-gray-500">${product.price}</p>
                               </div>
                               {isSelected && (
-                                <div className="w-4 h-4 bg-[#003C66] rounded-full flex items-center justify-center">
+                                <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" />
                                   </svg>
@@ -205,7 +205,7 @@ export function CollectionsModal({ open, onClose }: CollectionsModalProps) {
                   <div className="flex gap-2">
                     <Button
                       onClick={editingCollection ? handleUpdateCollection : handleCreateCollection}
-                      className="bg-[#003C66] hover:bg-[#002A4A]"
+                      className="bg-primary hover:bg-primary/90"
                     >
                       {editingCollection ? 'Update Collection' : 'Create Collection'}
                     </Button>

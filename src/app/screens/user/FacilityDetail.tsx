@@ -344,14 +344,14 @@ export function FacilityDetail({ facilityId, onBack, renderBookingSidebar }: Fac
                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-8 h-2 bg-black/20 rounded-full blur-sm"></div>
                           
                           {/* Animated ping effect */}
-                          <div className="absolute -top-2 -left-2 w-16 h-16 bg-[#003C66]/20 rounded-full animate-ping"></div>
+                          <div className="absolute -top-2 -left-2 w-16 h-16 bg-primary/20 rounded-full animate-ping"></div>
                           
                           {/* Main pin */}
                           <div className="relative flex flex-col items-center">
-                            <div className="bg-[#003C66] text-white p-3 rounded-full shadow-lg border-4 border-white">
+                            <div className="bg-primary text-white p-3 rounded-full shadow-lg border-4 border-white">
                               <MapPin className="w-6 h-6 fill-current" />
                             </div>
-                            <div className="w-1 h-4 bg-[#003C66]"></div>
+                            <div className="w-1 h-4 bg-primary"></div>
                           </div>
                         </div>
                       </div>

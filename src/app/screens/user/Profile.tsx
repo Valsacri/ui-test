@@ -36,7 +36,7 @@ export function Profile({
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <div className="bg-[#003C66] text-white pt-8 pb-16">
+      <div className="bg-primary text-white pt-8 pb-16">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex flex-col items-center">
             <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white text-3xl font-bold mb-3 border-4 border-white/30">
@@ -64,13 +64,13 @@ export function Profile({
                 onClick={() => onSwitchUserType('user')}
                 className={`relative p-4 rounded-lg border-2 transition-all ${
                   userType === 'user'
-                    ? 'border-[#003C66] bg-[#003C66]/5'
+                    ? 'border-[#003C66] bg-primary/5'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className="flex flex-col items-center gap-2">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    userType === 'user' ? 'bg-[#003C66] text-white' : 'bg-gray-100 text-gray-600'
+                    userType === 'user' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'
                   }`}>
                     <User className="w-6 h-6" />
                   </div>
@@ -81,7 +81,7 @@ export function Profile({
                 </div>
                 {userType === 'user' && (
                   <div className="absolute top-2 right-2">
-                    <div className="w-6 h-6 rounded-full bg-[#003C66] flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
                       <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>

@@ -46,7 +46,7 @@ export function JobCard({
                 <span className="font-medium">{company}</span>
               </div>
             </div>
-            <Badge className="bg-[#003C66] hover:bg-[#003C66] text-white border-0 shrink-0">
+            <Badge className="bg-primary hover:bg-primary text-white border-0 shrink-0">
               {type}
             </Badge>
           </div>

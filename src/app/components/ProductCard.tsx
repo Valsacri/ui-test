@@ -125,7 +125,7 @@ export function ProductCard({
               ) : (
                 <Button
                   variant="outline"
-                  className="w-full border-[#003C66] text-[#003C66] hover:bg-[#003C66] hover:text-white transition-colors"
+                  className="w-full border-[#003C66] text-[#003C66] hover:bg-primary hover:text-white transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
                   }}

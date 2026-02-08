@@ -119,7 +119,7 @@ export function BlockedUsers({ onBack }: BlockedUsersProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleUnblock(user.id, user.name)}
-                      className="text-[#003C66] border-[#003C66] hover:bg-[#003C66] hover:text-white"
+                      className="text-[#003C66] border-[#003C66] hover:bg-primary hover:text-white"
                     >
                       Unblock
                     </Button>

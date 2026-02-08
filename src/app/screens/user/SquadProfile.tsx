@@ -80,7 +80,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
       {/* Hero Section */}
       <div className="relative">
         {/* Cover Image */}
-        <div className="h-64 bg-gradient-to-r from-[#FC8936] via-[#FF9A56] to-[#FFA666] relative overflow-hidden">
+        <div className="h-64 bg-gradient-to-r from-secondary via-[#FF9A56] to-[#FFA666] relative overflow-hidden">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
           
           {/* Back Button */}
@@ -115,11 +115,11 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
               <div className="relative">
                 <Avatar className="h-32 w-32 border-4 border-white shadow-xl">
                   <AvatarImage src={squad.avatar} alt={squad.name} />
-                  <AvatarFallback className="bg-gradient-to-br from-[#FC8936] to-[#E67A2E] text-white text-3xl font-bold">
+                  <AvatarFallback className="bg-gradient-to-br from-secondary to-secondary/90 text-white text-3xl font-bold">
                     {squad.name.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#FC8936] to-[#E67A2E] text-white border-4 border-white">
+                <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-gradient-to-r from-secondary to-secondary/90 text-white border-4 border-white">
                   {squad.sport}
                 </Badge>
               </div>
@@ -146,13 +146,13 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-4 gap-4 mt-6">
                   <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                    <Users className="w-6 h-6 text-[#003C66] mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#003C66]">{stats.members}</p>
+                    <Users className="w-6 h-6 text-primary mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-primary">{stats.members}</p>
                     <p className="text-xs text-gray-600">Members</p>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl">
-                    <Calendar className="w-6 h-6 text-[#FC8936] mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#FC8936]">{stats.activities}</p>
+                    <Calendar className="w-6 h-6 text-secondary mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-secondary">{stats.activities}</p>
                     <p className="text-xs text-gray-600">Activities</p>
                   </div>
                   <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl">
@@ -183,7 +183,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                     <Button 
                       size="lg" 
                       variant="outline"
-                      className="border-2 border-[#FC8936] text-[#FC8936] hover:bg-[#FC8936] hover:text-white shadow-lg"
+                      className="border-2 border-secondary text-secondary hover:bg-secondary hover:text-white shadow-lg"
                       onClick={handleChallengeSquad}
                     >
                       <Swords className="w-5 h-5 mr-2" />
@@ -194,7 +194,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                   <>
                     <Button 
                       size="lg" 
-                      className="bg-gradient-to-r from-[#FC8936] to-[#E67A2E] hover:from-[#E67A2E] hover:to-[#D66B25] text-white shadow-lg"
+                      className="bg-gradient-to-r from-secondary to-secondary/90 hover:from-[#E67A2E] hover:to-[#D66B25] text-white shadow-lg"
                       onClick={handleJoinSquad}
                     >
                       <UserPlus2 className="w-5 h-5 mr-2" />
@@ -203,7 +203,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                     <Button 
                       size="lg" 
                       variant="outline"
-                      className="border-2 border-[#003C66] text-[#003C66] hover:bg-[#003C66] hover:text-white shadow-lg"
+                      className="border-2 border-[#003C66] text-primary hover:bg-primary hover:text-white shadow-lg"
                       onClick={handleInviteFriends}
                     >
                       <UserPlus className="w-5 h-5 mr-2" />
@@ -225,7 +225,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
             {/* Achievements */}
             <Card className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-[#FC8936]" />
+                <Trophy className="w-5 h-5 text-secondary" />
                 Squad Achievements
               </h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -241,7 +241,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
             {/* Upcoming Activities */}
             <Card className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-[#FC8936]" />
+                <Calendar className="w-5 h-5 text-secondary" />
                 Upcoming Activities
               </h2>
               <div className="space-y-3">
@@ -262,7 +262,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                       </div>
                     </div>
                     {isMember && (
-                      <Button size="sm" variant="outline" className="border-[#FC8936] text-[#FC8936] hover:bg-[#FC8936] hover:text-white">
+                      <Button size="sm" variant="outline" className="border-secondary text-secondary hover:bg-secondary hover:text-white">
                         Join
                       </Button>
                     )}
@@ -274,15 +274,15 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
             {/* Members Section */}
             <Card className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#FC8936]" />
+                <Users className="w-5 h-5 text-secondary" />
                 Squad Members ({stats.members})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {members.map((member) => (
                   <div key={member.id} className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-transparent rounded-xl hover:shadow-md transition-shadow border border-gray-100">
-                    <Avatar className="h-12 w-12 border-2 border-[#FC8936]">
+                    <Avatar className="h-12 w-12 border-2 border-secondary">
                       <AvatarImage src={member.avatar} alt={member.name} />
-                      <AvatarFallback className="bg-gradient-to-br from-[#FC8936] to-[#E67A2E] text-white">
+                      <AvatarFallback className="bg-gradient-to-br from-secondary to-secondary/90 text-white">
                         {member.name.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -296,7 +296,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="w-full mt-4 border-[#FC8936] text-[#FC8936] hover:bg-[#FC8936] hover:text-white">
+              <Button variant="outline" className="w-full mt-4 border-secondary text-secondary hover:bg-secondary hover:text-white">
                 View All Members
               </Button>
             </Card>
@@ -305,7 +305,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
           {/* Right Column - Quick Info */}
           <div className="space-y-6">
             {/* Squad Info Card */}
-            <Card className="p-6 bg-gradient-to-br from-orange-50 to-white border-2 border-[#FC8936]/20">
+            <Card className="p-6 bg-gradient-to-br from-orange-50 to-white border-2 border-secondary/20">
               <h3 className="font-bold text-gray-900 mb-4">Squad Info</h3>
               <div className="space-y-3 text-sm">
                 <div>
@@ -314,7 +314,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                 </div>
                 <div>
                   <p className="text-gray-600 mb-1">Category</p>
-                  <Badge className="bg-[#FC8936] text-white">{squad.sport}</Badge>
+                  <Badge className="bg-secondary text-white">{squad.sport}</Badge>
                 </div>
                 <div>
                   <p className="text-gray-600 mb-1">Activity Level</p>
@@ -336,15 +336,15 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
               <h3 className="font-bold text-gray-900 mb-4">Join Requirements</h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#FC8936] rounded-full mt-1.5" />
+                  <div className="w-1.5 h-1.5 bg-secondary rounded-full mt-1.5" />
                   <span>Must be committed to attending at least 2 activities per week</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#FC8936] rounded-full mt-1.5" />
+                  <div className="w-1.5 h-1.5 bg-secondary rounded-full mt-1.5" />
                   <span>Respectful and supportive team player</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-[#FC8936] rounded-full mt-1.5" />
+                  <div className="w-1.5 h-1.5 bg-secondary rounded-full mt-1.5" />
                   <span>Willing to work towards personal and group fitness goals</span>
                 </li>
               </ul>
@@ -354,7 +354,7 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
             {!isMember && (
               <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-[#003C66]/20">
                 <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Swords className="w-5 h-5 text-[#003C66]" />
+                  <Swords className="w-5 h-5 text-primary" />
                   Challenge This Squad
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
@@ -362,15 +362,15 @@ export function SquadProfile({ squadId, onBack }: SquadProfileProps) {
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-[#003C66] rounded-full mt-1.5" />
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5" />
                     <span>Set challenge terms and goals</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-[#003C66] rounded-full mt-1.5" />
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5" />
                     <span>Track progress in real-time</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-[#003C66] rounded-full mt-1.5" />
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5" />
                     <span>Win badges and rewards</span>
                   </li>
                 </ul>

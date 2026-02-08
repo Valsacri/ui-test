@@ -57,7 +57,7 @@ export function TicketModal({
           <div className="mt-6 text-center">
             <Button
               onClick={onClose}
-              className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+              className="w-full bg-primary hover:bg-[#002A4A]"
             >
               Done
             </Button>

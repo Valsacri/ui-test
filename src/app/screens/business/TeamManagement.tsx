@@ -118,7 +118,7 @@ export function TeamManagement({
           </div>
           <Button
             onClick={() => setShowInviteModal(true)}
-            className="gap-2 bg-[#003C66] hover:bg-[#002A4A]"
+            className="gap-2 bg-primary hover:bg-primary/90"
           >
             <UserPlus className="w-4 h-4" />
             Invite Member
@@ -160,7 +160,7 @@ export function TeamManagement({
                   <div className="flex items-center gap-3">
                     <Avatar className="w-12 h-12">
                       <AvatarImage src={member.avatar} />
-                      <AvatarFallback className="bg-[#003C66] text-white">
+                      <AvatarFallback className="bg-primary text-white">
                         {member.name.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
@@ -265,7 +265,7 @@ export function TeamManagement({
                 <Button
                   onClick={handleInvite}
                   disabled={!inviteEmail}
-                  className="flex-1 bg-[#003C66] hover:bg-[#002A4A]"
+                  className="flex-1 bg-primary hover:bg-primary/90"
                 >
                   Send Invite
                 </Button>

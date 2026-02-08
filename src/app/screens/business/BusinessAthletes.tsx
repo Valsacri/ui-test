@@ -194,7 +194,7 @@ export function BusinessAthletes({ onNavigate }: BusinessAthletesProps) {
               variant={selectedSport === null ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedSport(null)}
-              className={selectedSport === null ? "bg-[#003C66]" : ""}
+              className={selectedSport === null ? "bg-primary" : ""}
             >
               All Sports
             </Button>
@@ -204,7 +204,7 @@ export function BusinessAthletes({ onNavigate }: BusinessAthletesProps) {
                 variant={selectedSport === sport ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedSport(sport)}
-                className={selectedSport === sport ? "bg-[#003C66]" : ""}
+                className={selectedSport === sport ? "bg-primary" : ""}
               >
                 {sport}
               </Button>
@@ -277,7 +277,7 @@ export function BusinessAthletes({ onNavigate }: BusinessAthletesProps) {
               {/* Actions */}
               <div className="p-4 space-y-2">
                 <Button 
-                  className="w-full bg-[#003C66] hover:bg-[#002A4A]"
+                  className="w-full bg-primary hover:bg-primary/90"
                   onClick={() => onNavigate('business-athletes-add-collab', { athlete })}
                 >
                   <UserCheck className="w-4 h-4 mr-2" />

@@ -26,7 +26,7 @@ export function DataPermissions({ onBack }: DataPermissionsProps) {
     <button
       onClick={onChange}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        enabled ? 'bg-[#003C66]' : 'bg-gray-300'
+        enabled ? 'bg-primary' : 'bg-gray-300'
       }`}
     >
       <span
@@ -133,7 +133,7 @@ export function DataPermissions({ onBack }: DataPermissionsProps) {
             </p>
             <Button
               variant="outline"
-              className="w-full border-[#003C66] text-[#003C66] hover:bg-[#003C66] hover:text-white"
+              className="w-full border-[#003C66] text-[#003C66] hover:bg-primary hover:text-white"
               onClick={handleDownloadData}
             >
               <Download className="w-4 h-4 mr-2" />
