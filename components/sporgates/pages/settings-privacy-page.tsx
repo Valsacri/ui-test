@@ -1,60 +1,222 @@
 "use client"
 
+import { useState } from "react"
+import { ArrowLeft, Shield, Eye, Lock, UserX, Key } from "lucide-react"
+import { cn } from "@/lib/utils"
+
 interface SettingsPrivacyPageProps {
   onBack: () => void
 }
 
-const privacyOptions = [
-  { label: "Public", description: "Anyone can see your profile" },
-  { label: "Friends", description: "Only friends can see your profile" },
-  { label: "Private", description: "Only you can see your profile" },
+const visibilityOptions = [
+  { label: "Public", description: "Anyone can see your profile and activity", value: "public" },
+  { label: "Friends Only", description: "Only people you follow can see your activity", value: "friends" },
+  { label: "Private", description: "Only you can see your profile details", value: "private" },
 ]
 
 export function SettingsPrivacyPage({ onBack }: SettingsPrivacyPageProps) {
+  const [visibility, setVisibility] = useState("public")
+  const [settings, setSettings] = useState({
+    showLocation: true,
+    showActivity: true,
+    showGoals: true,
+    showOnlineStatus: false,
+    twoFactor: true,
+    loginAlerts: true,
+    dataSharing: false,
+  })
+
+  const toggle = (key: keyof typeof settings) => {
+    setSettings((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Settings
+      </button>
+
       <div>
         <h1 className="text-2xl font-bold text-foreground">Privacy & Security</h1>
         <p className="text-sm text-muted-foreground">Control who can see your information</p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-5">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Profile Visibility</p>
-          <div className="mt-3 space-y-3">
-            {privacyOptions.map((option, index) => (
-              <button
-                key={option.label}
-                type="button"
-                className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm ${
-                  index === 0 ? "border-primary bg-primary/5" : "border-border"
-                }`}
+      {/* Profile Visibility */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <Eye className="h-5 w-5 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">Profile Visibility</h2>
+        </div>
+        <div className="space-y-2">
+          {visibilityOptions.map((option) => (
+            <button
+              type="button"
+              key={option.value}
+              onClick={() => setVisibility(option.value)}
+              className={cn(
+                "flex w-full items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-all",
+                visibility === option.value
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/40"
+              )}
+            >
+              <div>
+                <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                <p className="text-xs text-muted-foreground">{option.description}</p>
+              </div>
+              <div
+                className={cn(
+                  "h-5 w-5 rounded-full border-2",
+                  visibility === option.value ? "border-primary bg-primary" : "border-border"
+                )}
               >
-                <div>
-                  <p className="font-semibold text-foreground">{option.label}</p>
-                  <p className="text-xs text-muted-foreground">{option.description}</p>
-                </div>
-                <span className={`h-3 w-3 rounded-full ${index === 0 ? "bg-primary" : "bg-muted"}`} />
+                {visibility === option.value && (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <div className="h-2 w-2 rounded-full bg-white" />
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Privacy Toggles */}
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <Shield className="h-5 w-5 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">Privacy Controls</h2>
+        </div>
+        <div className="divide-y divide-border">
+          {[
+            { key: "showLocation" as const, label: "Show Location", description: "Display your city on your profile" },
+            { key: "showActivity" as const, label: "Show Activity", description: "Let others see your recent activities" },
+            { key: "showGoals" as const, label: "Show Goals", description: "Share your goals progress publicly" },
+            { key: "showOnlineStatus" as const, label: "Online Status", description: "Show when you are active" },
+            { key: "dataSharing" as const, label: "Data Sharing", description: "Share anonymized data to improve the platform" },
+          ].map((item) => (
+            <div key={item.key} className="flex items-center justify-between px-5 py-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground">{item.description}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => toggle(item.key)}
+                className={cn(
+                  "relative h-6 w-11 rounded-full transition-colors",
+                  settings[item.key] ? "bg-primary" : "bg-border"
+                )}
+              >
+                <div
+                  className={cn(
+                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+                    settings[item.key] ? "translate-x-5" : "translate-x-0.5"
+                  )}
+                />
               </button>
-            ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Security */}
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4">
+          <Lock className="h-5 w-5 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">Account Security</h2>
+        </div>
+        <div className="divide-y divide-border">
+          <div className="flex items-center justify-between px-5 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <Key className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Change Password</p>
+                <p className="text-xs text-muted-foreground">Last updated 3 weeks ago</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="rounded-full border border-border px-4 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              Update
+            </button>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Two-Factor Authentication</p>
+              <p className="text-xs text-muted-foreground">Extra security for your account</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggle("twoFactor")}
+              className={cn(
+                "relative h-6 w-11 rounded-full transition-colors",
+                settings.twoFactor ? "bg-primary" : "bg-border"
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+                  settings.twoFactor ? "translate-x-5" : "translate-x-0.5"
+                )}
+              />
+            </button>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Login Alerts</p>
+              <p className="text-xs text-muted-foreground">Get notified of new login attempts</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggle("loginAlerts")}
+              className={cn(
+                "relative h-6 w-11 rounded-full transition-colors",
+                settings.loginAlerts ? "bg-primary" : "bg-border"
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+                  settings.loginAlerts ? "translate-x-5" : "translate-x-0.5"
+                )}
+              />
+            </button>
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-border pt-4">
-          <p className="text-sm font-semibold text-foreground">Account Security</p>
-          <div className="mt-3 space-y-3 text-sm text-muted-foreground">
-            <p>Password last updated: 3 weeks ago</p>
-            <p>Two-factor authentication: Enabled</p>
-          </div>
+      {/* Danger Zone */}
+      <div className="rounded-2xl border border-destructive/20 bg-card p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <UserX className="h-5 w-5 text-destructive" />
+          <h2 className="text-sm font-bold text-destructive">Danger Zone</h2>
         </div>
-
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
-        >
-          Back to Settings
-        </button>
+        <p className="mb-4 text-xs text-muted-foreground">
+          These actions are permanent and cannot be undone.
+        </p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            className="rounded-xl border border-destructive/20 px-4 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/5"
+          >
+            Deactivate Account
+          </button>
+          <button
+            type="button"
+            className="rounded-xl border border-destructive/20 px-4 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/5"
+          >
+            Delete Account
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -34,6 +34,7 @@ import { BusinessDashboardPage } from "@/components/sporgates/pages/business-das
 import { FacilityDetailPage } from "@/components/sporgates/pages/facility-detail-page"
 import { ProductDetailPage } from "@/components/sporgates/pages/product-detail-page"
 import { ServiceDetailPage } from "@/components/sporgates/pages/service-detail-page"
+import { BusinessDetailPage } from "@/components/sporgates/pages/business-detail-page"
 import {
   BusinessActivitiesPage,
   BusinessCustomersPage,
@@ -81,6 +82,7 @@ export function AppShell() {
     "facility-detail",
     "product-detail",
     "service-detail",
+    "business-detail",
   ]
   const showRightSidebar = showSidebars && !isBusinessMode && !hideRightSidebarPages.includes(currentPage)
 
@@ -107,8 +109,9 @@ export function AppShell() {
       case "service-detail":
         return <ServiceDetailPage serviceId={detailId || "1"} onNavigate={navigate} />
       case "businesses":
-      case "business-detail":
         return <BusinessesPage onNavigate={navigate} />
+      case "business-detail":
+        return <BusinessDetailPage businessId={detailId || "1"} onNavigate={navigate} />
       case "jobs":
         return <JobsPage onNavigate={navigate} />
       case "messages":

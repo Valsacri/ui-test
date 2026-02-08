@@ -634,6 +634,84 @@ export const userProfile = {
   walletBalance: 125.5,
 }
 
+export const posts = [
+  {
+    id: "1",
+    author: "Mike Johnson",
+    authorAvatar: "MJ",
+    time: "2 hours ago",
+    content: "Just finished an amazing 5v5 basketball session at Chelsea Piers! The energy was incredible tonight. Who's joining next week?",
+    image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600&h=400&fit=crop",
+    likes: 42,
+    comments: 8,
+    shares: 3,
+    sport: "Basketball",
+  },
+  {
+    id: "2",
+    author: "Sarah Lee",
+    authorAvatar: "SL",
+    time: "4 hours ago",
+    content: "Beautiful morning for beach volleyball at Rockaway! Nothing beats starting your day with sand between your toes and a great game. See you all next Saturday!",
+    image: "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=600&h=400&fit=crop",
+    likes: 67,
+    comments: 12,
+    shares: 5,
+    sport: "Volleyball",
+  },
+  {
+    id: "3",
+    author: "NYC Run Club",
+    authorAvatar: "RC",
+    time: "6 hours ago",
+    content: "Registration is now open for our Spring 10K race through Central Park! Early bird pricing available until March 1st. Limited spots available.",
+    likes: 128,
+    comments: 34,
+    shares: 22,
+    sport: "Running",
+  },
+  {
+    id: "4",
+    author: "Alex Chen",
+    authorAvatar: "AC",
+    time: "1 day ago",
+    content: "New personal best on my tennis serve today - 112 mph! Months of training finally paying off. Thanks to Coach Rivera for the technique adjustments.",
+    likes: 89,
+    comments: 15,
+    shares: 7,
+    sport: "Tennis",
+  },
+  {
+    id: "5",
+    author: "Chelsea Piers Sports",
+    authorAvatar: "CP",
+    time: "1 day ago",
+    content: "Exciting news! We just upgraded our swimming pool facilities with Olympic-grade timing systems. Book your lane today and experience the difference.",
+    image: "https://images.unsplash.com/photo-1576610616656-d3aa5d1f4534?w=600&h=400&fit=crop",
+    likes: 203,
+    comments: 28,
+    shares: 45,
+    sport: "Swimming",
+  },
+]
+
+export const transactionHistory = [
+  { id: "T001", type: "payment", description: "Basketball Court Booking", amount: -45, date: "Feb 7, 2026", status: "completed" },
+  { id: "T002", type: "deposit", description: "Wallet Top Up", amount: 100, date: "Feb 5, 2026", status: "completed" },
+  { id: "T003", type: "payment", description: "Tennis Racket - Wilson", amount: -219.99, date: "Feb 3, 2026", status: "completed" },
+  { id: "T004", type: "refund", description: "Cancelled Yoga Session", amount: 25, date: "Feb 1, 2026", status: "completed" },
+  { id: "T005", type: "payment", description: "Swimming Laps - Asphalt Green", amount: -20, date: "Jan 30, 2026", status: "completed" },
+  { id: "T006", type: "payment", description: "Personal Training Session", amount: -85, date: "Jan 28, 2026", status: "pending" },
+  { id: "T007", type: "deposit", description: "Wallet Top Up", amount: 200, date: "Jan 25, 2026", status: "completed" },
+  { id: "T008", type: "payment", description: "Sports Massage Therapy", amount: -120, date: "Jan 22, 2026", status: "completed" },
+]
+
+export const paymentMethods = [
+  { id: "1", type: "visa", last4: "4242", expiry: "12/27", isDefault: true },
+  { id: "2", type: "mastercard", last4: "8888", expiry: "09/28", isDefault: false },
+  { id: "3", type: "paypal", email: "jordan@email.com", isDefault: false },
+]
+
 export const businessDashboardData = {
   totalRevenue: 24580,
   totalBookings: 342,
