@@ -11,7 +11,9 @@ import {
   Heart,
   CheckCircle,
 } from "lucide-react"
-import { activities } from "@/lib/mock-data"
+import { useState } from "react"
+import { activities, userProfile } from "@/lib/mock-data"
+import { TicketModal } from "@/components/sporgates/attendance/ticket-modal"
 import type { PageRoute } from "@/lib/navigation"
 
 interface ActivityDetailPageProps {
@@ -21,6 +23,7 @@ interface ActivityDetailPageProps {
 
 export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPageProps) {
   const activity = activities.find((a) => a.id === activityId) || activities[0]
+  const [showTicket, setShowTicket] = useState(false)
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -192,6 +195,7 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
             </div>
             <button
               type="button"
+              onClick={() => setShowTicket(true)}
               className="gradient-primary mb-3 w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
             >
               Join Activity
@@ -205,6 +209,18 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
           </div>
         </div>
       </div>
+
+      <TicketModal
+        isOpen={showTicket}
+        onClose={() => setShowTicket(false)}
+        activityId={activity.id}
+        userId={userProfile.username}
+        activityTitle={activity.title}
+        activityDate={activity.date}
+        activityTime={activity.time}
+        location={activity.location}
+        userName={userProfile.name}
+      />
     </div>
   )
 }

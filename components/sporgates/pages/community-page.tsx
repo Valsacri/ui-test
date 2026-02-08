@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Heart, MessageCircle, Share2, Users, Plus, ImageIcon } from "lucide-react"
 import { posts, squads } from "@/lib/mock-data"
 import { Stories } from "@/components/sporgates/stories"
+import { PullToRefresh } from "@/components/sporgates/ux/pull-to-refresh"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -14,38 +15,42 @@ interface CommunityPageProps {
 export function CommunityPage({ onNavigate }: CommunityPageProps) {
   const [activeTab, setActiveTab] = useState("Feed")
   const [newPost, setNewPost] = useState("")
+  const handleRefresh = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 600))
+  }
 
   return (
-    <div className="space-y-6 pb-20 lg:pb-0">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Community</h1>
-          <p className="text-sm text-muted-foreground">Connect with athletes and squads</p>
+    <PullToRefresh onRefresh={handleRefresh}>
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Community</h1>
+            <p className="text-sm text-muted-foreground">Connect with athletes and squads</p>
+          </div>
         </div>
-      </div>
 
-      <Stories />
+        <Stories />
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {["Feed", "Squads", "Discover"].map((tab) => (
-          <button
-            type="button"
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all",
-              activeTab === tab
-                ? "gradient-primary text-white shadow-md"
-                : "bg-card text-foreground border border-border hover:bg-muted"
-            )}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {["Feed", "Squads", "Discover"].map((tab) => (
+            <button
+              type="button"
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all",
+                activeTab === tab
+                  ? "gradient-primary text-white shadow-md"
+                  : "bg-card text-foreground border border-border hover:bg-muted"
+              )}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-      {activeTab === "Feed" && (
-        <div className="space-y-4">
+        {activeTab === "Feed" && (
+          <div className="space-y-4">
           {/* Create Post */}
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-start gap-3">
@@ -170,7 +175,15 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
           {squads.map((squad) => (
             <div
               key={squad.id}
-              className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm"
+              role="button"
+              tabIndex={0}
+              onClick={() => onNavigate("squad-profile", squad.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  onNavigate("squad-profile", squad.id)
+                }
+              }}
+              className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md"
             >
               <div className="gradient-secondary flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold text-white">
                 {squad.avatar}
@@ -183,6 +196,9 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
               </div>
               <button
                 type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                }}
                 className="rounded-full border border-primary px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
               >
                 Join
@@ -191,6 +207,7 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }

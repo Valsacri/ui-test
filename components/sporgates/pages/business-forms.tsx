@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   ArrowLeft,
   Plus,
@@ -30,8 +30,15 @@ import {
   Trash2,
   Eye,
   BadgeCheck,
+  Check,
 } from "lucide-react"
-import { sports, activities, businessResources, businessPartners, athletes, businessDashboardData } from "@/lib/mock-data"
+import { sports, activities, businessResources, businessPartners, athletes, businessDashboardData, experienceLevels } from "@/lib/mock-data"
+import { QRScanner } from "@/components/sporgates/attendance/qr-scanner"
+import { DateTimePicker } from "@/components/sporgates/date-time-picker"
+import { CommunicationPhaseContent } from "@/components/sporgates/business/communication-phase-content"
+import { MapView } from "@/components/sporgates/map-view"
+import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporgates/business/sponsorship-tier-builder"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -58,17 +65,27 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
 
   const estimatedReach = formData.capacity * 12
   const estimatedRevenue = formData.capacity * formData.price
+  const minDate = useMemo(() => new Date().toISOString().split("T")[0], [])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={() => onNavigate("business-activities")} className="rounded-full p-2 hover:bg-muted">
-          <ArrowLeft className="h-5 w-5 text-foreground" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Create Activity</h1>
-          <p className="text-sm text-muted-foreground">Set up a new sports activity or event</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => onNavigate("business-activities")} className="rounded-full p-2 hover:bg-muted">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Create Activity</h1>
+            <p className="text-sm text-muted-foreground">Set up a new sports activity or event</p>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={() => onNavigate("create-activity-steps")}
+          className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          Guided Builder
+        </button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -140,40 +157,26 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <h3 className="mb-4 text-sm font-bold text-foreground">Schedule & Location</h3>
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
-                    <Calendar className="h-3.5 w-3.5" /> Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
-                    <Clock className="h-3.5 w-3.5" /> Start
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
-                    <Clock className="h-3.5 w-3.5" /> End
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <DateTimePicker
+                  label="Date"
+                  type="date"
+                  value={formData.date}
+                  minDate={minDate}
+                  onChange={(value) => setFormData({ ...formData, date: value })}
+                />
+                <DateTimePicker
+                  label="Start"
+                  type="time"
+                  value={formData.startTime}
+                  onChange={(value) => setFormData({ ...formData, startTime: value })}
+                />
+                <DateTimePicker
+                  label="End"
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(value) => setFormData({ ...formData, endTime: value })}
+                />
               </div>
               <div>
                 <label className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
@@ -308,6 +311,438 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
   )
 }
 
+// ==================== CreateActivitySteps ====================
+export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
+  const steps = [
+    { id: 1, label: "Basic Info", icon: ImageIcon },
+    { id: 2, label: "Location", icon: MapPin },
+    { id: 3, label: "Schedule", icon: Calendar },
+    { id: 4, label: "Resources", icon: Package },
+    { id: 5, label: "Sponsorship", icon: Target },
+    { id: 6, label: "Review", icon: CheckCircle },
+  ]
+
+  const [currentStep, setCurrentStep] = useState(1)
+  const [formData, setFormData] = useState({
+    title: "",
+    sport: "",
+    level: "",
+    description: "",
+    location: {
+      address: "",
+      city: "",
+      neighborhood: "",
+      lat: 40.758,
+      lng: -73.9855,
+    },
+    date: "",
+    time: "",
+    duration: 90,
+    maxParticipants: 10,
+    price: 0,
+    selectedResources: [] as string[],
+    customTiers: [] as SponsorshipTier[],
+    eventPoster: "",
+  })
+
+  const cities = [
+    { id: "nyc", label: "New York City" },
+    { id: "manhattan", label: "Manhattan" },
+    { id: "brooklyn", label: "Brooklyn" },
+    { id: "queens", label: "Queens" },
+    { id: "bronx", label: "Bronx" },
+  ]
+
+  const neighborhoods: Record<string, string[]> = {
+    manhattan: ["Upper East Side", "Upper West Side", "Midtown", "Greenwich Village", "SoHo", "Tribeca"],
+    brooklyn: ["Williamsburg", "Park Slope", "DUMBO", "Brooklyn Heights", "Bushwick"],
+    queens: ["Astoria", "Long Island City", "Flushing", "Forest Hills"],
+    bronx: ["Riverdale", "Fordham", "Pelham Bay", "Concourse"],
+  }
+
+  const availableNeighborhoods = formData.location.city
+    ? neighborhoods[formData.location.city] || []
+    : []
+
+  const toggleResource = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      selectedResources: prev.selectedResources.includes(id)
+        ? prev.selectedResources.filter((item) => item !== id)
+        : [...prev.selectedResources, id],
+    }))
+  }
+
+  const canProceed = () => {
+    switch (currentStep) {
+      case 1:
+        return formData.title && formData.sport && formData.level
+      case 2:
+        return formData.location.address && formData.location.city
+      case 3:
+        return formData.date && formData.time
+      default:
+        return true
+    }
+  }
+
+  const handleNext = () => {
+    if (!canProceed()) return
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length))
+  }
+
+  const handleBack = () => {
+    if (currentStep === 1) {
+      onNavigate("business-activities")
+      return
+    }
+    setCurrentStep((prev) => Math.max(prev - 1, 1))
+  }
+
+  const handleSubmit = () => {
+    onNavigate("business-activities")
+  }
+
+  return (
+    <div className="space-y-6 pb-20 lg:pb-0">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <button type="button" onClick={handleBack} className="rounded-full p-2 hover:bg-muted">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Create New Activity</h1>
+            <p className="text-xs text-muted-foreground">Follow the steps to publish a new event</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          {steps.map((step, index) => {
+            const Icon = step.icon
+            const isCompleted = currentStep > step.id
+            const isCurrent = currentStep === step.id
+
+            return (
+              <div key={step.id} className="flex flex-1 items-center">
+                <div className="flex flex-1 flex-col items-center">
+                  <div
+                    className={cn(
+                      "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold",
+                      isCompleted
+                        ? "bg-primary text-white"
+                        : isCurrent
+                        ? "border-2 border-secondary bg-secondary/10 text-secondary"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  </div>
+                  <span className={cn(
+                    "mt-2 hidden text-[10px] font-semibold sm:block",
+                    isCurrent ? "text-secondary" : "text-muted-foreground"
+                  )}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={cn(
+                    "mx-2 h-0.5 flex-1",
+                    isCompleted ? "bg-primary" : "bg-muted"
+                  )} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {currentStep === 1 && (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-bold text-foreground">Basic Information</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Activity Title</label>
+              <input
+                value={formData.title}
+                onChange={(event) => setFormData({ ...formData, title: event.target.value })}
+                placeholder="e.g., City Basketball Championship"
+                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
+                <select
+                  value={formData.sport}
+                  onChange={(event) => setFormData({ ...formData, sport: event.target.value })}
+                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                >
+                  <option value="">Select sport</option>
+                  {sports.map((sport) => (
+                    <option key={sport.id} value={sport.name}>{sport.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Skill Level</label>
+                <select
+                  value={formData.level}
+                  onChange={(event) => setFormData({ ...formData, level: event.target.value })}
+                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                >
+                  <option value="">Select level</option>
+                  {experienceLevels.map((level) => (
+                    <option key={level.id} value={level.id}>{level.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                rows={4}
+                placeholder="Tell participants what to expect."
+                className="w-full rounded-xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentStep === 2 && (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-bold text-foreground">Location Details</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
+              <input
+                value={formData.location.address}
+                onChange={(event) =>
+                  setFormData({
+                    ...formData,
+                    location: { ...formData.location, address: event.target.value },
+                  })
+                }
+                placeholder="Venue address"
+                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
+                <select
+                  value={formData.location.city}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      location: { ...formData.location, city: event.target.value, neighborhood: "" },
+                    })
+                  }
+                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                >
+                  <option value="">Select city</option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.id}>{city.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Neighborhood</label>
+                <select
+                  value={formData.location.neighborhood}
+                  onChange={(event) =>
+                    setFormData({
+                      ...formData,
+                      location: { ...formData.location, neighborhood: event.target.value },
+                    })
+                  }
+                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                >
+                  <option value="">Select neighborhood</option>
+                  {availableNeighborhoods.map((neighborhood) => (
+                    <option key={neighborhood} value={neighborhood}>{neighborhood}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <MapView
+              center={[formData.location.lat, formData.location.lng]}
+              markerLabel={formData.location.address || "Select a location"}
+              height="220px"
+            />
+          </div>
+        </div>
+      )}
+
+      {currentStep === 3 && (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-bold text-foreground">Schedule</h3>
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <DateTimePicker
+                label="Date"
+                type="date"
+                value={formData.date}
+                onChange={(value) => setFormData({ ...formData, date: value })}
+              />
+              <DateTimePicker
+                label="Start Time"
+                type="time"
+                value={formData.time}
+                onChange={(value) => setFormData({ ...formData, time: value })}
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Duration (minutes)</label>
+                <input
+                  type="number"
+                  value={formData.duration}
+                  onChange={(event) => setFormData({ ...formData, duration: Number(event.target.value) || 0 })}
+                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Max Participants</label>
+                <input
+                  type="number"
+                  value={formData.maxParticipants}
+                  onChange={(event) => setFormData({ ...formData, maxParticipants: Number(event.target.value) || 0 })}
+                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Price per participant ($)</label>
+              <input
+                type="number"
+                value={formData.price}
+                onChange={(event) => setFormData({ ...formData, price: Number(event.target.value) || 0 })}
+                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentStep === 4 && (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-bold text-foreground">Select Resources</h3>
+          <div className="grid gap-3 md:grid-cols-2">
+            {businessResources.map((resource) => {
+              const selected = formData.selectedResources.includes(resource.id)
+              return (
+                <button
+                  key={resource.id}
+                  type="button"
+                  onClick={() => toggleResource(resource.id)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all",
+                    selected && "border-secondary bg-secondary/5"
+                  )}
+                >
+                  <img
+                    src={resource.image}
+                    alt={resource.name}
+                    className="h-14 w-14 rounded-xl object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-foreground">{resource.name}</p>
+                    <p className="text-xs text-muted-foreground">{resource.type}</p>
+                    <p className="text-[10px] text-muted-foreground">Status: {resource.status}</p>
+                  </div>
+                  {selected && <CheckCircle className="h-5 w-5 text-secondary" />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {currentStep === 5 && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-2 text-sm font-bold text-foreground">Sponsorship Packages</h3>
+            <p className="text-xs text-muted-foreground">Create tiered packages for event sponsors.</p>
+          </div>
+          <SponsorshipTierBuilder
+            tiers={formData.customTiers}
+            onChange={(tiers) => setFormData({ ...formData, customTiers: tiers })}
+            eventPoster={formData.eventPoster}
+            onPosterUpload={(url) => setFormData({ ...formData, eventPoster: url })}
+          />
+        </div>
+      )}
+
+      {currentStep === 6 && (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-bold text-foreground">Review & Publish</h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Title</span>
+              <span className="font-semibold text-foreground">{formData.title || "Untitled"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Sport</span>
+              <span className="font-semibold text-foreground">{formData.sport || "Not set"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Schedule</span>
+              <span className="font-semibold text-foreground">
+                {formData.date && formData.time ? `${formData.date} · ${formData.time}` : "Not set"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Location</span>
+              <span className="font-semibold text-foreground">{formData.location.address || "Not set"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Resources</span>
+              <span className="font-semibold text-foreground">{formData.selectedResources.length}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Sponsorship Tiers</span>
+              <span className="font-semibold text-foreground">{formData.customTiers.length}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        {currentStep > 1 && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="rounded-full border border-border px-5 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+          >
+            Back
+          </button>
+        )}
+        {currentStep < steps.length ? (
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={!canProceed()}
+            className="gradient-primary rounded-full px-6 py-2 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            Continue
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="gradient-primary rounded-full px-6 py-2 text-xs font-semibold text-white"
+          >
+            Publish Activity
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ==================== CreateCampaign ====================
 export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
   const [formData, setFormData] = useState({
@@ -319,6 +754,19 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
     targetAudience: "all",
     description: "",
   })
+  const [activePhase, setActivePhase] = useState<"pre" | "during" | "post">("pre")
+  const [phaseState, setPhaseState] = useState({
+    pre: { printMedia: false, athleteCollab: false, selectedAthlete: undefined as string | undefined, search: "", deliverables: [] as string[] },
+    during: { printMedia: false, athleteCollab: false, selectedAthlete: undefined as string | undefined, search: "", deliverables: [] as string[] },
+    post: { printMedia: false, athleteCollab: false, selectedAthlete: undefined as string | undefined, search: "", deliverables: [] as string[] },
+  })
+
+  const updatePhaseState = (phase: "pre" | "during" | "post", updates: Partial<typeof phaseState.pre>) => {
+    setPhaseState((prev) => ({
+      ...prev,
+      [phase]: { ...prev[phase], ...updates },
+    }))
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -449,6 +897,53 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Communication Plan</h3>
+              <p className="text-xs text-muted-foreground">Plan pre, during, and post-event messaging</p>
+            </div>
+            <div className="flex gap-1 rounded-full border border-border p-1 text-[10px]">
+              {(["pre", "during", "post"] as const).map((phase) => (
+                <button
+                  key={phase}
+                  type="button"
+                  onClick={() => setActivePhase(phase)}
+                  className={cn(
+                    "rounded-full px-3 py-1 font-semibold",
+                    activePhase === phase ? "bg-secondary text-white" : "text-muted-foreground"
+                  )}
+                >
+                  {phase}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <CommunicationPhaseContent
+            phase={activePhase}
+            printMedia={phaseState[activePhase].printMedia}
+            onPrintMediaChange={(value) => updatePhaseState(activePhase, { printMedia: value })}
+            athleteCollab={phaseState[activePhase].athleteCollab}
+            onAthleteCollabChange={(value) => updatePhaseState(activePhase, { athleteCollab: value })}
+            selectedAthlete={phaseState[activePhase].selectedAthlete}
+            onSelectAthlete={(id) => updatePhaseState(activePhase, { selectedAthlete: id })}
+            athleteSearchQuery={phaseState[activePhase].search}
+            onAthleteSearchChange={(value) => updatePhaseState(activePhase, { search: value })}
+            selectedDeliverables={phaseState[activePhase].deliverables}
+            onDeliverablesChange={(deliverables) => updatePhaseState(activePhase, { deliverables })}
+            athletes={athletes.map((athlete) => ({
+              id: athlete.id,
+              name: athlete.name,
+              sport: athlete.sport,
+              followers: athlete.followers,
+              ranking: athlete.ranking,
+              avatar: athlete.avatar,
+              verified: athlete.status === "active",
+            }))}
+          />
         </div>
 
         <div className="flex gap-3">
@@ -1077,15 +1572,44 @@ export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
               </div>
               <p className="text-sm text-muted-foreground">Sports Complex</p>
             </div>
-            <button type="button" onClick={() => onNavigate("create-business")} className="hidden rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary hover:bg-primary hover:text-white md:block">
-              Edit Profile
-            </button>
+            <div className="hidden items-center gap-2 md:flex">
+              <button
+                type="button"
+                onClick={() => onNavigate("create-activity")}
+                className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
+              >
+                Create Activity
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate("create-business")}
+                className="rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary hover:bg-primary hover:text-white"
+              >
+                Edit Profile
+              </button>
+            </div>
           </div>
           <p className="mt-3 text-sm text-foreground">Premier multi-sport complex in NYC offering basketball, swimming, tennis, and more.</p>
           <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Chelsea, NYC</span>
             <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-secondary text-secondary" />4.8 (312 reviews)</span>
             <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />2,450 followers</span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 md:hidden">
+            <button
+              type="button"
+              onClick={() => onNavigate("create-activity")}
+              className="flex-1 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
+            >
+              Create Activity
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate("create-business")}
+              className="flex-1 rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary hover:bg-primary hover:text-white"
+            >
+              Edit Profile
+            </button>
           </div>
         </div>
       </div>
@@ -1129,18 +1653,30 @@ export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
 
 // ==================== AttendanceManagement ====================
 export function AttendanceManagementPage({ onNavigate }: BusinessFormPageProps) {
-  const attendees = [
-    { name: "Jordan Rivera", avatar: "JR", checkedIn: true, time: "5:45 PM" },
-    { name: "Emily Park", avatar: "EP", checkedIn: true, time: "5:50 PM" },
-    { name: "David Kim", avatar: "DK", checkedIn: false, time: "" },
-    { name: "Lisa Chen", avatar: "LC", checkedIn: true, time: "5:55 PM" },
-    { name: "Mark Brown", avatar: "MB", checkedIn: false, time: "" },
-    { name: "Carlos Rivera", avatar: "CR", checkedIn: true, time: "5:58 PM" },
-    { name: "Sarah Lee", avatar: "SL", checkedIn: false, time: "" },
-    { name: "Alex Chen", avatar: "AC", checkedIn: true, time: "6:01 PM" },
-  ]
+  const [showScanner, setShowScanner] = useState(false)
+  const [attendees, setAttendees] = useState([
+    { id: "U-1", name: "Jordan Rivera", avatar: "JR", checkedIn: true, time: "5:45 PM" },
+    { id: "U-2", name: "Emily Park", avatar: "EP", checkedIn: true, time: "5:50 PM" },
+    { id: "U-3", name: "David Kim", avatar: "DK", checkedIn: false, time: "" },
+    { id: "U-4", name: "Lisa Chen", avatar: "LC", checkedIn: true, time: "5:55 PM" },
+    { id: "U-5", name: "Mark Brown", avatar: "MB", checkedIn: false, time: "" },
+    { id: "U-6", name: "Carlos Rivera", avatar: "CR", checkedIn: true, time: "5:58 PM" },
+    { id: "U-7", name: "Sarah Lee", avatar: "SL", checkedIn: false, time: "" },
+    { id: "U-8", name: "Alex Chen", avatar: "AC", checkedIn: true, time: "6:01 PM" },
+  ])
 
   const checkedInCount = attendees.filter((a) => a.checkedIn).length
+  const checkedInUsers = attendees.filter((a) => a.checkedIn).map((a) => a.id)
+
+  const handleScanSuccess = (result: { userId: string }) => {
+    setAttendees((prev) =>
+      prev.map((attendee) =>
+        attendee.id === result.userId
+          ? { ...attendee, checkedIn: true, time: "Just now" }
+          : attendee
+      )
+    )
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -1177,7 +1713,11 @@ export function AttendanceManagementPage({ onNavigate }: BusinessFormPageProps) 
           </div>
           <h3 className="text-sm font-bold text-foreground">QR Code Scanner</h3>
           <p className="mt-1 text-xs text-muted-foreground">Scan attendee QR codes for quick check-in</p>
-          <button type="button" className="gradient-primary mt-4 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90">
+          <button
+            type="button"
+            onClick={() => setShowScanner(true)}
+            className="gradient-primary mt-4 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:opacity-90"
+          >
             Open Scanner
           </button>
         </div>
@@ -1201,7 +1741,11 @@ export function AttendanceManagementPage({ onNavigate }: BusinessFormPageProps) 
                   <CheckCircle className="h-3 w-3" /> Present
                 </span>
               ) : (
-                <button type="button" className="rounded-full border border-primary px-3 py-1 text-[10px] font-semibold text-primary hover:bg-primary hover:text-white transition-colors">
+                <button
+                  type="button"
+                  onClick={() => handleScanSuccess({ userId: attendee.id })}
+                  className="rounded-full border border-primary px-3 py-1 text-[10px] font-semibold text-primary hover:bg-primary hover:text-white transition-colors"
+                >
                   Check In
                 </button>
               )}
@@ -1209,6 +1753,16 @@ export function AttendanceManagementPage({ onNavigate }: BusinessFormPageProps) 
           ))}
         </div>
       </div>
+
+      <Dialog open={showScanner} onOpenChange={setShowScanner}>
+        <DialogContent className="max-w-xl">
+          <QRScanner
+            activityId="1"
+            checkedInUsers={checkedInUsers}
+            onScanSuccess={handleScanSuccess}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

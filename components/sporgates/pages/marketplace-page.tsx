@@ -1,9 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus } from "lucide-react"
+import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Package } from "lucide-react"
 import { products } from "@/lib/mock-data"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
+import { MarketplaceFilterSidebar } from "@/components/sporgates/filters/marketplace-filter-sidebar"
+import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loading-cards"
+import { ResourceCarousel } from "@/components/sporgates/business/resource-carousel"
+import { CollectionsModal } from "@/components/sporgates/business/collections-modal"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +32,9 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
   const [showCart, setShowCart] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [priceRange, setPriceRange] = useState("Any Price")
+  const [selectedResources, setSelectedResources] = useState<string[]>([])
+  const [showCollections, setShowCollections] = useState(false)
+  const isLoading = false
   const [cartItems, setCartItems] = useState<CartItem[]>([
     { productId: "1", name: "Pro Basketball Shoes", price: 149.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop", quantity: 1 },
     { productId: "4", name: "Smart Fitness Watch", price: 299.99, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop", quantity: 1 },
@@ -69,18 +77,34 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
             Shop sports gear, equipment, and more
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCart(true)}
-          className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
-        >
-          <ShoppingBag className="h-5 w-5 text-foreground" />
-          {cartCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-white">
-              {cartCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCollections(true)}
+            className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            Collections
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate("products")}
+            className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            Browse Products
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCart(true)}
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
+          >
+            <ShoppingBag className="h-5 w-5 text-foreground" />
+            {cartCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-white">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -104,28 +128,15 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
         </button>
       </div>
 
-      {/* Extended Filters */}
       {showFilters && (
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm animate-slide-in-up">
-          <h3 className="mb-3 text-xs font-semibold text-foreground">Price Range</h3>
-          <div className="flex flex-wrap gap-2">
-            {priceRanges.map((range) => (
-              <button
-                type="button"
-                key={range}
-                onClick={() => setPriceRange(range)}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-[11px] font-medium transition-all",
-                  priceRange === range
-                    ? "bg-secondary text-white"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-        </div>
+        <MarketplaceFilterSidebar
+          categories={categories}
+          activeCategory={activeCategory}
+          priceRanges={priceRanges}
+          activePriceRange={priceRange}
+          onCategoryChange={setActiveCategory}
+          onPriceRangeChange={setPriceRange}
+        />
       )}
 
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -146,6 +157,26 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
         ))}
       </div>
 
+      <ResourceCarousel
+        title="Curated Picks"
+        icon={<Package className="h-4 w-4" />}
+        resources={products.slice(0, 6).map((product) => ({
+          id: product.id,
+          name: product.name,
+          type: product.category,
+          price: product.price,
+          image: product.image,
+          businessName: product.seller,
+        }))}
+        selectedResources={selectedResources}
+        onToggle={(id) =>
+          setSelectedResources((prev) =>
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+          )
+        }
+        colorScheme="orange"
+      />
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{filteredProducts.length}</span> products found
@@ -159,21 +190,33 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredProducts.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            onClick={() => onNavigate("product-detail", product.id)}
-          />
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <ShoppingBag className="mb-3 h-12 w-12 text-muted-foreground/40" />
-          <h3 className="text-base font-semibold text-foreground">No products found</h3>
-          <p className="text-sm text-muted-foreground">Try adjusting your filters or search query</p>
+      {isLoading ? (
+        <LoadingGrid>
+          <LoadingProductCard />
+        </LoadingGrid>
+      ) : filteredProducts.length === 0 ? (
+        <EmptyState
+          icon={ShoppingBag}
+          title="No products found"
+          description="Try adjusting your filters or search query"
+          action={{
+            label: "Clear Filters",
+            onClick: () => {
+              setActiveCategory("All")
+              setPriceRange("Any Price")
+            },
+            variant: "secondary",
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={() => onNavigate("product-detail", product.id)}
+            />
+          ))}
         </div>
       )}
 
@@ -300,6 +343,8 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
           </div>
         </>
       )}
+
+      <CollectionsModal open={showCollections} onClose={() => setShowCollections(false)} />
     </div>
   )
 }

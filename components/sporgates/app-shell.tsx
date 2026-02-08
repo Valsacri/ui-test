@@ -12,12 +12,17 @@ import { ActivitiesPage } from "@/components/sporgates/pages/activities-page"
 import { ActivityDetailPage } from "@/components/sporgates/pages/activity-detail-page"
 import { FacilitiesPage } from "@/components/sporgates/pages/facilities-page"
 import { MarketplacePage } from "@/components/sporgates/pages/marketplace-page"
+import { ProductsPage } from "@/components/sporgates/pages/products-page"
 import { ServicesPage } from "@/components/sporgates/pages/services-page"
 import { BusinessesPage } from "@/components/sporgates/pages/businesses-page"
 import { JobsPage } from "@/components/sporgates/pages/jobs-page"
 import { MessagesPage } from "@/components/sporgates/pages/messages-page"
+import { ConversationPage } from "@/components/sporgates/pages/conversation-page"
 import { NotificationsPage } from "@/components/sporgates/pages/notifications-page"
 import { ProfilePage } from "@/components/sporgates/pages/profile-page"
+import { ProfileEnhancedPage } from "@/components/sporgates/pages/profile-enhanced-page"
+import { ProfileInformationPage } from "@/components/sporgates/pages/profile-information-page"
+import { PersonDetailPage } from "@/components/sporgates/pages/person-detail-page"
 import { SettingsPage } from "@/components/sporgates/pages/settings-page"
 import { SettingsProfilePage } from "@/components/sporgates/pages/settings-profile-page"
 import { SettingsPrivacyPage } from "@/components/sporgates/pages/settings-privacy-page"
@@ -46,12 +51,14 @@ import {
 } from "@/components/sporgates/pages/business-pages"
 import { CommunityPage } from "@/components/sporgates/pages/community-page"
 import { SquadDetailPage } from "@/components/sporgates/pages/squad-detail-page"
+import { SquadProfilePage } from "@/components/sporgates/pages/squad-profile-page"
 import { SquadDashboardPage } from "@/components/sporgates/pages/squad-dashboard-page"
 import { StoreDetailPage } from "@/components/sporgates/pages/store-detail-page"
 import { SettingsDataPermissionsPage } from "@/components/sporgates/pages/settings-data-permissions-page"
 import { SettingsTransactionsPage } from "@/components/sporgates/pages/settings-transactions-page"
 import {
   CreateActivityPage,
+  CreateActivityStepsPage,
   CreateCampaignPage,
   CreateBusinessPage,
   AddResourcePage,
@@ -72,7 +79,6 @@ const authPages: PageRoute[] = [
   "reset-password",
   "verify-email",
   "choose-sports",
-  "experience-level",
   "set-goals",
   "onboarding-confirmation",
 ]
@@ -104,6 +110,8 @@ export function AppShell() {
     "product-detail",
     "service-detail",
     "business-detail",
+    "person-detail",
+    "squad-profile",
   ]
   const showRightSidebar = showSidebars && !isBusinessMode && !hideRightSidebarPages.includes(currentPage)
 
@@ -123,6 +131,8 @@ export function AppShell() {
         return <FacilityDetailPage facilityId={detailId || "1"} onNavigate={navigate} />
       case "marketplace":
         return <MarketplacePage onNavigate={navigate} />
+      case "products":
+        return <ProductsPage onNavigate={navigate} />
       case "product-detail":
         return <ProductDetailPage productId={detailId || "1"} onNavigate={navigate} />
       case "services":
@@ -136,12 +146,19 @@ export function AppShell() {
       case "jobs":
         return <JobsPage onNavigate={navigate} />
       case "messages":
+        return <MessagesPage onNavigate={navigate} />
       case "conversation":
-        return <MessagesPage />
+        return <ConversationPage conversationId={detailId || "1"} onNavigate={navigate} />
       case "notifications":
         return <NotificationsPage />
       case "profile":
         return <ProfilePage onNavigate={navigate} />
+      case "profile-enhanced":
+        return <ProfileEnhancedPage onNavigate={navigate} />
+      case "profile-information":
+        return <ProfileInformationPage onNavigate={navigate} />
+      case "person-detail":
+        return <PersonDetailPage personId={detailId || "1"} onNavigate={navigate} />
       case "settings":
         return <SettingsPage onNavigate={navigate} />
       case "settings-profile":
@@ -184,6 +201,8 @@ export function AppShell() {
         return <CommunityPage onNavigate={navigate} />
       case "squad-detail":
         return <SquadDetailPage squadId={detailId || "1"} onNavigate={navigate} />
+      case "squad-profile":
+        return <SquadProfilePage squadId={detailId || "1"} onNavigate={navigate} />
       case "squad-dashboard":
         return <SquadDashboardPage onNavigate={navigate} />
       case "store-detail":
@@ -198,6 +217,8 @@ export function AppShell() {
         return <BusinessProfilePage onNavigate={navigate} />
       case "create-activity":
         return <CreateActivityPage onNavigate={navigate} />
+      case "create-activity-steps":
+        return <CreateActivityStepsPage onNavigate={navigate} />
       case "create-campaign":
         return <CreateCampaignPage onNavigate={navigate} />
       case "create-business":
@@ -222,7 +243,6 @@ export function AppShell() {
       case "reset-password":
       case "verify-email":
       case "choose-sports":
-      case "experience-level":
       case "set-goals":
       case "onboarding-confirmation":
         return <AuthPages page={currentPage} onNavigate={navigate} />

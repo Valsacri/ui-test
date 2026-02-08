@@ -13,6 +13,7 @@ import {
 import { businessDashboardData } from "@/lib/mock-data"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { ProgressChart } from "@/components/sporgates/progress-chart"
 
 interface BusinessDashboardPageProps {
   onNavigate: (page: PageRoute) => void
@@ -21,6 +22,10 @@ interface BusinessDashboardPageProps {
 export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps) {
   const data = businessDashboardData
   const maxRevenue = Math.max(...data.monthlyRevenue.map((d) => d.revenue))
+  const revenueTrend = data.monthlyRevenue.map((item) => ({
+    date: item.month,
+    value: item.revenue,
+  }))
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -157,6 +162,10 @@ export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <ProgressChart title="Revenue Trend" data={revenueTrend} color="#0f172a" />
       </div>
 
       {/* Recent Bookings */}

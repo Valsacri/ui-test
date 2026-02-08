@@ -157,7 +157,7 @@ export const facilities = [
     reviews: 89,
     pricePerHour: 0,
     currency: "$",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=250&fit=crop",
     amenities: ["Free Entry", "Water Fountain", "Restrooms"],
     hours: "6:00 AM - 10:00 PM",
     sports: ["Basketball", "Soccer", "Volleyball"],
@@ -567,6 +567,7 @@ export const conversations = [
     avatar: "MJ",
     lastMessage: "See you at the game tonight!",
     time: "2m ago",
+    timestamp: "2026-02-08T11:58:00",
     unread: 2,
     online: true,
   },
@@ -576,6 +577,7 @@ export const conversations = [
     avatar: "SL",
     lastMessage: "Thanks for the invite! I'll be there.",
     time: "15m ago",
+    timestamp: "2026-02-08T11:45:00",
     unread: 0,
     online: true,
   },
@@ -585,6 +587,7 @@ export const conversations = [
     avatar: "CP",
     lastMessage: "Your booking has been confirmed.",
     time: "1h ago",
+    timestamp: "2026-02-08T11:00:00",
     unread: 1,
     online: false,
   },
@@ -594,6 +597,7 @@ export const conversations = [
     avatar: "AC",
     lastMessage: "Great match yesterday!",
     time: "3h ago",
+    timestamp: "2026-02-08T09:00:00",
     unread: 0,
     online: false,
   },
@@ -603,8 +607,62 @@ export const conversations = [
     avatar: "RC",
     lastMessage: "Next group run is on Saturday at 7 AM",
     time: "1d ago",
+    timestamp: "2026-02-07T12:00:00",
     unread: 0,
     online: false,
+  },
+]
+
+export const organizerPortfolioEvents = [
+  {
+    id: "1",
+    name: "Summer Basketball Championship 2025",
+    date: "2025-06-15",
+    location: "Downtown Sports Arena",
+    metrics: {
+      attendance: 2500,
+      mediaReach: 150000,
+      engagementRate: 12.5,
+      geographicReach: ["New York", "New Jersey", "Connecticut"],
+    },
+    proof: {
+      photos: ["event1-photo1.jpg", "event1-photo2.jpg", "event1-photo3.jpg"],
+      mediaLinks: ["https://localnews.com/basketball-championship", "https://sportsdaily.com/summer-event"],
+      socialMediaLinks: ["https://instagram.com/post1", "https://twitter.com/post1"],
+      documents: ["attendance-report.pdf", "event-summary.pdf"],
+    },
+    testimonials: [
+      {
+        author: "Nike NYC",
+        role: "Event Sponsor",
+        text: "Exceptional event organization and impressive turnout. The engagement metrics exceeded expectations.",
+      },
+    ],
+  },
+  {
+    id: "2",
+    name: "Youth Soccer League - Spring Season",
+    date: "2025-04-20",
+    location: "Central Park Fields",
+    metrics: {
+      attendance: 1800,
+      mediaReach: 85000,
+      engagementRate: 15.2,
+      geographicReach: ["Manhattan", "Brooklyn", "Queens"],
+    },
+    proof: {
+      photos: ["event2-photo1.jpg", "event2-photo2.jpg"],
+      mediaLinks: ["https://nycsports.com/youth-soccer"],
+      socialMediaLinks: ["https://facebook.com/post1"],
+      documents: ["league-results.pdf"],
+    },
+    testimonials: [
+      {
+        author: "Adidas Youth Sports",
+        role: "Title Sponsor",
+        text: "Well-organized league with strong community engagement. Great partnership opportunity.",
+      },
+    ],
   },
 ]
 

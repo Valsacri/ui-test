@@ -1,15 +1,40 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Send, Phone, Video, MoreVertical } from "lucide-react"
+import { Search, Send, Phone, Video, MoreVertical, Trash2, CheckCircle } from "lucide-react"
+import type { PageRoute } from "@/lib/navigation"
 import { conversations } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
+import { ConversationItem } from "@/components/sporgates/conversation-item"
+import { SwipeableCard } from "@/components/sporgates/ux/swipeable-card"
 
-export function MessagesPage() {
+interface MessagesPageProps {
+  onNavigate?: (page: PageRoute, id?: string) => void
+}
+
+export function MessagesPage({ onNavigate }: MessagesPageProps) {
   const [selectedConvo, setSelectedConvo] = useState<string | null>("1")
   const [message, setMessage] = useState("")
+  const [conversationList, setConversationList] = useState(conversations)
 
-  const activeConvo = conversations.find((c) => c.id === selectedConvo)
+  const parseRelativeTime = (value: string) => {
+    const trimmed = value.trim()
+    const minutesMatch = trimmed.match(/(\d+)m/)
+    const hoursMatch = trimmed.match(/(\d+)h/)
+    const daysMatch = trimmed.match(/(\d+)d/)
+    const now = new Date()
+    if (minutesMatch) return new Date(now.getTime() - Number(minutesMatch[1]) * 60000)
+    if (hoursMatch) return new Date(now.getTime() - Number(hoursMatch[1]) * 3600000)
+    if (daysMatch) return new Date(now.getTime() - Number(daysMatch[1]) * 86400000)
+    return now
+  }
+
+  const activeConvo = conversationList.find((c) => c.id === selectedConvo)
+
+  const getConversationTimestamp = (value: { time: string; timestamp?: string }) => {
+    if (value.timestamp) return new Date(value.timestamp)
+    return parseRelativeTime(value.time)
+  }
 
   return (
     <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:h-[calc(100vh-5rem)]">
@@ -32,37 +57,38 @@ export function MessagesPage() {
           </div>
         </div>
         <div className="overflow-y-auto">
-          {conversations.map((convo) => (
-            <button
-              type="button"
+          {conversationList.map((convo) => (
+            <SwipeableCard
               key={convo.id}
-              onClick={() => setSelectedConvo(convo.id)}
-              className={cn(
-                "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted",
-                selectedConvo === convo.id && "bg-muted"
-              )}
+              leftAction={{
+                icon: CheckCircle,
+                label: "Read",
+                color: "text-green-700",
+                bgColor: "bg-green-100",
+                onAction: () =>
+                  setConversationList((prev) =>
+                    prev.map((item) => (item.id === convo.id ? { ...item, unread: 0 } : item))
+                  ),
+              }}
+              rightAction={{
+                icon: Trash2,
+                label: "Delete",
+                color: "text-red-700",
+                bgColor: "bg-red-100",
+                onAction: () =>
+                  setConversationList((prev) => prev.filter((item) => item.id !== convo.id)),
+              }}
             >
-              <div className="relative">
-                <div className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white">
-                  {convo.avatar}
-                </div>
-                {convo.online && (
-                  <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-foreground">{convo.name}</p>
-                  <span className="text-[10px] text-muted-foreground">{convo.time}</span>
-                </div>
-                <p className="truncate text-xs text-muted-foreground">{convo.lastMessage}</p>
-              </div>
-              {convo.unread > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-white">
-                  {convo.unread}
-                </span>
-              )}
-            </button>
+              <ConversationItem
+                userName={convo.name}
+                lastMessage={convo.lastMessage}
+                timestamp={getConversationTimestamp(convo)}
+                unread={convo.unread}
+                isOnline={convo.online}
+                verified={false}
+                onClick={() => setSelectedConvo(convo.id)}
+              />
+            </SwipeableCard>
           ))}
         </div>
       </div>
@@ -141,6 +167,15 @@ export function MessagesPage() {
                 >
                   <Send className="h-4 w-4" />
                 </button>
+                {onNavigate && activeConvo && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("conversation", activeConvo.id)}
+                    className="hidden rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted md:inline-flex"
+                  >
+                    Open Thread
+                  </button>
+                )}
               </div>
             </div>
           </>

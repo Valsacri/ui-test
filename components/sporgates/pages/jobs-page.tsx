@@ -1,9 +1,11 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Search, MapPin, Briefcase } from "lucide-react"
+import { Search, MapPin, Briefcase, Plus } from "lucide-react"
 import { jobs } from "@/lib/mock-data"
 import type { PageRoute } from "@/lib/navigation"
+import { CreateJobOfferModal } from "@/components/sporgates/business/create-job-offer-modal"
+import { JobCard } from "@/components/sporgates/cards/job-card"
 
 interface JobsPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -11,21 +13,33 @@ interface JobsPageProps {
 
 export function JobsPage({ onNavigate }: JobsPageProps) {
   const [query, setQuery] = useState("")
+  const [jobList, setJobList] = useState(jobs)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const filteredJobs = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return jobs
-    return jobs.filter((job) =>
+    if (!q) return jobList
+    return jobList.filter((job) =>
       [job.title, job.company, job.location, job.type].some((value) =>
         value.toLowerCase().includes(q)
       )
     )
-  }, [query])
+  }, [jobList, query])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Jobs</h1>
-        <p className="text-sm text-muted-foreground">Open roles across sports businesses and teams</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Jobs</h1>
+          <p className="text-sm text-muted-foreground">Open roles across sports businesses and teams</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" />
+          Post Job
+        </button>
       </div>
 
       <div className="relative">
@@ -39,42 +53,47 @@ export function JobsPage({ onNavigate }: JobsPageProps) {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
         {filteredJobs.map((job) => (
-          <button
+          <JobCard
             key={job.id}
-            type="button"
+            id={job.id}
+            title={job.title}
+            company={job.company}
+            type={job.type}
+            location={job.location}
+            salary={job.salary}
+            description={job.description}
+            posted={`Posted ${job.posted}`}
+            remote={job.location.toLowerCase().includes("remote")}
             onClick={() => onNavigate("jobs", job.id)}
-            className="w-full rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:shadow-md"
-          >
-            <div className="flex items-start gap-4">
-              <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-xl text-sm font-bold text-white">
-                {job.logo}
-              </div>
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-semibold text-foreground">{job.title}</h3>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
-                    {job.type}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">{job.company}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {job.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="h-3.5 w-3.5" />
-                    {job.salary}
-                  </span>
-                  <span>Posted {job.posted}</span>
-                </div>
-              </div>
-            </div>
-          </button>
+          />
         ))}
       </div>
+
+      <CreateJobOfferModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={(job) => {
+          const locationValue = job.location || `${job.locationType} role`
+          const salaryValue = job.salary || "Competitive"
+          setJobList((prev) => [
+            {
+              id: `job-${Date.now()}`,
+              title: job.title,
+              company: "Sporgates Business",
+              location: locationValue,
+              type: job.type,
+              salary: salaryValue,
+              posted: "just now",
+              description: job.description || "New opening",
+              requirements: [],
+              logo: "SB",
+            },
+            ...prev,
+          ])
+        }}
+      />
     </div>
   )
 }

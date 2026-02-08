@@ -21,7 +21,7 @@ const settingsGroups = [
   {
     title: "Account",
     items: [
-      { label: "Profile Information", icon: User, page: "settings-profile" as PageRoute, description: "Update your name, bio, and avatar" },
+      { label: "Profile Information", icon: User, page: "profile-information" as PageRoute, description: "Review and update your account details" },
       { label: "Privacy & Security", icon: Shield, page: "settings-privacy" as PageRoute, description: "Manage your privacy and security settings" },
       { label: "Notifications", icon: Bell, page: "settings-notifications" as PageRoute, description: "Configure your notification preferences" },
     ],

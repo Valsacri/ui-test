@@ -8,8 +8,14 @@ import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import { BusinessCard } from "@/components/sporgates/cards/business-card"
 import { PersonCard } from "@/components/sporgates/cards/person-card"
+import { RecommendationActivityCard } from "@/components/sporgates/cards/recommendation-activity-card"
+import { ExploreFilterSidebar } from "@/components/sporgates/filters/explore-filter-sidebar"
+import { MapFilter } from "@/components/sporgates/map-filter"
+import { MapView } from "@/components/sporgates/map-view"
+import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface ExplorePageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -21,6 +27,17 @@ const sportFilters = ["All Sports", "Basketball", "Soccer", "Tennis", "Swimming"
 export function ExplorePage({ onNavigate }: ExplorePageProps) {
   const [activeTab, setActiveTab] = useState("All")
   const [activeSport, setActiveSport] = useState("All Sports")
+  const [showFilters, setShowFilters] = useState(false)
+  const [showMap, setShowMap] = useState(false)
+  const [joinedRecommendations, setJoinedRecommendations] = useState<string[]>([])
+  const mapCenter = facilities[0]?.coordinates || [40.7465, -74.0071]
+  const isMobile = useIsMobile()
+  const recommendations = activities.slice(0, 3)
+  const reasons = [
+    "Matches your favorite sports",
+    "Trending near your area",
+    "Similar to recent bookings",
+  ]
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -37,13 +54,18 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
           </div>
           <button
             type="button"
+            onClick={() => setShowFilters((prev) => !prev)}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
           >
             <SlidersHorizontal className="h-4 w-4 text-foreground" />
           </button>
           <button
             type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
+            onClick={() => setShowMap((prev) => !prev)}
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted",
+              showMap && "bg-primary text-primary-foreground border-primary"
+            )}
           >
             <MapPin className="h-4 w-4 text-foreground" />
           </button>
@@ -86,9 +108,52 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
             </button>
           ))}
         </div>
+
+        {showFilters && isMobile && (
+          <BottomSheet isOpen={showFilters} onClose={() => setShowFilters(false)} title="Filters">
+            <ExploreFilterSidebar onClose={() => setShowFilters(false)} />
+          </BottomSheet>
+        )}
+
+        {showFilters && !isMobile && (
+          <ExploreFilterSidebar onClose={() => setShowFilters(false)} />
+        )}
+
+        {showMap && (
+          <div className="space-y-4">
+            <MapFilter />
+            <MapView center={mapCenter as [number, number]} markerLabel="Nearby locations" height="300px" />
+          </div>
+        )}
       </div>
 
       {/* Results */}
+      {activeTab === "All" && (
+        <div>
+          <h2 className="mb-4 text-base font-bold text-foreground">Recommended for you</h2>
+          <div className="space-y-3">
+            {recommendations.map((activity, index) => (
+              <RecommendationActivityCard
+                key={activity.id}
+                id={activity.id}
+                title={activity.title}
+                sport={activity.sport}
+                location={activity.location}
+                date={activity.date}
+                time={activity.time}
+                participants={activity.spots}
+                maxParticipants={activity.totalSpots}
+                level="Intermediate"
+                image={activity.image}
+                reason={reasons[index % reasons.length]}
+                isJoined={joinedRecommendations.includes(activity.id)}
+                onJoin={(id) => setJoinedRecommendations((prev) => [...prev, id])}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {(activeTab === "All" || activeTab === "Activities") && (
         <div>
           <h2 className="mb-4 text-base font-bold text-foreground">Activities</h2>
@@ -157,6 +222,7 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
               <PersonCard
                 key={person.id}
                 person={person}
+                onClick={() => onNavigate("person-detail", person.id)}
               />
             ))}
           </div>

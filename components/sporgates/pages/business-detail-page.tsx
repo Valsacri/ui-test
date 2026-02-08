@@ -17,6 +17,7 @@ import {
 import { businesses, activities, services } from "@/lib/mock-data"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
+import { OrganizerPortfolio } from "@/components/sporgates/business/organizer-portfolio"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -39,6 +40,7 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
   const business = businesses.find((b) => b.id === businessId) || businesses[0]
   const [activeTab, setActiveTab] = useState("Overview")
   const [following, setFollowing] = useState(false)
+  const [showPortfolio, setShowPortfolio] = useState(false)
 
   const relatedActivities = activities.slice(0, 3)
   const relatedServices = services.slice(0, 2)
@@ -218,6 +220,22 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
               ))}
             </div>
           </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Organizer Portfolio</h3>
+                <p className="text-xs text-muted-foreground">Showcase past event performance</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPortfolio(true)}
+                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                View Portfolio
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -319,6 +337,8 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           ))}
         </div>
       )}
+
+      {showPortfolio && <OrganizerPortfolio onClose={() => setShowPortfolio(false)} />}
     </div>
   )
 }

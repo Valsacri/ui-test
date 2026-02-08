@@ -15,9 +15,21 @@ import {
   Megaphone,
   BarChart3,
 } from "lucide-react"
-import { activities, businessDashboardData, businessPartners, businessResources } from "@/lib/mock-data"
+import {
+  activities,
+  athletes,
+  businessDashboardData,
+  businessPartners,
+  businessResources,
+} from "@/lib/mock-data"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { AddCampaignModal } from "@/components/sporgates/business/add-campaign-modal"
+import { AddResourceModal } from "@/components/sporgates/business/add-resource-modal"
+import { EditResourceModal } from "@/components/sporgates/business/edit-resource-modal"
+import { AddTeamMemberModal } from "@/components/sporgates/business/add-team-member-modal"
+import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporgates/business/sponsorship-tier-builder"
+import { AthleteCollaborationSelector } from "@/components/sporgates/business/athlete-collaboration-selector"
 
 interface BusinessSubPageProps {
   onNavigate: (page: PageRoute) => void
@@ -33,6 +45,7 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
         </div>
         <button
           type="button"
+          onClick={() => onNavigate("create-activity")}
           className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
@@ -184,6 +197,7 @@ export function BusinessCustomersPage({ onNavigate }: BusinessSubPageProps) {
 
 export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
   const data = businessDashboardData
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -194,6 +208,7 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
         </div>
         <button
           type="button"
+          onClick={() => setIsAddMemberOpen(true)}
           className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
@@ -228,11 +243,36 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
           </div>
         ))}
       </div>
+
+      <AddTeamMemberModal isOpen={isAddMemberOpen} onClose={() => setIsAddMemberOpen(false)} />
     </div>
   )
 }
 
 export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
+  type BusinessResource = (typeof businessResources)[number] & {
+    price?: number
+    pricePerHour?: number
+    description?: string
+  }
+
+  const [isAddResourceOpen, setIsAddResourceOpen] = useState(false)
+  const [resources, setResources] = useState<BusinessResource[]>(businessResources)
+  const [editingResource, setEditingResource] = useState<BusinessResource | null>(null)
+
+  const resourceTypeLabels: Record<"facility" | "product" | "service", string> = {
+    facility: "Court",
+    product: "Product",
+    service: "Service",
+  }
+
+  const resolveResourceType = (type: string) => {
+    const normalized = type.toLowerCase()
+    if (["court", "pool", "studio", "ring"].some((item) => normalized.includes(item))) return "facility"
+    if (["product", "gear", "item"].some((item) => normalized.includes(item))) return "product"
+    return "service"
+  }
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex items-center justify-between">
@@ -242,6 +282,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
         </div>
         <button
           type="button"
+          onClick={() => setIsAddResourceOpen(true)}
           className="gradient-primary rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
         >
           Add Resource
@@ -249,7 +290,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {businessResources.map((resource) => (
+        {resources.map((resource) => (
           <div key={resource.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-4">
               <img
@@ -282,15 +323,69 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
               >
                 {resource.status}
               </span>
+              <button
+                type="button"
+                onClick={() => setEditingResource(resource)}
+                className="rounded-full p-2 hover:bg-muted"
+              >
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      <AddResourceModal
+        isOpen={isAddResourceOpen}
+        onClose={() => setIsAddResourceOpen(false)}
+        onCreate={(resource) => {
+          const label = resourceTypeLabels[resource.resourceType]
+          const nextResource = {
+            id: `resource-${Date.now()}`,
+            name: resource.name || `New ${label}`,
+            type: label,
+            status: "available",
+            bookingsToday: 0,
+            revenue: 0,
+            image: resource.image || "/placeholder.svg",
+            description: resource.description,
+            price: resource.resourceType === "facility" ? undefined : resource.price,
+            pricePerHour: resource.resourceType === "facility" ? resource.price : undefined,
+          }
+          setResources((prev) => [nextResource, ...prev])
+        }}
+      />
+      {editingResource && (
+        <EditResourceModal
+          isOpen={!!editingResource}
+          onClose={() => setEditingResource(null)}
+          onDelete={() => {
+            setResources((prev) => prev.filter((item) => item.id !== editingResource.id))
+            setEditingResource(null)
+          }}
+          onSave={(updated) => {
+            setResources((prev) => prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)))
+            setEditingResource(null)
+          }}
+          resource={editingResource}
+          resourceType={resolveResourceType(editingResource.type)}
+        />
+      )}
     </div>
   )
 }
 
 export function BusinessPartnersPage({ onNavigate }: BusinessSubPageProps) {
+  const [tierPoster, setTierPoster] = useState("")
+  const [tiers, setTiers] = useState<SponsorshipTier[]>([
+    { id: "tier-gold", name: "Gold", price: 4500, benefits: ["Logo on jersey", "2 social posts"], logoPositions: ["Jersey Front", "Poster Top"] },
+    { id: "tier-silver", name: "Silver", price: 2500, benefits: ["Logo on poster"], logoPositions: ["Poster Bottom"] },
+  ])
+  const [collaborationPhase, setCollaborationPhase] = useState<"pre" | "during" | "post">("pre")
+  const [collaborationSearch, setCollaborationSearch] = useState("")
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string | undefined>(undefined)
+  const [selectedDeliverables, setSelectedDeliverables] = useState<string[]>([])
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div>
@@ -319,6 +414,70 @@ export function BusinessPartnersPage({ onNavigate }: BusinessSubPageProps) {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Sponsorship Packages</p>
+              <p className="text-xs text-muted-foreground">Bundle placements and perks</p>
+            </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-semibold text-primary">Builder</span>
+          </div>
+          <div className="mt-4">
+            <SponsorshipTierBuilder
+              tiers={tiers}
+              onChange={setTiers}
+              eventPoster={tierPoster}
+              onPosterUpload={setTierPoster}
+            />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Athlete Collaboration</p>
+              <p className="text-xs text-muted-foreground">Plan deliverables by phase</p>
+            </div>
+            <div className="flex gap-1 rounded-full border border-border p-1 text-[10px]">
+              {(["pre", "during", "post"] as const).map((phase) => (
+                <button
+                  key={phase}
+                  type="button"
+                  onClick={() => setCollaborationPhase(phase)}
+                  className={cn(
+                    "rounded-full px-3 py-1 font-semibold",
+                    collaborationPhase === phase ? "bg-secondary text-white" : "text-muted-foreground"
+                  )}
+                >
+                  {phase}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4">
+            <AthleteCollaborationSelector
+              phase={collaborationPhase}
+              athletes={athletes.map((athlete) => ({
+                id: athlete.id,
+                name: athlete.name,
+                sport: athlete.sport,
+                followers: athlete.followers,
+                ranking: athlete.ranking,
+                avatar: athlete.avatar,
+                verified: athlete.status === "active",
+              }))}
+              selectedAthlete={selectedAthleteId}
+              onSelectAthlete={setSelectedAthleteId}
+              searchQuery={collaborationSearch}
+              onSearchChange={setCollaborationSearch}
+              selectedDeliverables={selectedDeliverables}
+              onDeliverablesChange={setSelectedDeliverables}
+            />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -398,12 +557,13 @@ export function BusinessAnalyticsPage({ onNavigate }: BusinessSubPageProps) {
 }
 
 export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
-  const campaigns = [
+  const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false)
+  const [campaigns, setCampaigns] = useState([
     { name: "Summer Sports Fest", status: "active", reach: 4500, conversions: 234, budget: 500, spent: 320 },
     { name: "New Member Discount", status: "active", reach: 2800, conversions: 156, budget: 300, spent: 180 },
     { name: "Team Building Promo", status: "ended", reach: 1900, conversions: 89, budget: 200, spent: 200 },
     { name: "Holiday Special", status: "draft", reach: 0, conversions: 0, budget: 400, spent: 0 },
-  ]
+  ])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -414,6 +574,7 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
         </div>
         <button
           type="button"
+          onClick={() => setIsAddCampaignOpen(true)}
           className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
@@ -481,6 +642,24 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
           </div>
         ))}
       </div>
+
+      <AddCampaignModal
+        isOpen={isAddCampaignOpen}
+        onClose={() => setIsAddCampaignOpen(false)}
+        onCreate={(campaign) => {
+          setCampaigns((prev) => [
+            {
+              name: campaign.name,
+              status: "draft",
+              reach: 0,
+              conversions: 0,
+              budget: campaign.budget,
+              spent: 0,
+            },
+            ...prev,
+          ])
+        }}
+      />
     </div>
   )
 }

@@ -1,0 +1,142 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import { Search, SlidersHorizontal } from "lucide-react"
+import { products } from "@/lib/mock-data"
+import { ProductCard } from "@/components/sporgates/cards/product-card"
+import { ProductsFilterSidebar } from "@/components/sporgates/filters/products-filter-sidebar"
+import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loading-cards"
+import type { PageRoute } from "@/lib/navigation"
+import { cn } from "@/lib/utils"
+
+interface ProductsPageProps {
+  onNavigate: (page: PageRoute, detailId?: string) => void
+}
+
+const priceRanges = ["Any Price", "Under $50", "$50-$100", "$100-$200", "Over $200"]
+
+export function ProductsPage({ onNavigate }: ProductsPageProps) {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState("All")
+  const [priceRange, setPriceRange] = useState("Any Price")
+  const isLoading = false
+
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(products.map((item) => item.category)))],
+    []
+  )
+
+  const filteredProducts = products.filter((product) => {
+    const matchesQuery =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesCategory = categoryFilter === "All" || product.category === categoryFilter
+
+    if (!matchesQuery || !matchesCategory) return false
+
+    if (priceRange === "Under $50" && product.price >= 50) return false
+    if (priceRange === "$50-$100" && (product.price < 50 || product.price > 100)) return false
+    if (priceRange === "$100-$200" && (product.price < 100 || product.price > 200)) return false
+    if (priceRange === "Over $200" && product.price <= 200) return false
+
+    return true
+  })
+
+  return (
+    <div className="space-y-6 pb-20 lg:pb-0">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Products</h1>
+          <p className="text-sm text-muted-foreground">Browse sports gear and essentials</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate("marketplace")}
+          className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          Back to Marketplace
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search products..."
+            className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowFilters((prev) => !prev)}
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted",
+            showFilters && "bg-primary text-primary-foreground border-primary"
+          )}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
+      </div>
+
+      {showFilters && (
+        <ProductsFilterSidebar
+          categories={categories}
+          activeCategory={categoryFilter}
+          priceRanges={priceRanges}
+          activePriceRange={priceRange}
+          onCategoryChange={setCategoryFilter}
+          onPriceRangeChange={setPriceRange}
+        />
+      )}
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{filteredProducts.length}</span> products found
+        </p>
+        <select className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs outline-none">
+          <option>Sort by: Relevance</option>
+          <option>Price: Low to High</option>
+          <option>Price: High to Low</option>
+          <option>Rating</option>
+        </select>
+      </div>
+
+      {isLoading ? (
+        <LoadingGrid>
+          <LoadingProductCard />
+        </LoadingGrid>
+      ) : filteredProducts.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="No products found"
+          description="Try adjusting your filters or search query"
+          action={{
+            label: "Clear Filters",
+            onClick: () => {
+              setSearchQuery("")
+              setCategoryFilter("All")
+              setPriceRange("Any Price")
+            },
+            variant: "secondary",
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={() => onNavigate("product-detail", product.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

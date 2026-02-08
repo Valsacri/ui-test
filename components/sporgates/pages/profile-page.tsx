@@ -81,13 +81,29 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
               </div>
               <p className="text-sm text-muted-foreground">{userProfile.username}</p>
             </div>
-            <button
-              type="button"
-              onClick={() => onNavigate("settings")}
-              className="hidden rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white md:block"
-            >
-              Edit Profile
-            </button>
+            <div className="hidden items-center gap-2 md:flex">
+              <button
+                type="button"
+                onClick={() => onNavigate("profile-enhanced")}
+                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                View Insights
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate("profile-information")}
+                className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                Profile Info
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate("settings")}
+                className="rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
+              >
+                Edit Profile
+              </button>
+            </div>
           </div>
           <p className="mt-3 text-sm text-foreground">{userProfile.bio}</p>
           <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">

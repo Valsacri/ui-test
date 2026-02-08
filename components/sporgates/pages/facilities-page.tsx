@@ -4,8 +4,15 @@ import { useState } from "react"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
 import { facilities } from "@/lib/mock-data"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
+import { FacilitiesFilterSidebar } from "@/components/sporgates/filters/facilities-filter-sidebar"
+import { MapFilter } from "@/components/sporgates/map-filter"
+import { MapView } from "@/components/sporgates/map-view"
+import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
+import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { LoadingFacilityCard, LoadingGrid } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface FacilitiesPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -15,6 +22,11 @@ const filters = ["All", "Available", "Free", "Indoor", "Outdoor", "Multi-Sport"]
 
 export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
+  const [showFilters, setShowFilters] = useState(false)
+  const [showMap, setShowMap] = useState(false)
+  const mapCenter = facilities[0]?.coordinates || [40.7465, -74.0071]
+  const isMobile = useIsMobile()
+  const isLoading = false
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -36,16 +48,21 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
         </div>
         <button
           type="button"
+          onClick={() => setShowFilters((prev) => !prev)}
           className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
         >
           <SlidersHorizontal className="h-4 w-4 text-foreground" />
         </button>
         <button
           type="button"
-          className="flex h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted"
+          onClick={() => setShowMap((prev) => !prev)}
+          className={cn(
+            "flex h-11 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted",
+            showMap && "bg-primary text-primary-foreground border-primary"
+          )}
         >
           <MapPin className="h-4 w-4" />
-          <span className="hidden md:inline">Map View</span>
+          <span className="hidden md:inline">{showMap ? "Hide Map" : "Map View"}</span>
         </button>
       </div>
 
@@ -67,15 +84,49 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {facilities.map((facility) => (
-          <FacilityCard
-            key={facility.id}
-            facility={facility}
-            onClick={() => onNavigate("facility-detail", facility.id)}
-          />
-        ))}
-      </div>
+      {showFilters && isMobile && (
+        <BottomSheet isOpen={showFilters} onClose={() => setShowFilters(false)} title="Filters">
+          <FacilitiesFilterSidebar onClose={() => setShowFilters(false)} />
+        </BottomSheet>
+      )}
+
+      {showFilters && !isMobile && (
+        <FacilitiesFilterSidebar onClose={() => setShowFilters(false)} />
+      )}
+
+      {showMap && (
+        <div className="space-y-4">
+          <MapFilter />
+          <MapView center={mapCenter as [number, number]} markerLabel="Facility cluster" height="300px" />
+        </div>
+      )}
+
+      {isLoading ? (
+        <LoadingGrid className="md:grid-cols-2">
+          <LoadingFacilityCard />
+        </LoadingGrid>
+      ) : facilities.length === 0 ? (
+        <EmptyState
+          icon={MapPin}
+          title="No facilities found"
+          description="Try adjusting your filters or map radius."
+          action={{
+            label: "Clear Filters",
+            onClick: () => setActiveFilter("All"),
+            variant: "secondary",
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {facilities.map((facility) => (
+            <FacilityCard
+              key={facility.id}
+              facility={facility}
+              onClick={() => onNavigate("facility-detail", facility.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

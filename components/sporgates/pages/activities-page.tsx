@@ -4,8 +4,13 @@ import { useState } from "react"
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
 import { activities } from "@/lib/mock-data"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
+import { ActivitiesFilterSidebar } from "@/components/sporgates/filters/activities-filter-sidebar"
+import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
+import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { LoadingActivityCard, LoadingGrid } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface ActivitiesPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -16,6 +21,9 @@ const filters = ["All", "Today", "This Week", "Free", "Paid", "Indoor", "Outdoor
 export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [showFilters, setShowFilters] = useState(false)
+  const isMobile = useIsMobile()
+  const isLoading = false
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -37,6 +45,7 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
         </div>
         <button
           type="button"
+          onClick={() => setShowFilters((prev) => !prev)}
           className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
         >
           <SlidersHorizontal className="h-4 w-4 text-foreground" />
@@ -83,6 +92,20 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
         ))}
       </div>
 
+      {showFilters && isMobile && (
+        <BottomSheet
+          isOpen={showFilters}
+          onClose={() => setShowFilters(false)}
+          title="Filters"
+        >
+          <ActivitiesFilterSidebar onClose={() => setShowFilters(false)} />
+        </BottomSheet>
+      )}
+
+      {showFilters && !isMobile && (
+        <ActivitiesFilterSidebar onClose={() => setShowFilters(false)} />
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{activities.length}</span> activities found
@@ -96,15 +119,32 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {activities.map((activity) => (
-          <ActivityCard
-            key={activity.id}
-            activity={activity}
-            onClick={() => onNavigate("activity-detail", activity.id)}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <LoadingGrid>
+          <LoadingActivityCard />
+        </LoadingGrid>
+      ) : activities.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="No activities found"
+          description="Try adjusting your filters or search query."
+          action={{
+            label: "Clear Filters",
+            onClick: () => setActiveFilter("All"),
+            variant: "secondary",
+          }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {activities.map((activity) => (
+            <ActivityCard
+              key={activity.id}
+              activity={activity}
+              onClick={() => onNavigate("activity-detail", activity.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
