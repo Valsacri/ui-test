@@ -161,7 +161,7 @@ export function SponsorshipTierBuilder({
                   <Upload className="w-12 h-12 mx-auto text-muted-foreground" />
                   <div>
                     <label htmlFor="poster-upload" className="cursor-pointer">
-                      <span className="text-[#003C66] hover:text-[#FC8936] font-medium">
+                      <span className="text-primary hover:text-secondary font-medium">
                         Click to upload
                       </span>
                       <span className="text-muted-foreground"> or drag and drop</span>
@@ -199,7 +199,7 @@ export function SponsorshipTierBuilder({
               {/* Front View */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-center">Front View</p>
-                <div className="relative bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg p-8 aspect-[3/4]">
+                <div className="relative bg-gradient-to-b from-muted to-accent rounded-xl p-8 aspect-[3/4]">
                   {/* Jersey Front SVG */}
                   <svg viewBox="0 0 300 400" className="w-full h-full">
                     {/* Jersey Body */}
@@ -315,7 +315,7 @@ export function SponsorshipTierBuilder({
               {/* Back View */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-center">Back View</p>
-                <div className="relative bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg p-8 aspect-[3/4]">
+                <div className="relative bg-gradient-to-b from-muted to-accent rounded-xl p-8 aspect-[3/4]">
                   {/* Jersey Back SVG */}
                   <svg viewBox="0 0 300 400" className="w-full h-full">
                     {/* Jersey Body */}
@@ -379,11 +379,11 @@ export function SponsorshipTierBuilder({
             </div>
 
             {selectedJerseyPosition && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-blue-900">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                <p className="text-sm font-medium text-foreground">
                   Selected: {LOGO_POSITIONS.find(p => p.id === selectedJerseyPosition)?.name}
                 </p>
-                <p className="text-xs text-blue-700 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Assign this position to a sponsorship tier below
                 </p>
               </div>
@@ -406,7 +406,7 @@ export function SponsorshipTierBuilder({
               <Button
                 onClick={addNewTier}
                 size="sm"
-                className="bg-[#003C66] hover:bg-[#002A4A]"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Tier
@@ -418,7 +418,7 @@ export function SponsorshipTierBuilder({
               {tiers.map((tier) => (
                 <div
                   key={tier.id}
-                  className="border rounded-lg p-4 hover:border-[#FC8936] transition-colors"
+                  className="border border-border rounded-xl p-4 hover:border-secondary transition-colors"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -625,7 +625,7 @@ export function SponsorshipTierBuilder({
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 bg-[#003C66] hover:bg-[#002A4A]"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
                   onClick={saveTier}
                 >
                   Save Tier

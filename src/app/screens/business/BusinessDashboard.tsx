@@ -209,10 +209,10 @@ export function BusinessDashboard({
 
   return (
     <div className="w-full pb-6">
-      {/* Business Profile Section - Removed TopBar as it's now in RootLayout */}
-      <div className="bg-white border-b rounded-lg mb-6">
+      {/* Business Profile Section */}
+      <div className="bg-card border border-border rounded-xl mb-6 overflow-hidden shadow-sm">
         {/* Cover Image */}
-        <div className="relative h-48 bg-gradient-to-r from-[#003C66] to-[#005A99]">
+        <div className="relative h-48 bg-gradient-to-r from-primary to-primary/70">
           <img 
             src="https://images.unsplash.com/photo-1761971975769-97e598bf526b?w=1200"
             alt="Business cover"
@@ -221,7 +221,7 @@ export function BusinessDashboard({
           <Button 
             variant="ghost" 
             size="sm"
-            className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white"
+            className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white rounded-lg"
           >
             <Camera className="w-4 h-4 mr-2" />
             Edit Cover
@@ -234,16 +234,16 @@ export function BusinessDashboard({
             {/* Profile Picture */}
             <div className="absolute -top-16 left-0">
               <div className="relative">
-                <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
+                <Avatar className="w-32 h-32 border-4 border-card shadow-lg">
                   <AvatarImage src={currentBusiness.avatar} />
-                  <AvatarFallback className="bg-[#003C66] text-white text-3xl">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
                     {currentBusiness.name.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="absolute bottom-0 right-0 bg-white border shadow-sm rounded-full w-10 h-10 p-0"
+                  className="absolute bottom-0 right-0 bg-card border border-border shadow-sm rounded-full w-10 h-10 p-0"
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
@@ -275,7 +275,7 @@ export function BusinessDashboard({
                 {/* Rating and Stats */}
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-[#FC8936] text-[#FC8936]" />
+                    <Star className="w-4 h-4 fill-secondary text-secondary" />
                     <span className="font-semibold">4.8</span>
                     <span className="text-muted-foreground">(127 reviews)</span>
                   </div>
@@ -289,7 +289,7 @@ export function BusinessDashboard({
                   </div>
                 </div>
               </div>
-              <Badge className="bg-[#003C66] hover:bg-[#002A4A]">Pro</Badge>
+              <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground">Pro</Badge>
             </div>
 
             {/* Contact Info */}
@@ -310,24 +310,24 @@ export function BusinessDashboard({
 
             {/* Quick Stats Bar */}
             <div className="grid grid-cols-4 gap-3 mt-4">
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
+              <div className="text-center p-3 bg-muted rounded-xl">
                 <DollarSign className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                <p className="text-lg font-bold">${totalRevenue}</p>
+                <p className="text-lg font-bold text-foreground">${totalRevenue}</p>
                 <p className="text-xs text-muted-foreground">Revenue</p>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <Calendar className="w-5 h-5 mx-auto mb-1 text-blue-600" />
-                <p className="text-lg font-bold">{myActivities.length}</p>
+              <div className="text-center p-3 bg-muted rounded-xl">
+                <Calendar className="w-5 h-5 mx-auto mb-1 text-primary" />
+                <p className="text-lg font-bold text-foreground">{myActivities.length}</p>
                 <p className="text-xs text-muted-foreground">Events</p>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <Trophy className="w-5 h-5 mx-auto mb-1 text-[#FC8936]" />
-                <p className="text-lg font-bold">{activeCampaigns}</p>
+              <div className="text-center p-3 bg-muted rounded-xl">
+                <Trophy className="w-5 h-5 mx-auto mb-1 text-secondary" />
+                <p className="text-lg font-bold text-foreground">{activeCampaigns}</p>
                 <p className="text-xs text-muted-foreground">Campaigns</p>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <Eye className="w-5 h-5 mx-auto mb-1 text-purple-600" />
-                <p className="text-lg font-bold">{totalReach}</p>
+              <div className="text-center p-3 bg-muted rounded-xl">
+                <Eye className="w-5 h-5 mx-auto mb-1 text-primary" />
+                <p className="text-lg font-bold text-foreground">{totalReach}</p>
                 <p className="text-xs text-muted-foreground">Reach</p>
               </div>
             </div>
@@ -348,25 +348,25 @@ export function BusinessDashboard({
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 mt-6">
             {/* Business Overview */}
-            <Card>
+            <Card className="border-border shadow-sm">
               <CardHeader>
-                <CardTitle>Business Overview</CardTitle>
+                <CardTitle className="text-base">Business Overview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <Calendar className="w-5 h-5 mx-auto mb-2 text-blue-600" />
-                    <p className="text-xl font-bold">2</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-primary/5 rounded-xl">
+                    <Calendar className="w-5 h-5 mx-auto mb-2 text-primary" />
+                    <p className="text-xl font-bold text-foreground">2</p>
                     <p className="text-xs text-muted-foreground">Past Events</p>
                   </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-center p-4 bg-green-50 rounded-xl">
                     <Users className="w-5 h-5 mx-auto mb-2 text-green-600" />
-                    <p className="text-xl font-bold">4.3K</p>
+                    <p className="text-xl font-bold text-foreground">4.3K</p>
                     <p className="text-xs text-muted-foreground">Total Attendance</p>
                   </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <Eye className="w-5 h-5 mx-auto mb-2 text-purple-600" />
-                    <p className="text-xl font-bold">235K</p>
+                  <div className="text-center p-4 bg-secondary/5 rounded-xl">
+                    <Eye className="w-5 h-5 mx-auto mb-2 text-secondary" />
+                    <p className="text-xl font-bold text-foreground">235K</p>
                     <p className="text-xs text-muted-foreground">Media Reach</p>
                   </div>
                 </div>
@@ -374,25 +374,25 @@ export function BusinessDashboard({
             </Card>
 
             {/* Business Details */}
-            <Card>
+            <Card className="border-border shadow-sm">
               <CardHeader>
-                <CardTitle>Business Details</CardTitle>
+                <CardTitle className="text-base">Business Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <Building2 className="w-5 h-5 mx-auto mb-2 text-gray-600" />
-                    <p className="text-xl font-bold">Peak Performance Gym</p>
+                  <div className="text-center p-4 bg-muted rounded-xl">
+                    <Building2 className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-lg font-bold text-foreground">Peak Performance Gym</p>
                     <p className="text-xs text-muted-foreground">Fitness Center</p>
                   </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <MapPin className="w-5 h-5 mx-auto mb-2 text-gray-600" />
-                    <p className="text-xl font-bold">New York, NY</p>
+                  <div className="text-center p-4 bg-muted rounded-xl">
+                    <MapPin className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-lg font-bold text-foreground">New York, NY</p>
                     <p className="text-xs text-muted-foreground">Location</p>
                   </div>
-                  <div className="p-4 bg-gray-50 rounded-lg col-span-2">
+                  <div className="p-4 bg-muted rounded-xl col-span-2">
                     <div className="flex items-center gap-2 mb-4">
-                      <Clock className="w-5 h-5 text-gray-600" />
+                      <Clock className="w-5 h-5 text-muted-foreground" />
                       <p className="font-semibold">Operating Hours</p>
                     </div>
                     
@@ -402,7 +402,7 @@ export function BusinessDashboard({
                       <div className="flex gap-1 mb-2">
                         <div className="w-20 flex-shrink-0"></div>
                         {Array.from({ length: 24 }, (_, i) => (
-                          <div key={i} className="w-8 flex-shrink-0 text-[10px] text-center text-gray-500">
+                          <div key={i} className="w-8 flex-shrink-0 text-[10px] text-center text-muted-foreground">
                             {i === 0 ? '12a' : i < 12 ? `${i}a` : i === 12 ? '12p' : `${i-12}p`}
                           </div>
                         ))}
@@ -420,7 +420,7 @@ export function BusinessDashboard({
                           { day: 'Sun', start: 8, end: 20 },
                         ].map((daySchedule) => (
                           <div key={daySchedule.day} className="flex gap-1 items-center">
-                            <div className="w-20 flex-shrink-0 text-sm font-medium text-gray-700">
+                            <div className="w-20 flex-shrink-0 text-sm font-medium text-foreground">
                               {daySchedule.day}
                             </div>
                             <div className="flex gap-1">
@@ -429,10 +429,10 @@ export function BusinessDashboard({
                                 return (
                                   <div
                                     key={hour}
-                                    className={`w-8 h-8 flex-shrink-0 rounded ${
+                                    className={`w-8 h-8 flex-shrink-0 rounded-md ${
                                       isOpen
-                                        ? 'bg-[#003C66] hover:bg-[#002A4A]'
-                                        : 'bg-gray-200'
+                                        ? 'bg-primary hover:bg-primary/90'
+                                        : 'bg-border'
                                     } transition-colors`}
                                     title={`${hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}${hour < 12 ? 'AM' : 'PM'} - ${isOpen ? 'Open' : 'Closed'}`}
                                   />
@@ -446,12 +446,12 @@ export function BusinessDashboard({
                       {/* Legend */}
                       <div className="flex items-center gap-4 mt-4 text-xs">
                         <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-[#003C66] rounded"></div>
-                          <span className="text-gray-600">Open</span>
+                          <div className="w-4 h-4 bg-primary rounded"></div>
+                          <span className="text-muted-foreground">Open</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-gray-200 rounded"></div>
-                          <span className="text-gray-600">Closed</span>
+                          <div className="w-4 h-4 bg-border rounded"></div>
+                          <span className="text-muted-foreground">Closed</span>
                         </div>
                       </div>
                     </div>
@@ -464,16 +464,16 @@ export function BusinessDashboard({
           {/* Feeds Tab */}
           <TabsContent value="feeds" className="space-y-6 mt-6">
             {/* Create Post Action */}
-            <Card className="bg-white border hover:shadow-sm transition-shadow">
+            <Card className="border-border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <Avatar className="w-10 h-10">
                     <AvatarImage src={currentBusiness.avatar} />
-                    <AvatarFallback className="bg-[#003C66] text-white">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
                       {currentBusiness.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 bg-gray-100 rounded-full px-4 py-2 cursor-pointer hover:bg-gray-200 transition-colors">
+                  <div className="flex-1 bg-muted rounded-full px-4 py-2 cursor-pointer hover:bg-accent transition-colors">
                     <p className="text-sm text-muted-foreground">Share an update with your followers...</p>
                   </div>
                 </div>
@@ -503,9 +503,9 @@ export function BusinessDashboard({
                   <div className="p-4 flex items-start gap-3">
                     <Avatar className="w-10 h-10">
                       <AvatarImage src={currentBusiness.avatar} />
-                      <AvatarFallback className="bg-[#003C66] text-white">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
                         {currentBusiness.name.charAt(0)}
-                      </AvatarFallback>
+                    </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <h3 className="font-semibold">Peak Performance Gym</h3>
@@ -522,7 +522,7 @@ export function BusinessDashboard({
                   </div>
 
                   {/* Post Image */}
-                  <div className="relative w-full aspect-video bg-gray-200">
+                  <div className="relative w-full aspect-video bg-muted">
                     <img 
                       src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800"
                       alt="Yoga session"
@@ -560,9 +560,9 @@ export function BusinessDashboard({
                   <div className="p-4 flex items-start gap-3">
                     <Avatar className="w-10 h-10">
                       <AvatarImage src={currentBusiness.avatar} />
-                      <AvatarFallback className="bg-[#003C66] text-white">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
                         {currentBusiness.name.charAt(0)}
-                      </AvatarFallback>
+                    </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <h3 className="font-semibold">Peak Performance Gym</h3>
@@ -579,7 +579,7 @@ export function BusinessDashboard({
                   </div>
 
                   {/* Post Image */}
-                  <div className="relative w-full aspect-video bg-gray-200">
+                  <div className="relative w-full aspect-video bg-muted">
                     <img 
                       src={MOCK_BUSINESS_PRODUCTS[0].image}
                       alt="Resistance bands"
@@ -589,9 +589,9 @@ export function BusinessDashboard({
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1">
                           <p className="font-semibold text-sm">Resistance Bands Set</p>
-                          <p className="text-lg font-bold text-[#003C66]">$29.99</p>
+                          <p className="text-lg font-bold text-primary">$29.99</p>
                         </div>
-                        <Badge className="bg-[#FC8936] hover:bg-[#E67A2F] cursor-pointer">Shop Now</Badge>
+                        <Badge className="bg-secondary hover:bg-secondary/90 text-secondary-foreground cursor-pointer">Shop Now</Badge>
                       </div>
                     </div>
                   </div>
@@ -621,9 +621,9 @@ export function BusinessDashboard({
                   <div className="p-4 flex items-start gap-3">
                     <Avatar className="w-10 h-10">
                       <AvatarImage src={currentBusiness.avatar} />
-                      <AvatarFallback className="bg-[#003C66] text-white">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
                         {currentBusiness.name.charAt(0)}
-                      </AvatarFallback>
+                    </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <h3 className="font-semibold">Peak Performance Gym</h3>
@@ -640,7 +640,7 @@ export function BusinessDashboard({
                   </div>
 
                   {/* Post Image */}
-                  <div className="relative w-full aspect-video bg-gray-200">
+                  <div className="relative w-full aspect-video bg-muted">
                     <img 
                       src={MOCK_BUSINESS_SERVICES[0].image}
                       alt="Personal training"
@@ -648,7 +648,7 @@ export function BusinessDashboard({
                     />
                     <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
                       <p className="font-semibold text-sm">1-on-1 Personal Training</p>
-                      <p className="text-lg font-bold text-[#003C66]">$75/session</p>
+                      <p className="text-lg font-bold text-primary">$75/session</p>
                       <p className="text-xs text-muted-foreground mt-1">First session free!</p>
                     </div>
                   </div>
@@ -678,9 +678,9 @@ export function BusinessDashboard({
                   <div className="p-4 flex items-start gap-3">
                     <Avatar className="w-10 h-10">
                       <AvatarImage src={currentBusiness.avatar} />
-                      <AvatarFallback className="bg-[#003C66] text-white">
+                    <AvatarFallback className="bg-primary text-primary-foreground">
                         {currentBusiness.name.charAt(0)}
-                      </AvatarFallback>
+                    </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <h3 className="font-semibold">Peak Performance Gym</h3>
@@ -697,7 +697,7 @@ export function BusinessDashboard({
                   </div>
 
                   {/* Post Image */}
-                  <div className="relative w-full aspect-video bg-gray-200">
+                  <div className="relative w-full aspect-video bg-muted">
                     <img 
                       src={MOCK_BUSINESS_FACILITIES[0].image}
                       alt="Sports court"
@@ -705,7 +705,7 @@ export function BusinessDashboard({
                     />
                     <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
                       <p className="font-semibold text-sm">Indoor Sports Court</p>
-                      <p className="text-lg font-bold text-[#003C66]">$50/hour</p>
+                      <p className="text-lg font-bold text-primary">$50/hour</p>
                       <p className="text-xs text-muted-foreground mt-1">Available 6 AM - 10 PM</p>
                     </div>
                   </div>
@@ -736,14 +736,14 @@ export function BusinessDashboard({
             <div className="grid grid-cols-2 gap-3">
               <Button 
                 onClick={onCreateCampaign}
-                className="h-auto py-6 flex-col gap-2 bg-[#FC8936] hover:bg-[#E67A2F]"
+                className="h-auto py-6 flex-col gap-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-xl"
               >
                 <Target className="w-6 h-6" />
                 <span>New Campaign</span>
               </Button>
               <Button 
                 variant="outline" 
-                className="h-auto py-6 flex-col gap-2"
+                className="h-auto py-6 flex-col gap-2 rounded-xl"
               >
                 <BarChart3 className="w-6 h-6" />
                 <span>View Analytics</span>
@@ -759,7 +759,7 @@ export function BusinessDashboard({
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="border rounded-lg p-4">
+                <div className="border border-border rounded-xl p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="font-semibold mb-1">Brand Awareness Q1 2026</h3>
@@ -823,18 +823,18 @@ export function BusinessDashboard({
                     <span className="text-muted-foreground">Brand Awareness</span>
                     <span className="font-semibold text-orange-600">+45%</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-600 rounded-full" style={{ width: '75%' }} />
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-secondary rounded-full" style={{ width: '75%' }} />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Engagement Rate</span>
-                    <span className="font-semibold text-pink-600">+32%</span>
+                    <span className="font-semibold text-primary">+32%</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-pink-600 rounded-full" style={{ width: '65%' }} />
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: '65%' }} />
                   </div>
                 </div>
               </CardContent>
@@ -855,7 +855,7 @@ export function BusinessDashboard({
                   </div>
                   <Button 
                     onClick={() => setShowPortfolio(true)}
-                    className="bg-[#003C66] hover:bg-[#002A4A]"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     View Portfolio
                   </Button>
@@ -863,19 +863,19 @@ export function BusinessDashboard({
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <Calendar className="w-5 h-5 mx-auto mb-2 text-blue-600" />
-                    <p className="text-xl font-bold">2</p>
+                  <div className="text-center p-4 bg-primary/5 rounded-xl">
+                    <Calendar className="w-5 h-5 mx-auto mb-2 text-primary" />
+                    <p className="text-xl font-bold text-foreground">2</p>
                     <p className="text-xs text-muted-foreground">Past Events</p>
                   </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <div className="text-center p-4 bg-green-50 rounded-xl">
                     <Users className="w-5 h-5 mx-auto mb-2 text-green-600" />
-                    <p className="text-xl font-bold">4.3K</p>
+                    <p className="text-xl font-bold text-foreground">4.3K</p>
                     <p className="text-xs text-muted-foreground">Total Attendance</p>
                   </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <Eye className="w-5 h-5 mx-auto mb-2 text-purple-600" />
-                    <p className="text-xl font-bold">235K</p>
+                  <div className="text-center p-4 bg-secondary/5 rounded-xl">
+                    <Eye className="w-5 h-5 mx-auto mb-2 text-secondary" />
+                    <p className="text-xl font-bold text-foreground">235K</p>
                     <p className="text-xs text-muted-foreground">Media Reach</p>
                   </div>
                 </div>

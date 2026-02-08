@@ -406,7 +406,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
           <div className="space-y-6">
             {/* Activity Type Selection */}
             <div>
-              <h3 className="font-semibold mb-3">Select Activity Type</h3>
+              <h3 className="font-semibold mb-3 text-foreground">Select Activity Type</h3>
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {ACTIVITY_TYPES.map((type) => {
                   const IconComponent = getActivityIcon(type.icon);
@@ -415,13 +415,13 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                       key={type.id}
                       type="button"
                       onClick={() => setSelectedActivityType(type.id)}
-                      className={`flex-shrink-0 w-32 p-3 border-2 rounded-lg text-center transition-all ${
+                      className={`flex-shrink-0 w-32 p-3 border-2 rounded-xl text-center transition-all ${
                         selectedActivityType === type.id
-                          ? 'border-[#003C66] bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/30'
                       }`}
                     >
-                      <IconComponent className="w-5 h-5 mx-auto mb-2 text-[#003C66]" />
+                      <IconComponent className="w-5 h-5 mx-auto mb-2 text-primary" />
                       <span className="font-semibold text-sm block mb-1">{type.label}</span>
                       <p className="text-xs text-muted-foreground line-clamp-2">{type.description}</p>
                     </button>
@@ -432,7 +432,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
             {/* Divider */}
             <div className="border-t pt-6">
-              <h3 className="font-semibold mb-4">Basic Information</h3>
+              <h3 className="font-semibold mb-4 text-foreground">Basic Information</h3>
               
               {/* Activity Title */}
               <div className="mb-4">
@@ -449,10 +449,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                       key={sport.id}
                       type="button"
                       onClick={() => setSelectedSport(sport.id)}
-                      className={`p-3 border-2 rounded-lg text-center transition-all ${
+                      className={`p-3 border-2 rounded-xl text-center transition-all ${
                         selectedSport === sport.id
-                          ? 'border-[#003C66] bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/30'
                       }`}
                     >
                       <span className="text-2xl block mb-1">{sport.icon}</span>
@@ -471,10 +471,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                       key={level.id}
                       type="button"
                       onClick={() => setSelectedLevel(level.id)}
-                      className={`p-3 border-2 rounded-lg text-center transition-all ${
+                      className={`p-3 border-2 rounded-xl text-center transition-all ${
                         selectedLevel === level.id
-                          ? 'border-[#003C66] bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/30'
                       }`}
                     >
                       <span className="font-semibold text-sm block mb-1">{level.label}</span>
@@ -489,7 +489,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 <Label htmlFor="activity-description">Description</Label>
                 <textarea
                   id="activity-description"
-                  className="w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full min-h-[100px] px-3 py-2 border border-border rounded-xl bg-input-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                   placeholder="Describe your activity..."
                   required
                 />
@@ -553,10 +553,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-lg transition-colors ${
+                className={`relative border-2 border-dashed rounded-xl transition-colors ${
                   isDragging 
-                    ? 'border-[#003C66] bg-blue-50' 
-                    : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-border hover:border-primary/30'
                 }`}
               >
                 {uploadedImage ? (
@@ -581,11 +581,11 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     htmlFor="activity-image-file" 
                     className="flex flex-col items-center justify-center p-8 cursor-pointer"
                   >
-                    <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
-                    <p className="text-sm font-medium text-gray-700 mb-1">
+                    <ImageIcon className="w-12 h-12 text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium text-foreground mb-1">
                       Drop image here or click to upload
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       PNG, JPG up to 10MB
                     </p>
                     <input
@@ -625,34 +625,34 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
             </div>
 
             {/* How It Works Info Box */}
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 space-y-3">
-              <h4 className="font-semibold text-sm text-[#003C66]">How Event Sponsorship Works</h4>
-              <ul className="space-y-2 text-sm text-gray-700">
+            <div className="bg-primary/5 border-2 border-primary/20 rounded-lg p-4 space-y-3">
+              <h4 className="font-semibold text-sm text-primary">How Event Sponsorship Works</h4>
+              <ul className="space-y-2 text-sm text-foreground">
                 <li className="flex items-start gap-2">
-                  <span className="text-[#FC8936] mt-0.5">•</span>
+                  <span className="text-secondary mt-0.5">•</span>
                   <span><strong>Create Your Event:</strong> Set up your activity and enable sponsorship to make it visible to potential sponsors</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#FC8936] mt-0.5">•</span>
+                  <span className="text-secondary mt-0.5">•</span>
                   <span><strong>Define Visibility Tiers:</strong> Offer different sponsorship packages (Gold, Silver, Bronze) with varying levels of brand exposure</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#FC8936] mt-0.5">•</span>
+                  <span className="text-secondary mt-0.5">•</span>
                   <span><strong>Attract Sponsors:</strong> Businesses discover your event and choose sponsorship tiers that match their marketing goals</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#FC8936] mt-0.5">•</span>
+                  <span className="text-secondary mt-0.5">•</span>
                   <span><strong>Showcase Partners:</strong> Sponsor logos appear on event pages, promotional materials, and live displays</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#FC8936] mt-0.5">•</span>
+                  <span className="text-secondary mt-0.5">•</span>
                   <span><strong>Manage Everything:</strong> Track sponsorship commitments, coordinate with your team, and deliver on sponsor benefits</span>
                 </li>
               </ul>
             </div>
 
             {/* Enable Sponsorship Toggle */}
-            <div className="bg-white border-2 border-gray-200 rounded-lg p-4">
+            <div className="bg-card border-2 border-border rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 pr-4">
                   <Label htmlFor="enable-sponsorship" className="font-semibold text-base cursor-pointer">
@@ -672,7 +672,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                       setSponsorshipSubStep(1); // Reset sub-steps when disabled
                     }
                   }}
-                  className="data-[state=checked]:bg-[#003C66]"
+                  className="data-[state=checked]:bg-primary"
                 />
               </div>
             </div>
@@ -705,11 +705,11 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
             )}
 
             {isSponsoredEvent && isSponsorshipExpanded && (
-              <div className="space-y-6 p-4 bg-gradient-to-br from-orange-50 to-blue-50 border-2 border-[#FC8936] rounded-lg">
+              <div className="space-y-6 p-4 bg-gradient-to-br from-orange-50 to-blue-50 border-2 border-secondary rounded-lg">
                 {/* Sponsorship Header with Collapse Button */}
-                <div className="flex items-center justify-between pb-3 border-b-2 border-[#FC8936]/30">
+                <div className="flex items-center justify-between pb-3 border-b-2 border-secondary/30">
                   <div>
-                    <h3 className="font-bold text-[#003C66] text-lg">Sponsorship Configuration</h3>
+                    <h3 className="font-bold text-primary text-lg">Sponsorship Configuration</h3>
                     <p className="text-sm text-muted-foreground mt-1">Step {sponsorshipSubStep} of 4</p>
                   </div>
                   <Button
@@ -719,7 +719,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                       setIsSponsorshipExpanded(false);
                       setSponsorshipSubStep(1);
                     }}
-                    className="border-gray-300"
+                    className="border-border"
                   >
                     Collapse
                   </Button>
@@ -728,15 +728,15 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 {/* Sub-step 1: Mission, Goals & Target Audience */}
                 {sponsorshipSubStep === 1 && (
                 <div>
-                  <h4 className="font-semibold text-[#003C66] flex items-center gap-2 mb-4">
+                  <h4 className="font-semibold text-primary flex items-center gap-2 mb-4">
                     <Target className="w-5 h-5" />
                     Mission, Goals & Target Audience
                   </h4>
                   
                   {/* Mission & Purpose */}
-                  <div className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
-                    <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-[#003C66]" />
+                  <div className="bg-card rounded-lg p-4 border border-border mb-4">
+                    <h5 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-primary" />
                       Event Mission & Purpose
                     </h5>
                     
@@ -745,7 +745,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                         <Label htmlFor="event-mission">What is the mission of this event?</Label>
                         <textarea
                           id="event-mission"
-                          className="w-full min-h-[80px] px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          className="w-full min-h-[80px] px-3 py-2 border border-border rounded-md text-sm"
                           placeholder="e.g., Promote youth fitness and healthy competition, build community through sports, raise awareness for mental health through athletics..."
                         />
                         <p className="text-xs text-muted-foreground mt-1">Help sponsors understand the purpose and impact of your event</p>
@@ -756,7 +756,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                           <Label htmlFor="event-cause">Event Cause/Category</Label>
                           <select
                             id="event-cause"
-                            className="w-full h-10 px-3 border border-gray-300 rounded-md text-sm"
+                            className="w-full h-10 px-3 border border-border rounded-md text-sm"
                           >
                             <option value="">Select a category</option>
                             <option value="youth-development">Youth Development</option>
@@ -773,7 +773,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                           <Label htmlFor="event-impact">Expected Community Impact</Label>
                           <select
                             id="event-impact"
-                            className="w-full h-10 px-3 border border-gray-300 rounded-md text-sm"
+                            className="w-full h-10 px-3 border border-border rounded-md text-sm"
                           >
                             <option value="">Select impact level</option>
                             <option value="local">Local (Neighborhood)</option>
@@ -787,9 +787,9 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                   </div>
 
                   {/* Target Audience & Reach */}
-                  <div className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
-                    <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Users className="w-4 h-4 text-[#003C66]" />
+                  <div className="bg-card rounded-lg p-4 border border-border mb-4">
+                    <h5 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary" />
                       Target Audience & Reach
                     </h5>
                     
@@ -799,7 +799,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                         <Input 
                           id="target-audience" 
                           placeholder="e.g., Fitness enthusiasts 25-40"
-                          className="bg-white"
+                          className="bg-card"
                         />
                         <p className="text-xs text-muted-foreground mt-1">Demographics who will see sponsor brands</p>
                       </div>
@@ -810,7 +810,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                           id="expected-attendance" 
                           type="number"
                           placeholder="100"
-                          className="bg-white"
+                          className="bg-card"
                         />
                         <p className="text-xs text-muted-foreground mt-1">Participants + spectators</p>
                       </div>
@@ -820,17 +820,17 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                       <Label htmlFor="audience-interests">Audience Interests & Characteristics</Label>
                       <textarea
                         id="audience-interests"
-                        className="w-full min-h-[60px] px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        className="w-full min-h-[60px] px-3 py-2 border border-border rounded-md text-sm"
                         placeholder="e.g., Health-conscious, active lifestyle, social media engaged, interested in sports nutrition and fitness gear..."
                       />
                       <p className="text-xs text-muted-foreground mt-1">Help sponsors understand audience alignment with their brand</p>
                     </div>
 
                     {/* Audience Value Proposition */}
-                    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-primary/20">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Estimated Sponsor Reach</span>
-                        <span className="text-2xl font-bold text-[#003C66]">100+</span>
+                        <span className="text-sm font-medium text-foreground">Estimated Sponsor Reach</span>
+                        <span className="text-2xl font-bold text-primary">100+</span>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Direct exposure to 100 engaged participants and spectators
@@ -850,9 +850,9 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 {/* Sub-step 2: Event Resources & Budget Setup */}
                 {sponsorshipSubStep === 2 && (
                 <div>
-                  <Separator className="bg-[#FC8936]/20" />
+                  <Separator className="bg-secondary/20" />
                   
-                  <h4 className="font-semibold text-[#003C66] flex items-center gap-2 mb-4 mt-6">
+                  <h4 className="font-semibold text-primary flex items-center gap-2 mb-4 mt-6">
                     <DollarSign className="w-5 h-5" />
                     Event Resources & Budget Setup
                   </h4>
@@ -863,7 +863,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
                   {/* Category Filter */}
                   <div className="mb-4">
-                    <div className="bg-white rounded-lg border border-gray-200 p-3">
+                    <div className="bg-card rounded-lg border border-border p-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         {/* All Resources Button */}
                         <Button
@@ -871,7 +871,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                           variant={resourceCategory === 'all' ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setResourceCategory('all')}
-                          className={`h-8 ${resourceCategory === 'all' ? 'bg-[#003C66]' : ''}`}
+                          className={`h-8 ${resourceCategory === 'all' ? 'bg-primary' : ''}`}
                         >
                           All
                         </Button>
@@ -888,7 +888,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                               variant={resourceCategory === category ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => setResourceCategory(category)}
-                              className={`h-8 ${resourceCategory === category ? 'bg-[#003C66]' : ''}`}
+                              className={`h-8 ${resourceCategory === category ? 'bg-primary' : ''}`}
                             >
                               <IconComponent className="w-3.5 h-3.5 mr-1.5" />
                               {category}
@@ -917,7 +917,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     {/* My Products */}
                     <ResourceCarousel
                       title="My Products"
-                      icon={<Package className="w-4 h-4 text-[#003C66]" />}
+                      icon={<Package className="w-4 h-4 text-primary" />}
                       resources={MOCK_BUSINESS_PRODUCTS.filter(item => 
                         resourceCategory === 'all' || item.category === resourceCategory
                       )}
@@ -929,7 +929,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     {/* My Services */}
                     <ResourceCarousel
                       title="My Services"
-                      icon={<Users className="w-4 h-4 text-[#003C66]" />}
+                      icon={<Users className="w-4 h-4 text-primary" />}
                       resources={MOCK_BUSINESS_SERVICES.filter(item => 
                         resourceCategory === 'all' || item.category === resourceCategory
                       )}
@@ -941,7 +941,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     {/* Marketplace Products */}
                     <ResourceCarousel
                       title="Marketplace - Products"
-                      icon={<ShoppingCart className="w-4 h-4 text-[#FC8936]" />}
+                      icon={<ShoppingCart className="w-4 h-4 text-secondary" />}
                       resources={MOCK_MARKETPLACE_PRODUCTS.filter(product => 
                         (resourceCategory === 'all' || product.category === resourceCategory) &&
                         (!marketplaceSearchQuery || 
@@ -972,145 +972,145 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                   </div>
 
                   {/* Event Budget Breakdown Table */}
-                  <div className="bg-white rounded-lg border-2 border-gray-200 p-4 mb-4">
-                    <h5 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                      <DollarSign className="w-4 h-4 text-[#003C66]" />
+                  <div className="bg-card rounded-lg border-2 border-border p-4 mb-4">
+                    <h5 className="font-semibold text-foreground flex items-center gap-2 mb-4">
+                      <DollarSign className="w-4 h-4 text-primary" />
                       Event Budget Breakdown
                     </h5>
                     
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b-2 border-gray-200">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">Category</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-700">Allocated</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-700">% of Total</th>
+                          <tr className="border-b-2 border-border">
+                            <th className="text-left py-2 px-3 font-semibold text-foreground">Category</th>
+                            <th className="text-right py-2 px-3 font-semibold text-foreground">Allocated</th>
+                            <th className="text-right py-2 px-3 font-semibold text-foreground">% of Total</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-gray-600" />
+                                <Building2 className="w-4 h-4 text-muted-foreground" />
                                 <span>Facilities</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.facilities.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.facilities / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <Users className="w-4 h-4 text-gray-600" />
+                                <Users className="w-4 h-4 text-muted-foreground" />
                                 <span>Staff (Refs/Instructors)</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.staff.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.staff / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <Package className="w-4 h-4 text-gray-600" />
+                                <Package className="w-4 h-4 text-muted-foreground" />
                                 <span>Products</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.products.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.products / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-gray-600" />
+                                <Sparkles className="w-4 h-4 text-muted-foreground" />
                                 <span>Services</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.services.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.services / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <Camera className="w-4 h-4 text-gray-600" />
+                                <Camera className="w-4 h-4 text-muted-foreground" />
                                 <span>Media</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.media.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.media / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <ShieldCheck className="w-4 h-4 text-gray-600" />
+                                <ShieldCheck className="w-4 h-4 text-muted-foreground" />
                                 <span>Safety</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.safety.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.safety / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <Music className="w-4 h-4 text-gray-600" />
+                                <Music className="w-4 h-4 text-muted-foreground" />
                                 <span>Entertainment</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.entertainment.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.entertainment / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="border-b border-gray-100">
+                          <tr className="border-b border-border/50">
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
-                                <Utensils className="w-4 h-4 text-gray-600" />
+                                <Utensils className="w-4 h-4 text-muted-foreground" />
                                 <span>Food & Beverage</span>
                               </div>
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-600">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               ${budgetBreakdown.foodBeverage.toLocaleString()}
                             </td>
-                            <td className="text-right py-3 px-3 text-gray-500">
+                            <td className="text-right py-3 px-3 text-muted-foreground">
                               {totalBudgetWithFacilities > 0 ? Math.round((budgetBreakdown.foodBeverage / totalBudgetWithFacilities) * 100) : 0}%
                             </td>
                           </tr>
-                          <tr className="bg-gray-50 font-semibold">
-                            <td className="py-3 px-3 text-[#003C66]">Total Event Budget</td>
-                            <td className="text-right py-3 px-3 text-[#003C66]">${totalBudgetWithFacilities.toLocaleString()}</td>
-                            <td className="text-right py-3 px-3 text-[#003C66]">100%</td>
+                          <tr className="bg-muted font-semibold">
+                            <td className="py-3 px-3 text-primary">Total Event Budget</td>
+                            <td className="text-right py-3 px-3 text-primary">${totalBudgetWithFacilities.toLocaleString()}</td>
+                            <td className="text-right py-3 px-3 text-primary">100%</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
 
                     {totalBudgetWithFacilities > 0 && (
-                      <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
                         <p className="text-xs text-blue-900">
                           <strong>💡 Budget includes:</strong> {selectedFacility ? '✓ Facility' : ''} {instructors.length > 0 ? `✓ ${instructors.length} Staff` : ''} {selectedResources.length > 0 ? `✓ ${selectedResources.length} Products/Services` : ''}
                         </p>
@@ -1119,16 +1119,16 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                   </div>
 
                   {/* Budget Summary */}
-                  <div className="bg-white rounded-lg border-2 border-[#003C66] p-4 space-y-4 mt-4">
-                    <h5 className="font-semibold text-[#003C66] flex items-center gap-2">
+                  <div className="bg-card rounded-lg border-2 border-primary p-4 space-y-4 mt-4">
+                    <h5 className="font-semibold text-primary flex items-center gap-2">
                       <DollarSign className="w-4 h-4" />
                       Event Budget Summary
                     </h5>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-sm font-medium text-gray-700">Total Event Budget</Label>
-                        <div className="mt-1 text-2xl font-bold text-[#003C66]">
+                        <Label className="text-sm font-medium text-foreground">Total Event Budget</Label>
+                        <div className="mt-1 text-2xl font-bold text-primary">
                           ${totalBudgetWithFacilities.toLocaleString()}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -1139,7 +1139,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                       </div>
 
                       <div>
-                        <Label htmlFor="sponsorship-goal-input" className="text-sm font-medium text-gray-700">
+                        <Label htmlFor="sponsorship-goal-input" className="text-sm font-medium text-foreground">
                           Sponsorship Goal ($)
                         </Label>
                         <Input
@@ -1159,18 +1159,18 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     {sponsorshipGoal > 0 && totalBudgetWithFacilities > 0 && (
                       <div className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Budget Coverage</span>
+                          <span className="text-sm font-medium text-foreground">Budget Coverage</span>
                           <span className="text-sm font-bold text-green-600">
                             {Math.round((sponsorshipGoal / totalBudgetWithFacilities) * 100)}%
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-border rounded-full h-2">
                           <div 
                             className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all" 
                             style={{ width: `${Math.min(100, (sponsorshipGoal / totalBudgetWithFacilities) * 100)}%` }}
                           />
                         </div>
-                        <p className="text-xs text-gray-600 mt-2">
+                        <p className="text-xs text-muted-foreground mt-2">
                           {sponsorshipGoal >= totalBudgetWithFacilities 
                             ? `Goal covers full budget of $${totalBudgetWithFacilities.toLocaleString()}`
                             : `Goal covers $${sponsorshipGoal.toLocaleString()} of $${totalBudgetWithFacilities.toLocaleString()}`
@@ -1182,9 +1182,9 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
                   {/* Empty State */}
                   {selectedResources.length === 0 && (
-                    <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center mt-4">
-                      <Package className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-gray-700 mb-1">No resources selected yet</p>
+                    <div className="bg-muted rounded-lg border-2 border-dashed border-border p-6 text-center mt-4">
+                      <Package className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium text-foreground mb-1">No resources selected yet</p>
                       <p className="text-xs text-muted-foreground">
                         Select products or services from the carousels above to build your event budget
                       </p>
@@ -1196,11 +1196,11 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 {/* Sub-step 3: Communication & Marketing Plan */}
                 {sponsorshipSubStep === 3 && (
                 <div>
-                <Separator className="bg-[#FC8936]/20" />
+                <Separator className="bg-secondary/20" />
 
                 {/* Communication Plan */}
                 <div>
-                  <h4 className="font-semibold text-[#003C66] flex items-center gap-2 mb-2">
+                  <h4 className="font-semibold text-primary flex items-center gap-2 mb-2">
                     <ImageIcon className="w-5 h-5" />
                     Communication & Marketing Plan
                   </h4>
@@ -1209,12 +1209,12 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                   </p>
 
                   {/* Marketing Materials */}
-                  <div className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
-                    <h5 className="font-semibold text-gray-900 mb-3">Event Poster & Marketing Materials</h5>
+                  <div className="bg-card rounded-lg p-4 border border-border mb-4">
+                    <h5 className="font-semibold text-foreground mb-3">Event Poster & Marketing Materials</h5>
                     
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
-                      <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm font-medium text-gray-700">Upload Event Poster</p>
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center bg-muted hover:bg-accent transition-colors cursor-pointer">
+                      <ImageIcon className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium text-foreground">Upload Event Poster</p>
                       <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 10MB</p>
                       <Button variant="outline" size="sm" className="mt-3">
                         Browse Files
@@ -1222,72 +1222,72 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className="border border-gray-200 rounded-lg p-3 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
-                        <ImageIcon className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                        <p className="text-xs font-medium text-gray-700">Additional Images</p>
+                      <div className="border border-border rounded-lg p-3 text-center bg-muted hover:bg-accent transition-colors cursor-pointer">
+                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                        <p className="text-xs font-medium text-foreground">Additional Images</p>
                         <p className="text-xs text-muted-foreground">Gallery photos</p>
                       </div>
-                      <div className="border border-gray-200 rounded-lg p-3 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
-                        <ImageIcon className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                        <p className="text-xs font-medium text-gray-700">Social Assets</p>
+                      <div className="border border-border rounded-lg p-3 text-center bg-muted hover:bg-accent transition-colors cursor-pointer">
+                        <ImageIcon className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                        <p className="text-xs font-medium text-foreground">Social Assets</p>
                         <p className="text-xs text-muted-foreground">Stories, posts</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Communication Timeline */}
-                  <div className="bg-white rounded-lg p-5 border border-gray-200">
+                  <div className="bg-card rounded-lg p-5 border border-border">
                     <div className="mb-4">
-                      <h5 className="font-semibold text-gray-900 text-lg">Communication Timeline</h5>
-                      <p className="text-sm text-gray-600 mt-1">Plan your communication strategy, channels, frequency, and budget across all event phases</p>
+                      <h5 className="font-semibold text-foreground text-lg">Communication Timeline</h5>
+                      <p className="text-sm text-muted-foreground mt-1">Plan your communication strategy, channels, frequency, and budget across all event phases</p>
                     </div>
                     
                     {/* Phase Tabs */}
-                    <div className="flex gap-2 mb-4 p-1 bg-gray-100 rounded-lg">
+                    <div className="flex gap-2 mb-4 p-1 bg-accent rounded-lg">
                       <button
                         type="button"
                         onClick={() => setActiveCommPhase('pre')}
                         className={`flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
                           activeCommPhase === 'pre'
-                            ? 'bg-white text-[#003C66] shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
+                            ? 'bg-card text-primary shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-center gap-2">
                           <Calendar className="w-4 h-4" />
                           <span>Pre-Event</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">Before event day</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Before event day</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setActiveCommPhase('during')}
                         className={`flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
                           activeCommPhase === 'during'
-                            ? 'bg-white text-[#003C66] shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
+                            ? 'bg-card text-primary shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-center gap-2">
                           <Activity className="w-4 h-4" />
                           <span>During Event</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">Live coverage</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Live coverage</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setActiveCommPhase('post')}
                         className={`flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${
                           activeCommPhase === 'post'
-                            ? 'bg-white text-[#003C66] shadow-sm'
-                            : 'text-gray-600 hover:text-gray-900'
+                            ? 'bg-card text-primary shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-center gap-2">
                           <Trophy className="w-4 h-4" />
                           <span>Post-Event</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">After event day</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">After event day</p>
                       </button>
                     </div>
 
@@ -1335,11 +1335,11 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 {/* Sub-step 4: Sponsorship Visibility Tiers */}
                 {sponsorshipSubStep === 4 && (
                 <div>
-                  <Separator className="bg-[#FC8936]/20" />
+                  <Separator className="bg-secondary/20" />
 
                   {/* Visibility Tiers Configuration */}
                   <div>
-                    <h4 className="font-semibold text-[#003C66] flex items-center gap-2 mb-2">
+                    <h4 className="font-semibold text-primary flex items-center gap-2 mb-2">
                       <Eye className="w-5 h-5" />
                     Sponsorship Visibility Tiers
                   </h4>
@@ -1349,7 +1349,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
                   <div className="space-y-4">
                     {/* Gold Tier */}
-                    <div className="bg-white rounded-lg p-4 border-2 border-yellow-300">
+                    <div className="bg-card rounded-lg p-4 border-2 border-yellow-300">
                       <div className="flex items-center gap-2 mb-3">
                         <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                         <h5 className="font-semibold text-yellow-700">Gold Tier - Premium Visibility</h5>
@@ -1409,34 +1409,34 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
                           {/* Poster 3D Model */}
                           <div className="relative group cursor-pointer">
-                            <div className="aspect-square bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-yellow-300 transition-all overflow-hidden">
+                            <div className="aspect-square bg-muted rounded-lg border-2 border-border hover:border-yellow-300 transition-all overflow-hidden">
                               <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
                                 <div className="w-16 h-16 mb-2">
                                   {/* Poster Icon */}
-                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-gray-400">
+                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-muted-foreground">
                                     <rect x="6" y="3" width="12" height="18" rx="1" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.1"/>
                                     <path d="M9 7h6M9 10h6M9 13h4" stroke="currentColor" strokeWidth="1.5"/>
                                   </svg>
                                 </div>
-                                <p className="text-xs font-medium text-center text-gray-600">Poster</p>
-                                <p className="text-xs text-gray-400 mt-1">Click to select</p>
+                                <p className="text-xs font-medium text-center text-muted-foreground">Poster</p>
+                                <p className="text-xs text-muted-foreground mt-1">Click to select</p>
                               </div>
                             </div>
                           </div>
 
                           {/* Banner 3D Model */}
                           <div className="relative group cursor-pointer">
-                            <div className="aspect-square bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-yellow-300 transition-all overflow-hidden">
+                            <div className="aspect-square bg-muted rounded-lg border-2 border-border hover:border-yellow-300 transition-all overflow-hidden">
                               <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
                                 <div className="w-16 h-16 mb-2">
                                   {/* Banner Icon */}
-                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-gray-400">
+                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-muted-foreground">
                                     <rect x="4" y="8" width="16" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.1"/>
                                     <path d="M7 11h10" stroke="currentColor" strokeWidth="1.5"/>
                                   </svg>
                                 </div>
-                                <p className="text-xs font-medium text-center text-gray-600">Banner</p>
-                                <p className="text-xs text-gray-400 mt-1">Click to select</p>
+                                <p className="text-xs font-medium text-center text-muted-foreground">Banner</p>
+                                <p className="text-xs text-muted-foreground mt-1">Click to select</p>
                               </div>
                             </div>
                           </div>
@@ -1451,10 +1451,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     </div>
 
                     {/* Silver Tier */}
-                    <div className="bg-white rounded-lg p-4 border-2 border-gray-300">
+                    <div className="bg-card rounded-lg p-4 border-2 border-border">
                       <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="w-5 h-5 text-gray-400" />
-                        <h5 className="font-semibold text-gray-600">Silver Tier - Enhanced Visibility</h5>
+                        <Sparkles className="w-5 h-5 text-muted-foreground" />
+                        <h5 className="font-semibold text-muted-foreground">Silver Tier - Enhanced Visibility</h5>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <div>
@@ -1492,57 +1492,57 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                         <div className="grid grid-cols-3 gap-3 mt-2">
                           {/* Jersey 3D Model */}
                           <div className="relative group cursor-pointer">
-                            <div className="aspect-square bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-all overflow-hidden">
+                            <div className="aspect-square bg-muted rounded-lg border-2 border-border hover:border-border transition-all overflow-hidden">
                               <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
                                 <div className="w-16 h-16 mb-2 relative">
-                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-gray-400">
+                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-muted-foreground">
                                     <path d="M16 4l3 3v13H5V7l3-3h8z" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.2"/>
                                     <circle cx="8" cy="5" r="1.5" fill="currentColor"/>
                                     <circle cx="16" cy="5" r="1.5" fill="currentColor"/>
                                   </svg>
                                 </div>
-                                <p className="text-xs font-medium text-center text-gray-600">Jersey</p>
-                                <p className="text-xs text-gray-400 mt-1">Click to select</p>
+                                <p className="text-xs font-medium text-center text-muted-foreground">Jersey</p>
+                                <p className="text-xs text-muted-foreground mt-1">Click to select</p>
                               </div>
                             </div>
                           </div>
 
                           {/* Poster 3D Model */}
                           <div className="relative group cursor-pointer">
-                            <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-gray-400 hover:border-gray-500 transition-all overflow-hidden">
+                            <div className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border-2 border-border hover:border-primary/30 transition-all overflow-hidden">
                               <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
                                 <div className="w-16 h-16 mb-2 relative">
-                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-gray-600">
+                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-muted-foreground">
                                     <rect x="6" y="3" width="12" height="18" rx="1" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.2"/>
                                     <path d="M9 7h6M9 10h6M9 13h4" stroke="currentColor" strokeWidth="1.5"/>
                                   </svg>
                                   <div className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                                 </div>
-                                <p className="text-xs font-medium text-center text-gray-700">Poster</p>
-                                <p className="text-xs text-gray-600 mt-1">Selected</p>
+                                <p className="text-xs font-medium text-center text-foreground">Poster</p>
+                                <p className="text-xs text-muted-foreground mt-1">Selected</p>
                               </div>
                             </div>
                           </div>
 
                           {/* Banner 3D Model */}
                           <div className="relative group cursor-pointer">
-                            <div className="aspect-square bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-all overflow-hidden">
+                            <div className="aspect-square bg-muted rounded-lg border-2 border-border hover:border-border transition-all overflow-hidden">
                               <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
                                 <div className="w-16 h-16 mb-2">
-                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-gray-400">
+                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-muted-foreground">
                                     <rect x="4" y="8" width="16" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.1"/>
                                     <path d="M7 11h10" stroke="currentColor" strokeWidth="1.5"/>
                                   </svg>
                                 </div>
-                                <p className="text-xs font-medium text-center text-gray-600">Banner</p>
-                                <p className="text-xs text-gray-400 mt-1">Click to select</p>
+                                <p className="text-xs font-medium text-center text-muted-foreground">Banner</p>
+                                <p className="text-xs text-muted-foreground mt-1">Click to select</p>
                               </div>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="mt-3 p-2 bg-gray-50 rounded border border-gray-300">
-                          <p className="text-xs text-gray-700">
+                        <div className="mt-3 p-2 bg-muted rounded border border-border">
+                          <p className="text-xs text-foreground">
                             <strong>Selected:</strong> Poster - Logo on event posters
                           </p>
                         </div>
@@ -1550,7 +1550,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     </div>
 
                     {/* Bronze Tier */}
-                    <div className="bg-white rounded-lg p-4 border-2 border-orange-300">
+                    <div className="bg-card rounded-lg p-4 border-2 border-orange-300">
                       <div className="flex items-center gap-2 mb-3">
                         <Award className="w-5 h-5 text-orange-600" />
                         <h5 className="font-semibold text-orange-700">Bronze Tier - Standard Visibility</h5>
@@ -1591,33 +1591,33 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                         <div className="grid grid-cols-3 gap-3 mt-2">
                           {/* Jersey 3D Model */}
                           <div className="relative group cursor-pointer">
-                            <div className="aspect-square bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-orange-300 transition-all overflow-hidden">
+                            <div className="aspect-square bg-muted rounded-lg border-2 border-border hover:border-orange-300 transition-all overflow-hidden">
                               <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
                                 <div className="w-16 h-16 mb-2 relative">
-                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-gray-400">
+                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-muted-foreground">
                                     <path d="M16 4l3 3v13H5V7l3-3h8z" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.2"/>
                                     <circle cx="8" cy="5" r="1.5" fill="currentColor"/>
                                     <circle cx="16" cy="5" r="1.5" fill="currentColor"/>
                                   </svg>
                                 </div>
-                                <p className="text-xs font-medium text-center text-gray-600">Jersey</p>
-                                <p className="text-xs text-gray-400 mt-1">Click to select</p>
+                                <p className="text-xs font-medium text-center text-muted-foreground">Jersey</p>
+                                <p className="text-xs text-muted-foreground mt-1">Click to select</p>
                               </div>
                             </div>
                           </div>
 
                           {/* Poster 3D Model */}
                           <div className="relative group cursor-pointer">
-                            <div className="aspect-square bg-gray-50 rounded-lg border-2 border-gray-200 hover:border-orange-300 transition-all overflow-hidden">
+                            <div className="aspect-square bg-muted rounded-lg border-2 border-border hover:border-orange-300 transition-all overflow-hidden">
                               <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
                                 <div className="w-16 h-16 mb-2">
-                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-gray-400">
+                                  <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-muted-foreground">
                                     <rect x="6" y="3" width="12" height="18" rx="1" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.1"/>
                                     <path d="M9 7h6M9 10h6M9 13h4" stroke="currentColor" strokeWidth="1.5"/>
                                   </svg>
                                 </div>
-                                <p className="text-xs font-medium text-center text-gray-600">Poster</p>
-                                <p className="text-xs text-gray-400 mt-1">Click to select</p>
+                                <p className="text-xs font-medium text-center text-muted-foreground">Poster</p>
+                                <p className="text-xs text-muted-foreground mt-1">Click to select</p>
                               </div>
                             </div>
                           </div>
@@ -1649,7 +1649,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mt-4">
+                  <div className="bg-primary/5 rounded-lg p-3 border border-primary/20 mt-4">
                     <p className="text-xs text-blue-900">
                       <strong>💡 Tip:</strong> Higher tiers should offer more exposure and benefits. Visibility % indicates how prominently sponsors appear on event materials. You can customize benefits to match your event's offerings.
                     </p>
@@ -1659,7 +1659,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 )}
 
                 {/* Sub-step Navigation Buttons */}
-                <div className="flex items-center justify-between pt-4 border-t-2 border-[#FC8936]/30">
+                <div className="flex items-center justify-between pt-4 border-t-2 border-secondary/30">
                   <Button
                     type="button"
                     variant="outline"
@@ -1677,10 +1677,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                         key={step}
                         className={`w-2 h-2 rounded-full transition-all ${
                           step === sponsorshipSubStep
-                            ? 'bg-[#FC8936] w-4'
+                            ? 'bg-secondary w-4'
                             : step < sponsorshipSubStep
                             ? 'bg-green-500'
-                            : 'bg-gray-300'
+                            : 'bg-border'
                         }`}
                       />
                     ))}
@@ -1690,7 +1690,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     type="button"
                     onClick={() => setSponsorshipSubStep(Math.min(4, sponsorshipSubStep + 1))}
                     disabled={sponsorshipSubStep === 4}
-                    className="gap-2 bg-[#FC8936] hover:bg-[#E67A2F]"
+                    className="gap-2 bg-secondary hover:bg-[#E67A2F]"
                   >
                     Next
                     <ChevronRight className="w-4 h-4" />
@@ -1717,13 +1717,13 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
             </h3>
             <div>
               <Label htmlFor="focus-area">Focus Area</Label>
-              <div className="mt-2 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-600 mb-3">Click on body areas to select workout focus</p>
+              <div className="mt-2 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground mb-3">Click on body areas to select workout focus</p>
                 
                 <div className="flex gap-6 items-start justify-center">
                   {/* Front View */}
                   <div className="flex-1 max-w-[200px]">
-                    <p className="text-xs font-medium text-center mb-2 text-gray-700">Front View</p>
+                    <p className="text-xs font-medium text-center mb-2 text-foreground">Front View</p>
                     <svg viewBox="0 0 200 400" className="w-full h-auto">
                       {/* Head */}
                       <ellipse cx="100" cy="40" rx="25" ry="30" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2" className="cursor-pointer hover:fill-blue-200 transition-colors" />
@@ -1764,7 +1764,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                   
                   {/* Back View */}
                   <div className="flex-1 max-w-[200px]">
-                    <p className="text-xs font-medium text-center mb-2 text-gray-700">Back View</p>
+                    <p className="text-xs font-medium text-center mb-2 text-foreground">Back View</p>
                     <svg viewBox="0 0 200 400" className="w-full h-auto">
                       {/* Head */}
                       <ellipse cx="100" cy="40" rx="25" ry="30" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="2" className="cursor-pointer hover:fill-blue-200 transition-colors" />
@@ -1805,10 +1805,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                 </div>
                 
                 {/* Selected Areas Display */}
-                <div className="mt-4 p-3 bg-white rounded-lg border border-blue-200">
+                <div className="mt-4 p-3 bg-card rounded-lg border border-primary/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-4 h-4 text-[#003C66]" />
-                    <p className="text-xs font-semibold text-gray-700">Selected Focus Areas:</p>
+                    <Target className="w-4 h-4 text-primary" />
+                    <p className="text-xs font-semibold text-foreground">Selected Focus Areas:</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
@@ -1820,7 +1820,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                       Core
                     </span>
-                    <button className="px-2 py-1 border border-dashed border-gray-300 text-gray-500 rounded-full text-xs hover:border-blue-400 hover:text-blue-600 transition-colors">
+                    <button className="px-2 py-1 border border-dashed border-border text-muted-foreground rounded-full text-xs hover:border-blue-400 hover:text-blue-600 transition-colors">
                       + Add more
                     </button>
                   </div>
@@ -1829,7 +1829,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
             </div>
             <div>
               <Label htmlFor="intensity">Intensity Level</Label>
-              <select id="intensity" className="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <select id="intensity" className="w-full px-3 py-2 border border-border rounded-md">
                 <option value="">Select intensity</option>
                 <option value="low">Low</option>
                 <option value="moderate">Moderate</option>
@@ -1859,15 +1859,15 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
                 {/* Yoga Mat */}
                 <div className="relative group cursor-pointer">
-                  <div className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
+                  <div className="p-4 bg-card rounded-lg border-2 border-border hover:border-blue-400 transition-all">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-gray-400">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-muted-foreground">
                           <rect x="4" y="6" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                           <path d="M4 8h16M4 10h16M4 16h16" stroke="currentColor" strokeWidth="1.5"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium text-center text-gray-600">Yoga Mat</p>
+                      <p className="text-xs font-medium text-center text-muted-foreground">Yoga Mat</p>
                     </div>
                   </div>
                 </div>
@@ -1894,98 +1894,98 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
                 {/* Kettlebell */}
                 <div className="relative group cursor-pointer">
-                  <div className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
+                  <div className="p-4 bg-card rounded-lg border-2 border-border hover:border-blue-400 transition-all">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-gray-400">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-muted-foreground">
                           <rect x="9" y="4" width="6" height="3" rx="1" stroke="currentColor" strokeWidth="2"/>
                           <circle cx="12" cy="14" r="6" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium text-center text-gray-600">Kettlebell</p>
+                      <p className="text-xs font-medium text-center text-muted-foreground">Kettlebell</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Pull-up Bar */}
                 <div className="relative group cursor-pointer">
-                  <div className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
+                  <div className="p-4 bg-card rounded-lg border-2 border-border hover:border-blue-400 transition-all">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-gray-400">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-muted-foreground">
                           <path d="M4 8h16M8 8v8M16 8v8" stroke="currentColor" strokeWidth="2"/>
                           <circle cx="8" cy="18" r="2" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                           <circle cx="16" cy="18" r="2" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium text-center text-gray-600">Pull-up Bar</p>
+                      <p className="text-xs font-medium text-center text-muted-foreground">Pull-up Bar</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Jump Rope */}
                 <div className="relative group cursor-pointer">
-                  <div className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
+                  <div className="p-4 bg-card rounded-lg border-2 border-border hover:border-blue-400 transition-all">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-gray-400">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-muted-foreground">
                           <path d="M6 8c0 4 2 8 6 10 4-2 6-6 6-10" stroke="currentColor" strokeWidth="2" fill="none"/>
                           <circle cx="6" cy="8" r="2" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                           <circle cx="18" cy="8" r="2" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium text-center text-gray-600">Jump Rope</p>
+                      <p className="text-xs font-medium text-center text-muted-foreground">Jump Rope</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Bench */}
                 <div className="relative group cursor-pointer">
-                  <div className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
+                  <div className="p-4 bg-card rounded-lg border-2 border-border hover:border-blue-400 transition-all">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-gray-400">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-muted-foreground">
                           <rect x="4" y="10" width="16" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                           <path d="M6 14v4M18 14v4" stroke="currentColor" strokeWidth="2"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium text-center text-gray-600">Bench</p>
+                      <p className="text-xs font-medium text-center text-muted-foreground">Bench</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Medicine Ball */}
                 <div className="relative group cursor-pointer">
-                  <div className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
+                  <div className="p-4 bg-card rounded-lg border-2 border-border hover:border-blue-400 transition-all">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-gray-400">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-muted-foreground">
                           <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                           <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.5"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium text-center text-gray-600">Medicine Ball</p>
+                      <p className="text-xs font-medium text-center text-muted-foreground">Medicine Ball</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Foam Roller */}
                 <div className="relative group cursor-pointer">
-                  <div className="p-4 bg-white rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all">
+                  <div className="p-4 bg-card rounded-lg border-2 border-border hover:border-blue-400 transition-all">
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-12 h-12 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-gray-400">
+                        <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-muted-foreground">
                           <rect x="6" y="9" width="12" height="6" rx="3" stroke="currentColor" strokeWidth="2" fill="currentColor" fillOpacity="0.1"/>
                           <path d="M8 12h1M11 12h1M14 12h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                         </svg>
                       </div>
-                      <p className="text-xs font-medium text-center text-gray-600">Foam Roller</p>
+                      <p className="text-xs font-medium text-center text-muted-foreground">Foam Roller</p>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
                 <p className="text-xs text-blue-900">
                   <strong>Selected:</strong> Dumbbells, Resistance Bands
                 </p>
@@ -2013,7 +2013,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
             </div>
             <div>
               <Label htmlFor="competitive-level">Competitive Level</Label>
-              <select id="competitive-level" className="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <select id="competitive-level" className="w-full px-3 py-2 border border-border rounded-md">
                 <option value="">Select level</option>
                 <option value="recreational">Recreational</option>
                 <option value="competitive">Competitive</option>
@@ -2048,10 +2048,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     {instructors.map((instructor, index) => (
                       <div 
                         key={index}
-                        className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border-2 border-blue-200"
+                        className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border-2 border-primary/20"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[#003C66] flex items-center justify-center text-white font-semibold text-sm">
+                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm">
                             {instructor.charAt(0).toUpperCase()}
                           </div>
                           <span className="font-medium text-sm">{instructor}</span>
@@ -2087,8 +2087,8 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                           onClick={() => !isSelected && handleSelectStaffMember(staff)}
                           className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-gray-100 border-gray-300 opacity-50 cursor-not-allowed'
-                              : 'bg-white border-gray-200 hover:border-[#003C66] hover:bg-blue-50'
+                              ? 'bg-accent border-border opacity-50 cursor-not-allowed'
+                              : 'bg-card border-border hover:border-primary hover:bg-primary/5'
                           }`}
                         >
                           <img
@@ -2099,7 +2099,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm truncate">{staff.name}</p>
                             <p className="text-xs text-muted-foreground truncate">{staff.email}</p>
-                            <p className="text-xs text-[#FC8936] font-medium mt-0.5">{staff.role}</p>
+                            <p className="text-xs text-secondary font-medium mt-0.5">{staff.role}</p>
                           </div>
                           {isSelected && (
                             <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
@@ -2185,7 +2185,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
               <Label htmlFor="what-to-bring">What to Bring</Label>
               <textarea
                 id="what-to-bring"
-                className="w-full min-h-[60px] px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full min-h-[60px] px-3 py-2 border border-border rounded-md"
                 placeholder="List items participants should bring..."
               />
             </div>
@@ -2201,7 +2201,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
             </h3>
             <div>
               <Label htmlFor="difficulty">Difficulty Level</Label>
-              <select id="difficulty" className="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <select id="difficulty" className="w-full px-3 py-2 border border-border rounded-md">
                 <option value="">Select difficulty</option>
                 <option value="easy">Easy</option>
                 <option value="moderate">Moderate</option>
@@ -2217,7 +2217,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
               <Label htmlFor="prerequisites">Requirements/Prerequisites</Label>
               <textarea
                 id="prerequisites"
-                className="w-full min-h-[60px] px-3 py-2 border border-gray-300 rounded-md"
+                className="w-full min-h-[60px] px-3 py-2 border border-border rounded-md"
                 placeholder="Any skills, certifications, or experience required..."
               />
             </div>
@@ -2238,7 +2238,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
               </div>
               <div>
                 <Label htmlFor="tournament-format">Format</Label>
-                <select id="tournament-format" className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                <select id="tournament-format" className="w-full px-3 py-2 border border-border rounded-md">
                   <option value="">Select format</option>
                   <option value="single-elimination">Single Elimination</option>
                   <option value="double-elimination">Double Elimination</option>
@@ -2311,8 +2311,8 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
               onClick={() => setLocationType('facility')}
               className={`p-3 border-2 rounded-lg text-left transition-all ${
                 locationType === 'facility'
-                  ? 'border-[#003C66] bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-border'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -2326,8 +2326,8 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
               onClick={() => setLocationType('custom')}
               className={`p-3 border-2 rounded-lg text-left transition-all ${
                 locationType === 'custom'
-                  ? 'border-[#003C66] bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-border'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -2341,7 +2341,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
           {locationType === 'facility' && (
             <>
               {selectedDate && selectedTime && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-4">
                   <p className="text-sm text-blue-900">
                     <span className="font-semibold">Showing available facilities</span> for {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {formatDisplayTime(selectedTime)}
                   </p>
@@ -2355,8 +2355,8 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     onClick={() => setSelectedFacility(facility.id)}
                     className={`relative overflow-hidden rounded-lg border-2 transition-all text-left ${
                       selectedFacility === facility.id
-                        ? 'border-[#003C66] ring-2 ring-[#003C66]/20'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-primary ring-2 ring-primary/20'
+                        : 'border-border hover:border-border'
                     }`}
                   >
                     <img 
@@ -2367,10 +2367,10 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     <div className="p-3">
                       <p className="font-semibold text-sm">{facility.name}</p>
                       <p className="text-xs text-muted-foreground">{facility.type}</p>
-                      <p className="text-xs text-[#003C66] mt-1">${facility.pricePerHour}/hour</p>
+                      <p className="text-xs text-primary mt-1">${facility.pricePerHour}/hour</p>
                     </div>
                     {selectedFacility === facility.id && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-[#003C66] rounded-full flex items-center justify-center shadow-lg">
+                      <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-lg">
                         <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -2427,8 +2427,8 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
           {Array.from({ length: getTotalSteps() }).map((_, index) => (
             <div key={index} className="flex items-center flex-1">
               <div className={`h-2 rounded-full flex-1 transition-all ${
-                index + 1 < currentStep ? 'bg-[#003C66]' : 
-                index + 1 === currentStep ? 'bg-[#FC8936]' : 'bg-gray-200'
+                index + 1 < currentStep ? 'bg-primary' : 
+                index + 1 === currentStep ? 'bg-secondary' : 'bg-border'
               }`} />
             </div>
           ))}
@@ -2438,19 +2438,19 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
           {isSponsoredEvent && (
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-[#003C66]" />
-                <span className="font-medium text-gray-700">Budget:</span>
-                <span className="font-semibold text-[#003C66]">$5,240</span>
+                <DollarSign className="w-3.5 h-3.5 text-primary" />
+                <span className="font-medium text-foreground">Budget:</span>
+                <span className="font-semibold text-primary">$5,240</span>
               </div>
               <div className="flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-[#FC8936]" />
-                <span className="font-medium text-gray-700">Reach:</span>
-                <span className="font-semibold text-[#FC8936]">150K+</span>
+                <Users className="w-3.5 h-3.5 text-secondary" />
+                <span className="font-medium text-foreground">Reach:</span>
+                <span className="font-semibold text-secondary">150K+</span>
               </div>
               <div className="flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="font-medium text-gray-700">Tiers:</span>
-                <span className="font-semibold text-gray-900">3</span>
+                <span className="font-medium text-foreground">Tiers:</span>
+                <span className="font-semibold text-foreground">3</span>
               </div>
             </div>
           )}
@@ -2483,7 +2483,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
         <Button 
           type="button"
           onClick={currentStep === getTotalSteps() ? onSubmit : handleNext}
-          className="flex-1 bg-[#003C66] hover:bg-[#002A4A] flex items-center justify-center gap-2"
+          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center gap-2"
         >
           {currentStep === getTotalSteps() ? (
             `Create ${isSponsoredEvent ? 'Event' : 'Activity'}`
