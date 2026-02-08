@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Eye, EyeOff, ArrowLeft, Mail, Lock, User, CheckCircle } from "lucide-react"
+import { Eye, EyeOff, ArrowLeft, Mail, Lock, User, CheckCircle, Zap, TrendingUp, Trophy } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
+import { cn } from "@/lib/utils"
 
 interface AuthPageProps {
   page:
@@ -12,6 +13,7 @@ interface AuthPageProps {
     | "reset-password"
     | "verify-email"
     | "choose-sports"
+    | "experience-level"
     | "set-goals"
     | "onboarding-confirmation"
   onNavigate: (page: PageRoute) => void
@@ -20,6 +22,8 @@ interface AuthPageProps {
 export function AuthPages({ page, onNavigate }: AuthPageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [selectedSports, setSelectedSports] = useState<string[]>([])
+  const [selectedLevel, setSelectedLevel] = useState<string | null>(null)
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([])
 
   const sportsList = ["Basketball", "Soccer", "Tennis", "Swimming", "Running", "Volleyball", "Boxing", "Yoga", "Cycling", "Golf"]
 
@@ -56,6 +60,61 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
           </div>
           <button
             type="button"
+            onClick={() => onNavigate("experience-level")}
+            className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (page === "experience-level") {
+    const levels = [
+      { id: "beginner", label: "Beginner", description: "Just getting started with sports and fitness", icon: Zap },
+      { id: "intermediate", label: "Intermediate", description: "Comfortable with regular training and games", icon: TrendingUp },
+      { id: "advanced", label: "Advanced", description: "Competitive level with years of experience", icon: Trophy },
+    ]
+
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-8 shadow-lg">
+          <div className="mb-2 text-center">
+            <div className="gradient-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold text-white">
+              S
+            </div>
+            <h1 className="text-xl font-bold text-foreground">Your Experience Level</h1>
+            <p className="text-sm text-muted-foreground">Help us personalize your experience</p>
+          </div>
+          <div className="my-6 space-y-3">
+            {levels.map((level) => (
+              <button
+                type="button"
+                key={level.id}
+                onClick={() => setSelectedLevel(level.id)}
+                className={cn(
+                  "flex w-full items-center gap-4 rounded-xl border-2 px-5 py-4 text-left transition-all",
+                  selectedLevel === level.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/40"
+                )}
+              >
+                <div className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-xl",
+                  selectedLevel === level.id ? "bg-primary/10" : "bg-muted"
+                )}>
+                  <level.icon className={cn("h-5 w-5", selectedLevel === level.id ? "text-primary" : "text-muted-foreground")} />
+                </div>
+                <div>
+                  <p className={cn("text-sm font-semibold", selectedLevel === level.id ? "text-primary" : "text-foreground")}>{level.label}</p>
+                  <p className="text-xs text-muted-foreground">{level.description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
             onClick={() => onNavigate("set-goals")}
             className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
           >
@@ -82,9 +141,26 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               <button
                 type="button"
                 key={goal}
-                className="flex w-full items-center gap-3 rounded-xl border-2 border-border px-4 py-3 text-left text-sm font-medium text-foreground transition-all hover:border-primary/40"
+                onClick={() =>
+                  setSelectedGoals((prev) =>
+                    prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
+                  )
+                }
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm font-medium transition-all",
+                  selectedGoals.includes(goal)
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-border text-foreground hover:border-primary/40"
+                )}
               >
-                <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-border" />
+                <div className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors",
+                  selectedGoals.includes(goal) ? "border-primary bg-primary" : "border-border"
+                )}>
+                  {selectedGoals.includes(goal) && (
+                    <CheckCircle className="h-3.5 w-3.5 text-white" />
+                  )}
+                </div>
                 {goal}
               </button>
             ))}

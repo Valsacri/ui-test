@@ -44,6 +44,26 @@ import {
   BusinessResourcesPage,
   BusinessPartnersPage,
 } from "@/components/sporgates/pages/business-pages"
+import { CommunityPage } from "@/components/sporgates/pages/community-page"
+import { SquadDetailPage } from "@/components/sporgates/pages/squad-detail-page"
+import { SquadDashboardPage } from "@/components/sporgates/pages/squad-dashboard-page"
+import { StoreDetailPage } from "@/components/sporgates/pages/store-detail-page"
+import { SettingsDataPermissionsPage } from "@/components/sporgates/pages/settings-data-permissions-page"
+import { SettingsTransactionsPage } from "@/components/sporgates/pages/settings-transactions-page"
+import {
+  CreateActivityPage,
+  CreateCampaignPage,
+  CreateBusinessPage,
+  AddResourcePage,
+  AddTeamMemberPage,
+  AddCollaborationPage,
+  BusinessAthletesPage,
+  ManageResourcesPage,
+  ManageCustomersPage,
+  TeamManagementPage,
+  BusinessProfilePage,
+  AttendanceManagementPage,
+} from "@/components/sporgates/pages/business-forms"
 
 const authPages: PageRoute[] = [
   "signin",
@@ -52,6 +72,7 @@ const authPages: PageRoute[] = [
   "reset-password",
   "verify-email",
   "choose-sports",
+  "experience-level",
   "set-goals",
   "onboarding-confirmation",
 ]
@@ -159,12 +180,49 @@ export function AppShell() {
         return <BusinessResourcesPage onNavigate={navigate} />
       case "business-partners":
         return <BusinessPartnersPage onNavigate={navigate} />
+      case "community":
+        return <CommunityPage onNavigate={navigate} />
+      case "squad-detail":
+        return <SquadDetailPage squadId={detailId || "1"} onNavigate={navigate} />
+      case "squad-dashboard":
+        return <SquadDashboardPage onNavigate={navigate} />
+      case "store-detail":
+        return <StoreDetailPage businessId={detailId || "1"} onNavigate={navigate} />
+      case "settings-data-permissions":
+        return <SettingsDataPermissionsPage onBack={() => navigate("settings")} />
+      case "settings-transactions":
+        return <SettingsTransactionsPage onBack={() => navigate("settings")} />
+      case "business-athletes":
+        return <BusinessAthletesPage onNavigate={navigate} />
+      case "business-profile":
+        return <BusinessProfilePage onNavigate={navigate} />
+      case "create-activity":
+        return <CreateActivityPage onNavigate={navigate} />
+      case "create-campaign":
+        return <CreateCampaignPage onNavigate={navigate} />
+      case "create-business":
+        return <CreateBusinessPage onNavigate={navigate} />
+      case "add-resource":
+        return <AddResourcePage onNavigate={navigate} />
+      case "add-team-member":
+        return <AddTeamMemberPage onNavigate={navigate} />
+      case "add-collaboration":
+        return <AddCollaborationPage onNavigate={navigate} />
+      case "manage-resources":
+        return <ManageResourcesPage onNavigate={navigate} />
+      case "manage-customers":
+        return <ManageCustomersPage onNavigate={navigate} />
+      case "team-management":
+        return <TeamManagementPage onNavigate={navigate} />
+      case "attendance-management":
+        return <AttendanceManagementPage onNavigate={navigate} />
       case "signin":
       case "signup":
       case "forgot-password":
       case "reset-password":
       case "verify-email":
       case "choose-sports":
+      case "experience-level":
       case "set-goals":
       case "onboarding-confirmation":
         return <AuthPages page={currentPage} onNavigate={navigate} />

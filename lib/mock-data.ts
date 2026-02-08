@@ -712,6 +712,93 @@ export const paymentMethods = [
   { id: "3", type: "paypal", email: "jordan@email.com", isDefault: false },
 ]
 
+export const experienceLevels = [
+  { id: "beginner", label: "Beginner", description: "Just getting started with sports and fitness" },
+  { id: "intermediate", label: "Intermediate", description: "Comfortable with regular training and games" },
+  { id: "advanced", label: "Advanced", description: "Competitive level with years of experience" },
+]
+
+export const people = [
+  { id: "1", name: "Mike Johnson", sport: "Basketball", role: "Athlete", location: "NYC", followers: 1250, rating: 4.9, avatar: "MJ", verified: true, bio: "Professional basketball player and youth coach" },
+  { id: "2", name: "Sarah Lee", sport: "Volleyball", role: "Athlete", location: "Brooklyn", followers: 890, rating: 4.7, avatar: "SL", verified: true, bio: "Beach volleyball champion and fitness influencer" },
+  { id: "3", name: "Alex Chen", sport: "Tennis", role: "Coach", location: "Manhattan", followers: 2100, rating: 4.8, avatar: "AC", verified: true, bio: "ATP-ranked tennis player turned elite coach" },
+  { id: "4", name: "Carlos Rivera", sport: "Soccer", role: "Athlete", location: "Queens", followers: 3400, rating: 4.6, avatar: "CR", verified: false, bio: "Semi-pro soccer player and sports content creator" },
+  { id: "5", name: "Emily Park", sport: "Swimming", role: "Influencer", location: "NYC", followers: 5600, rating: 4.9, avatar: "EP", verified: true, bio: "Olympic trial swimmer and wellness advocate" },
+  { id: "6", name: "James Wright", sport: "Boxing", role: "Coach", location: "Brooklyn", followers: 780, rating: 4.8, avatar: "JW", verified: false, bio: "Former amateur boxing champion and certified trainer" },
+]
+
+export const squads = [
+  {
+    id: "1",
+    name: "NYC Hoops Crew",
+    sport: "Basketball",
+    members: 12,
+    maxMembers: 15,
+    avatar: "NH",
+    description: "Weekly pickup basketball games across NYC courts",
+    upcomingEvents: 3,
+    wins: 24,
+    losses: 8,
+    captain: "Mike Johnson",
+    captainAvatar: "MJ",
+    recentActivity: "Won against Brooklyn Ballers 78-65",
+    memberList: [
+      { name: "Mike Johnson", role: "Captain", avatar: "MJ" },
+      { name: "Jordan Rivera", role: "Member", avatar: "JR" },
+      { name: "David Kim", role: "Member", avatar: "DK" },
+      { name: "Mark Brown", role: "Member", avatar: "MB" },
+    ],
+  },
+  {
+    id: "2",
+    name: "Tennis Aces NYC",
+    sport: "Tennis",
+    members: 8,
+    maxMembers: 10,
+    avatar: "TA",
+    description: "Competitive doubles and singles matches every weekend",
+    upcomingEvents: 2,
+    wins: 15,
+    losses: 5,
+    captain: "Alex Chen",
+    captainAvatar: "AC",
+    recentActivity: "Tournament qualifier round completed",
+    memberList: [
+      { name: "Alex Chen", role: "Captain", avatar: "AC" },
+      { name: "Jordan Rivera", role: "Member", avatar: "JR" },
+      { name: "Lisa Chen", role: "Member", avatar: "LC" },
+    ],
+  },
+  {
+    id: "3",
+    name: "Run NYC Marathon",
+    sport: "Running",
+    members: 20,
+    maxMembers: 25,
+    avatar: "RM",
+    description: "Training group for marathon and half-marathon runners",
+    upcomingEvents: 4,
+    wins: 0,
+    losses: 0,
+    captain: "Emily Park",
+    captainAvatar: "EP",
+    recentActivity: "Group PR set at Central Park 10K",
+    memberList: [
+      { name: "Emily Park", role: "Captain", avatar: "EP" },
+      { name: "Carlos Rivera", role: "Co-Captain", avatar: "CR" },
+      { name: "Jordan Rivera", role: "Member", avatar: "JR" },
+    ],
+  },
+]
+
+export const athletes = [
+  { id: "1", name: "Sarah Lee", sport: "Volleyball", ranking: "#12 NYC", followers: 890, engagement: 8.2, avatar: "SL", status: "active", collaborations: 3 },
+  { id: "2", name: "Carlos Rivera", sport: "Soccer", ranking: "#5 NYC", followers: 3400, engagement: 12.5, avatar: "CR", status: "active", collaborations: 5 },
+  { id: "3", name: "Mike Johnson", sport: "Basketball", ranking: "#3 NYC", followers: 1250, engagement: 9.8, avatar: "MJ", status: "active", collaborations: 7 },
+  { id: "4", name: "Emily Park", sport: "Swimming", ranking: "#1 NYC", followers: 5600, engagement: 15.3, avatar: "EP", status: "pending", collaborations: 2 },
+  { id: "5", name: "James Wright", sport: "Boxing", ranking: "#8 NYC", followers: 780, engagement: 6.4, avatar: "JW", status: "inactive", collaborations: 1 },
+]
+
 export const businessDashboardData = {
   totalRevenue: 24580,
   totalBookings: 342,

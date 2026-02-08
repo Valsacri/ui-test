@@ -2,11 +2,12 @@
 
 import { useState } from "react"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
-import { activities, facilities, services, businesses } from "@/lib/mock-data"
+import { activities, facilities, services, businesses, people } from "@/lib/mock-data"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import { BusinessCard } from "@/components/sporgates/cards/business-card"
+import { PersonCard } from "@/components/sporgates/cards/person-card"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -14,7 +15,7 @@ interface ExplorePageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
 }
 
-const tabs = ["All", "Activities", "Facilities", "Services", "Businesses"]
+const tabs = ["All", "Activities", "Facilities", "Services", "Businesses", "People"]
 const sportFilters = ["All Sports", "Basketball", "Soccer", "Tennis", "Swimming", "Running", "Volleyball", "Boxing", "Yoga"]
 
 export function ExplorePage({ onNavigate }: ExplorePageProps) {
@@ -142,6 +143,20 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
                 key={business.id}
                 business={business}
                 onClick={() => onNavigate("business-detail", business.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(activeTab === "All" || activeTab === "People") && (
+        <div>
+          <h2 className="mb-4 text-base font-bold text-foreground">People</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {people.map((person) => (
+              <PersonCard
+                key={person.id}
+                person={person}
               />
             ))}
           </div>
