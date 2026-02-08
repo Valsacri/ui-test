@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, stat } from 'fs/promises';
+import { readdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 const REPLACEMENTS = [
@@ -44,8 +44,7 @@ async function getAllFiles(dir) {
       if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'ui') continue;
       files.push(...await getAllFiles(fullPath));
     } else if (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts')) {
-      // Skip ui components (shadcn)
-      if (fullPath.includes('/components/ui/') && entry.name !== 'slider.tsx') continue;
+      if (fullPath.includes('/components/ui/')) continue;
       files.push(fullPath);
     }
   }
