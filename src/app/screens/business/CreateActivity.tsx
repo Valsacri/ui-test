@@ -19,22 +19,25 @@ export function CreateActivity({ onBack, onSubmit, onMetricsChange }: CreateActi
   return (
     <div className="w-full">
       {/* Header */}
-      <div className="bg-white rounded-lg border mb-6 p-4">
+      <div className="bg-card rounded-xl border border-border/60 card-soft mb-6 p-5">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2.5 hover:bg-muted rounded-xl transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
-          <h1 className="text-xl font-bold">Create New Activity</h1>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Create New Activity</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">Set up your activity details step by step</p>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <Card>
+      <Card className="card-soft rounded-xl">
         <CardHeader>
-          <CardTitle>Activity Details</CardTitle>
+          <CardTitle className="text-foreground">Activity Details</CardTitle>
         </CardHeader>
         <CardContent>
           <ActivityStepForm

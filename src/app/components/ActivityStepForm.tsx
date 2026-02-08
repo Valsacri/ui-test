@@ -2861,35 +2861,35 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
   return (
     <div>
       {/* Progress Bar */}
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center gap-2">
           {Array.from({ length: getTotalSteps() }).map((_, index) => (
             <div key={index} className="flex items-center flex-1">
-              <div className={`h-2 rounded-full flex-1 transition-all ${
-                index + 1 < currentStep ? 'bg-[#003C66]' : 
-                index + 1 === currentStep ? 'bg-[#FC8936]' : 'bg-gray-200'
+              <div className={`h-2.5 rounded-full flex-1 transition-all duration-300 ${
+                index + 1 < currentStep ? 'bg-primary' : 
+                index + 1 === currentStep ? 'bg-secondary' : 'bg-muted'
               }`} />
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-sm text-muted-foreground">Step {currentStep} of {getTotalSteps()}</p>
+        <div className="flex items-center justify-between mt-3">
+          <p className="text-sm text-muted-foreground font-medium">Step {currentStep} of {getTotalSteps()}</p>
           {isSponsoredEvent && (
             <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-[#003C66]" />
-                <span className="font-medium text-gray-700">Budget:</span>
-                <span className="font-semibold text-[#003C66]">$5,240</span>
+              <div className="flex items-center gap-1.5 bg-primary/5 px-3 py-1.5 rounded-lg">
+                <DollarSign className="w-3.5 h-3.5 text-primary" />
+                <span className="font-medium text-muted-foreground">Budget:</span>
+                <span className="font-semibold text-primary">$5,240</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-[#FC8936]" />
-                <span className="font-medium text-gray-700">Reach:</span>
-                <span className="font-semibold text-[#FC8936]">150K+</span>
+              <div className="flex items-center gap-1.5 bg-secondary/5 px-3 py-1.5 rounded-lg">
+                <Users className="w-3.5 h-3.5 text-secondary" />
+                <span className="font-medium text-muted-foreground">Reach:</span>
+                <span className="font-semibold text-secondary">150K+</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-yellow-500" />
-                <span className="font-medium text-gray-700">Tiers:</span>
-                <span className="font-semibold text-gray-900">3</span>
+              <div className="flex items-center gap-1.5 bg-muted px-3 py-1.5 rounded-lg">
+                <Star className="w-3.5 h-3.5 text-amber-500" />
+                <span className="font-medium text-muted-foreground">Tiers:</span>
+                <span className="font-semibold text-foreground">3</span>
               </div>
             </div>
           )}
@@ -2902,12 +2902,12 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex gap-3 pt-6 mt-6 border-t">
+      <div className="flex gap-3 pt-6 mt-8 border-t border-border/60">
         <Button 
           type="button" 
           variant="outline" 
           onClick={currentStep === 1 ? onCancel : handlePrev}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 rounded-xl h-11"
         >
           {currentStep === 1 ? (
             'Cancel'
@@ -2922,7 +2922,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
         <Button 
           type="button"
           onClick={currentStep === getTotalSteps() ? onSubmit : handleNext}
-          className="flex-1 bg-[#003C66] hover:bg-[#002A4A] flex items-center justify-center gap-2"
+          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-11 flex items-center justify-center gap-2 font-medium"
         >
           {currentStep === getTotalSteps() ? (
             `Create ${isSponsoredEvent ? 'Event' : 'Activity'}`

@@ -189,19 +189,22 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b z-10 shadow-sm">
+      <div className="sticky top-0 bg-card/95 backdrop-blur-md border-b border-border/60 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="bg-white rounded-lg border p-4">
-            <div className="flex items-center gap-4 mb-4">
+          <div className="bg-card rounded-xl border border-border/60 card-soft p-5">
+            <div className="flex items-center gap-4 mb-5">
               <button
                 onClick={handlePrevious}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2.5 hover:bg-muted rounded-xl transition-colors"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5 text-foreground" />
               </button>
-              <h1 className="text-xl font-bold">Create New Activity</h1>
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Create New Activity</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Step {currentStep} of {STEPS.length}</p>
+              </div>
             </div>
 
             {/* Stepper */}
@@ -215,12 +218,12 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   <div key={step.id} className="flex items-center flex-1">
                     <div className="flex flex-col items-center flex-1">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
                           isCompleted
-                            ? 'bg-[#003C66] text-white'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
                             : isCurrent
-                            ? 'bg-[#FC8936]/10 text-[#FC8936] border-2 border-[#FC8936]'
-                            : 'bg-gray-200 text-gray-400'
+                            ? 'bg-secondary/10 text-secondary border-2 border-secondary'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {isCompleted ? (
@@ -230,8 +233,8 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                         )}
                       </div>
                       <span
-                        className={`text-xs mt-1 hidden sm:block ${
-                          isCurrent ? 'font-medium text-[#FC8936]' : 'text-muted-foreground'
+                        className={`text-xs mt-1.5 hidden sm:block ${
+                          isCurrent ? 'font-semibold text-secondary' : isCompleted ? 'font-medium text-primary' : 'text-muted-foreground'
                         }`}
                       >
                         {step.name}
@@ -239,8 +242,8 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                     </div>
                     {index < STEPS.length - 1 && (
                       <div
-                        className={`h-0.5 flex-1 mx-2 ${
-                          isCompleted ? 'bg-[#003C66]' : 'bg-gray-200'
+                        className={`h-0.5 flex-1 mx-2 rounded-full ${
+                          isCompleted ? 'bg-primary' : 'bg-muted'
                         }`}
                       />
                     )}
@@ -256,10 +259,10 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
-          <Card>
+          <Card className="card-soft rounded-xl">
             <CardContent className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold mb-1">Basic Information</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-1">Basic Information</h2>
                 <p className="text-sm text-muted-foreground">Tell us about your activity</p>
               </div>
 
@@ -360,13 +363,15 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
 
                   {/* Revenue Estimate */}
                   {formData.maxParticipants > 0 && formData.price > 0 && (
-                    <div className="mt-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4">
+                    <div className="mt-4 bg-emerald-50/60 border border-emerald-200/60 rounded-xl p-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5 text-green-600" />
-                          <span className="text-sm font-medium text-gray-700">Potential Revenue</span>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <TrendingUp className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <span className="text-sm font-medium text-foreground">Potential Revenue</span>
                         </div>
-                        <span className="text-2xl font-bold text-green-600">
+                        <span className="text-2xl font-bold text-emerald-600">
                           ${(formData.price * formData.maxParticipants).toFixed(2)}
                         </span>
                       </div>
@@ -383,10 +388,10 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
 
         {/* Step 2: Location */}
         {currentStep === 2 && (
-          <Card>
+          <Card className="card-soft rounded-xl">
             <CardContent className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold mb-1">Location</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-1">Location</h2>
                 <p className="text-sm text-muted-foreground">Where will this activity take place?</p>
               </div>
 
@@ -453,10 +458,12 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                 </div>
 
                 {/* Map */}
-                <div className="border rounded-lg overflow-hidden">
-                  <div className="bg-muted p-2 border-b flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm font-medium">
+                <div className="border border-border/60 rounded-xl overflow-hidden">
+                  <div className="bg-muted/50 p-3 border-b border-border/60 flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
+                      <MapPin className="w-3.5 h-3.5 text-secondary" />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">
                       {selectedCity ? selectedCity.name : 'Select location on map'}
                     </span>
                   </div>
@@ -478,10 +485,10 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
 
         {/* Step 3: Schedule */}
         {currentStep === 3 && (
-          <Card>
+          <Card className="card-soft rounded-xl">
             <CardContent className="p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold mb-1">Schedule</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-1">Schedule</h2>
                 <p className="text-sm text-muted-foreground">When will this activity happen?</p>
               </div>
 
@@ -522,9 +529,9 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                 </div>
 
                 {formData.date && formData.time && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm font-medium text-blue-900 mb-1">Activity Schedule</p>
-                    <p className="text-sm text-blue-700">
+                  <div className="bg-primary/5 border border-primary/15 rounded-xl p-4">
+                    <p className="text-sm font-medium text-foreground mb-1">Activity Schedule</p>
+                    <p className="text-sm text-primary">
                       {format(formData.date, 'EEEE, MMMM dd, yyyy')} at {formData.time}
                       {formData.duration > 1 && ` (${formData.duration} hours)`}
                     </p>

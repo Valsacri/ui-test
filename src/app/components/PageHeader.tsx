@@ -121,7 +121,7 @@ export function PageHeader({
           <div className="flex items-center gap-3">
             {icon && <div className="shrink-0">{icon}</div>}
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 truncate inline-block">{title}</h1>
+              <h1 className="text-2xl font-bold text-foreground truncate inline-block">{title}</h1>
               {subtitle && !filterControls && (
                 <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
               )}
@@ -185,7 +185,7 @@ export function PageHeader({
   }
 
   return (
-    <div className={`bg-white rounded-lg border p-6 ${className}`}>
+    <div className={`bg-card rounded-xl border border-border/60 p-6 card-soft ${className}`}>
       {content}
     </div>
   );

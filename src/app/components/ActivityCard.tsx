@@ -46,21 +46,22 @@ export function ActivityCard({
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
     >
       <Card 
-        className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-gray-200"
+        className="overflow-hidden transition-all duration-300 cursor-pointer card-soft rounded-xl group"
         onClick={onClick}
       >
         {/* Image */}
         {image && (
-          <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-50 to-green-50">
+          <div className="relative h-48 overflow-hidden bg-muted">
             <motion.img 
               src={image} 
               alt={title} 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.4 }}
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             {sponsored && (
-              <Badge className="absolute top-3 right-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white border-0 shadow-lg">
+              <Badge className="absolute top-3 right-3 bg-[#FC8936] text-white border-0 shadow-md">
                 <Trophy className="w-3 h-3 mr-1" />
                 Sponsored
               </Badge>
@@ -68,34 +69,40 @@ export function ActivityCard({
           </div>
         )}
 
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-5 space-y-3">
           {/* Header */}
           <div>
-            <h3 className="font-semibold text-lg leading-tight mb-1">{title}</h3>
-            <p className="text-sm text-[#003C66] font-medium">{sport}</p>
+            <h3 className="font-semibold text-lg leading-tight mb-1 text-foreground">{title}</h3>
+            <p className="text-sm text-primary font-medium">{sport}</p>
           </div>
 
           {/* Details */}
           <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
-              <MapPin className="w-4 h-4 flex-shrink-0 text-[#FC8936]" />
+            <div className="flex items-center gap-2.5 text-muted-foreground">
+              <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-3.5 h-3.5 text-secondary" />
+              </div>
               <span className="truncate">{location}</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Calendar className="w-4 h-4 flex-shrink-0 text-[#FC8936]" />
-              <span>{date} • {time}</span>
+            <div className="flex items-center gap-2.5 text-muted-foreground">
+              <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-3.5 h-3.5 text-secondary" />
+              </div>
+              <span>{date} - {time}</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Users className="w-4 h-4 flex-shrink-0 text-[#FC8936]" />
+            <div className="flex items-center gap-2.5 text-muted-foreground">
+              <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-3.5 h-3.5 text-secondary" />
+              </div>
               <span>{participants}/{maxParticipants} participants</span>
             </div>
           </div>
 
           {/* Progress Bar */}
           <div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
               <motion.div 
-                className="h-full bg-gradient-to-r from-[#003C66] to-[#FC8936]"
+                className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
                 initial={{ width: 0 }}
                 animate={{ width: `${fillPercentage}%` }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -104,14 +111,14 @@ export function ActivityCard({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between pt-1">
             <Badge 
               variant="outline" 
-              className="border-[#003C66] text-[#003C66] font-medium"
+              className="border-primary/30 text-primary font-medium rounded-lg"
             >
               {level}
             </Badge>
-            <span className={`text-xs font-medium ${spotsLeft <= 3 ? 'text-red-600' : 'text-gray-500'}`}>
+            <span className={`text-xs font-medium ${spotsLeft <= 3 ? 'text-destructive' : 'text-muted-foreground'}`}>
               {spotsLeft} {spotsLeft === 1 ? 'spot' : 'spots'} left
             </span>
           </div>
@@ -132,7 +139,7 @@ export function ActivityCard({
                   </Button>
                 ) : spotsLeft > 0 ? (
                   <Button
-                    className="w-full bg-gradient-to-r from-[#FC8936] to-[#E67A2E] hover:from-[#E67A2E] hover:to-[#D66B25] text-white"
+                    className="w-full bg-secondary hover:bg-secondary/90 text-white rounded-lg"
                     onClick={(e) => {
                       e.stopPropagation();
                       toast.success('Successfully joined the activity!');
