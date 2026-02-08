@@ -32,13 +32,11 @@ interface TopBarProps {
   userAvatar?: string;
   userName?: string;
   showSearch?: boolean;
-  // Goal-related props
   goals?: Array<{
     id: string;
     title: string;
     progress: number;
   }>;
-  // Profile data for switcher
   personalProfile?: {
     id: string;
     name: string;
@@ -88,42 +86,27 @@ export function TopBar({
   currentProfileId,
   profileCompletion = 75,
 }: TopBarProps) {
-  const [activeNav, setActiveNav] = useState('home');
-  const [currentGoalIndex, setCurrentGoalIndex] = useState(0);
-  
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const currentGoal = goals[currentGoalIndex];
-
-  const handlePrevGoal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentGoalIndex((prev) => (prev === 0 ? goals.length - 1 : prev - 1));
-  };
-
-  const handleNextGoal = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentGoalIndex((prev) => (prev === goals.length - 1 ? 0 : prev + 1));
-  };
-
   return (
-    <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center h-14 gap-3 relative">
+    <div className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border">
+      <div className="max-w-[1600px] mx-auto px-4">
+        <div className="flex items-center h-[3.75rem] gap-3">
           {/* Left Section - Logo & Search */}
-          <div className="flex items-center gap-2 w-80">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#003C66] to-[#005A99] rounded-full flex items-center justify-center shadow-md flex-shrink-0 transition-transform hover:scale-105">
-              <span className="text-white font-bold text-lg">S</span>
+          <div className="flex items-center gap-3 w-72 flex-shrink-0">
+            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-primary-foreground font-bold text-base">S</span>
             </div>
             
             {showSearch && (
               <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search Sporgates"
-                  className="w-full bg-gray-100 text-gray-900 placeholder-gray-500 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003C66]/30 focus:bg-white hover:bg-gray-200 transition-colors"
+                  className="w-full bg-muted text-foreground placeholder-muted-foreground rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-card border border-transparent focus:border-border transition-all"
                   onClick={onSearch}
                 />
               </div>
@@ -131,46 +114,44 @@ export function TopBar({
           </div>
 
           {/* Center Section - Current Goal */}
-          <div className="hidden md:flex items-center justify-center gap-2 absolute left-1/2 -translate-x-1/2">
-            <div className="flex items-center gap-3 px-5 py-2 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-100 rounded-full shadow-sm hover:shadow-md transition-shadow">
-              <Target className="w-4 h-4 text-[#003C66] flex-shrink-0" />
+          <div className="hidden md:flex items-center justify-center flex-1">
+            <div className="flex items-center gap-3 px-4 py-2 bg-muted rounded-lg border border-border">
+              <Target className="w-4 h-4 text-primary flex-shrink-0" />
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-gray-600">Current Goal:</span>
-                <span className="text-sm font-semibold text-[#003C66]">Run 5K in 30 days</span>
+                <span className="text-xs text-muted-foreground">Goal:</span>
+                <span className="text-sm font-medium text-foreground">Run 5K in 30 days</span>
               </div>
-              <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-blue-200">
-                <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#003C66] to-[#005A99] rounded-full transition-all duration-300" style={{ width: '65%' }}></div>
+              <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-border">
+                <div className="w-16 h-1.5 bg-border rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: '65%' }}></div>
                 </div>
-                <span className="text-xs font-semibold text-[#003C66]">65%</span>
+                <span className="text-xs font-semibold text-primary">65%</span>
               </div>
             </div>
           </div>
 
-          {/* Right Section - Widgets & Actions */}
-          <div className="flex items-center gap-2 w-80 justify-end ml-auto">
+          {/* Right Section - Actions */}
+          <div className="flex items-center gap-1.5 w-72 justify-end flex-shrink-0">
             {/* Wallet */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button 
-                  className="relative w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all hover:shadow-sm"
-                >
-                  <Wallet className="w-5 h-5 text-gray-700" />
+                <button className="relative w-9 h-9 bg-muted hover:bg-accent rounded-lg flex items-center justify-center transition-colors">
+                  <Wallet className="w-[18px] h-[18px] text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64 mr-2 mt-2 rounded-xl shadow-xl border-gray-200 bg-white" align="end">
+              <DropdownMenuContent className="w-56 rounded-xl shadow-lg border-border" align="end" sideOffset={8}>
                 <DropdownMenuLabel className="font-normal p-4">
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground mb-1">Account Balance</p>
-                    <p className="text-2xl font-bold text-[#003C66]">$2,450.00</p>
+                    <p className="text-2xl font-bold text-primary">$2,450.00</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => onNavigate?.('settings/wallet')}
-                  className="cursor-pointer rounded-lg mx-2 my-2 p-3 bg-gradient-to-r from-[#003C66] to-[#005A99] text-white hover:from-[#002A4D] hover:to-[#004580] focus:bg-[#003C66] focus:text-white"
+                  className="cursor-pointer rounded-lg mx-2 my-1 p-3 bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary/90 focus:text-primary-foreground"
                 >
-                  <Wallet className="w-4 h-4 mr-3" />
+                  <Wallet className="w-4 h-4 mr-2" />
                   <span className="font-medium">View Wallet</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -180,13 +161,13 @@ export function TopBar({
             {onMessages && (
               <button 
                 onClick={onMessages}
-                className="relative w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all hover:shadow-sm"
+                className="relative w-9 h-9 bg-muted hover:bg-accent rounded-lg flex items-center justify-center transition-colors"
               >
-                <MessageSquare className="w-5 h-5 text-gray-700" />
+                <MessageSquare className="w-[18px] h-[18px] text-muted-foreground" />
                 {messageCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 px-1.5 bg-[#FC8936] text-white text-xs font-semibold border-2 border-white shadow-sm">
+                  <span className="absolute -top-1 -right-1 h-4 min-w-4 flex items-center justify-center px-1 bg-secondary text-secondary-foreground text-[10px] font-bold rounded-full border-2 border-card">
                     {messageCount}
-                  </Badge>
+                  </span>
                 )}
               </button>
             )}
@@ -195,13 +176,13 @@ export function TopBar({
             {onNotifications && (
               <button 
                 onClick={onNotifications}
-                className="relative w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-all hover:shadow-sm"
+                className="relative w-9 h-9 bg-muted hover:bg-accent rounded-lg flex items-center justify-center transition-colors"
               >
-                <Bell className="w-5 h-5 text-gray-700" />
+                <Bell className="w-[18px] h-[18px] text-muted-foreground" />
                 {notificationCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 px-1.5 bg-[#FC8936] text-white text-xs font-semibold border-2 border-white shadow-sm">
+                  <span className="absolute -top-1 -right-1 h-4 min-w-4 flex items-center justify-center px-1 bg-secondary text-secondary-foreground text-[10px] font-bold rounded-full border-2 border-card">
                     {notificationCount}
-                  </Badge>
+                  </span>
                 )}
               </button>
             )}
@@ -210,49 +191,49 @@ export function TopBar({
             {onProfile && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="w-10 h-10 rounded-full p-0 hover:opacity-90 transition-all ring-2 ring-transparent hover:ring-[#003C66]/20 focus:ring-[#003C66]/30">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={userAvatar} alt={userName} />
-                      <AvatarFallback className="bg-gradient-to-br from-[#003C66] to-[#005A99] text-white text-sm font-semibold">
+                  <button className="w-9 h-9 rounded-lg p-0 hover:opacity-90 transition-all ring-2 ring-transparent hover:ring-primary/20 overflow-hidden">
+                    <Avatar className="h-9 w-9 rounded-lg">
+                      <AvatarImage src={userAvatar} alt={userName} className="rounded-lg" />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold rounded-lg">
                         {getInitials(userName)}
                       </AvatarFallback>
                     </Avatar>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-64 mr-2 mt-2 rounded-xl shadow-xl border-gray-200 bg-white" align="end">
-                  <DropdownMenuLabel className="font-normal p-3 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors" onClick={onProfile}>
+                <DropdownMenuContent className="w-64 rounded-xl shadow-lg border-border" align="end" sideOffset={8}>
+                  <DropdownMenuLabel className="font-normal p-3 cursor-pointer hover:bg-muted rounded-lg transition-colors" onClick={onProfile}>
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 ring-2 ring-gray-100">
-                        <AvatarImage src={userAvatar} alt={userName} />
-                        <AvatarFallback className="bg-gradient-to-br from-[#003C66] to-[#005A99] text-white text-sm font-semibold">
+                      <Avatar className="h-10 w-10 rounded-lg">
+                        <AvatarImage src={userAvatar} alt={userName} className="rounded-lg" />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold rounded-lg">
                           {getInitials(userName)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col flex-1 min-w-0">
                         <p className="text-sm font-semibold leading-none truncate">{userName}</p>
                         <p className="text-xs leading-none text-muted-foreground mt-1.5">
-                          {currentProfile === 'business' ? '🏢 Business Account' : '👤 Personal Account'}
+                          {currentProfile === 'business' ? 'Business Account' : 'Personal Account'}
                         </p>
                       </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   
-                  {/* Personal Profile Section */}
-                  <DropdownMenuLabel className="text-xs text-muted-foreground px-3 py-1.5 font-medium">
-                    Personal Profile
+                  {/* Personal Profile */}
+                  <DropdownMenuLabel className="text-[10px] text-muted-foreground px-3 py-1.5 font-semibold uppercase tracking-wider">
+                    Personal
                   </DropdownMenuLabel>
                   {personalProfile && (
                     <DropdownMenuItem
                       onClick={() => onSwitchProfile?.('user', personalProfile.id)}
                       className={cn(
-                        'cursor-pointer rounded-lg mx-2 my-1 p-3 transition-colors',
-                        currentProfile === 'user' && currentProfileId === personalProfile.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                        'cursor-pointer rounded-lg mx-1.5 my-0.5 p-2.5 transition-colors',
+                        currentProfile === 'user' && currentProfileId === personalProfile.id ? 'bg-primary/5 border border-primary/20' : 'hover:bg-muted'
                       )}
                     >
-                      <Avatar className="h-9 w-9 mr-3 ring-2 ring-gray-100">
-                        <AvatarImage src={personalProfile.avatar} alt={personalProfile.name} />
-                        <AvatarFallback className="bg-gradient-to-br from-[#003C66] to-[#005A99] text-white text-xs">
+                      <Avatar className="h-8 w-8 mr-2.5 rounded-lg">
+                        <AvatarImage src={personalProfile.avatar} alt={personalProfile.name} className="rounded-lg" />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs rounded-lg">
                           {getInitials(personalProfile.name)}
                         </AvatarFallback>
                       </Avatar>
@@ -261,15 +242,15 @@ export function TopBar({
                         <p className="text-xs text-muted-foreground truncate">{personalProfile.email}</p>
                       </div>
                       {currentProfile === 'user' && currentProfileId === personalProfile.id && (
-                        <Badge className="ml-2 bg-gradient-to-r from-[#003C66] to-[#005A99] text-white text-xs font-semibold" variant="secondary">Active</Badge>
+                        <Badge className="ml-1 bg-primary text-primary-foreground text-[10px]" variant="secondary">Active</Badge>
                       )}
                     </DropdownMenuItem>
                   )}
 
-                  {/* Business Profiles Section */}
-                  <DropdownMenuSeparator className="my-2" />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground px-3 py-1.5 font-medium">
-                    Business Profiles
+                  {/* Business Profiles */}
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <DropdownMenuLabel className="text-[10px] text-muted-foreground px-3 py-1.5 font-semibold uppercase tracking-wider">
+                    Business
                   </DropdownMenuLabel>
                   {businessProfiles && businessProfiles.length > 0 && (
                     <>
@@ -278,13 +259,13 @@ export function TopBar({
                           key={profile.id}
                           onClick={() => onSwitchProfile?.('business', profile.id)}
                           className={cn(
-                            'cursor-pointer rounded-lg mx-2 my-1 p-3 transition-colors',
-                            currentProfile === 'business' && currentProfileId === profile.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                            'cursor-pointer rounded-lg mx-1.5 my-0.5 p-2.5 transition-colors',
+                            currentProfile === 'business' && currentProfileId === profile.id ? 'bg-primary/5 border border-primary/20' : 'hover:bg-muted'
                           )}
                         >
-                          <Avatar className="h-9 w-9 mr-3 ring-2 ring-gray-100">
-                            <AvatarImage src={profile.avatar} alt={profile.name} />
-                            <AvatarFallback className="bg-gradient-to-br from-[#FC8936] to-[#E67A2E] text-white text-xs">
+                          <Avatar className="h-8 w-8 mr-2.5 rounded-lg">
+                            <AvatarImage src={profile.avatar} alt={profile.name} className="rounded-lg" />
+                            <AvatarFallback className="bg-secondary text-secondary-foreground text-xs rounded-lg">
                               {getInitials(profile.name)}
                             </AvatarFallback>
                           </Avatar>
@@ -293,7 +274,7 @@ export function TopBar({
                             <p className="text-xs text-muted-foreground truncate">{profile.type}</p>
                           </div>
                           {currentProfile === 'business' && currentProfileId === profile.id && (
-                            <Badge className="ml-2 bg-gradient-to-r from-[#003C66] to-[#005A99] text-white text-xs font-semibold" variant="secondary">Active</Badge>
+                            <Badge className="ml-1 bg-primary text-primary-foreground text-[10px]" variant="secondary">Active</Badge>
                           )}
                         </DropdownMenuItem>
                       ))}
@@ -301,16 +282,16 @@ export function TopBar({
                   )}
                   <DropdownMenuItem 
                     onClick={onCreateBusiness}
-                    className="cursor-pointer rounded-lg mx-2 my-1 text-[#003C66] font-medium hover:bg-blue-50 transition-colors p-3"
+                    className="cursor-pointer rounded-lg mx-1.5 my-0.5 text-primary font-medium hover:bg-primary/5 p-2.5"
                   >
-                    <Plus className="w-4 h-4 mr-3" />
+                    <Plus className="w-4 h-4 mr-2.5" />
                     <span>Create New Business</span>
                   </DropdownMenuItem>
 
-                  {/* Squad Profiles Section */}
-                  <DropdownMenuSeparator className="my-2" />
-                  <DropdownMenuLabel className="text-xs text-muted-foreground px-3 py-1.5 font-medium">
-                    Squad Profiles
+                  {/* Squad Profiles */}
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <DropdownMenuLabel className="text-[10px] text-muted-foreground px-3 py-1.5 font-semibold uppercase tracking-wider">
+                    Squads
                   </DropdownMenuLabel>
                   {squadProfiles && squadProfiles.length > 0 && (
                     <>
@@ -319,13 +300,13 @@ export function TopBar({
                           key={profile.id}
                           onClick={() => onSwitchProfile?.('squad', profile.id)}
                           className={cn(
-                            'cursor-pointer rounded-lg mx-1 my-0.5 p-3',
-                            currentProfile === 'squad' && currentProfileId === profile.id ? 'bg-orange-50 border border-orange-200' : ''
+                            'cursor-pointer rounded-lg mx-1.5 my-0.5 p-2.5',
+                            currentProfile === 'squad' && currentProfileId === profile.id ? 'bg-secondary/5 border border-secondary/20' : 'hover:bg-muted'
                           )}
                         >
-                          <Avatar className="h-9 w-9 mr-3">
-                            <AvatarImage src={profile.avatar} alt={profile.name} />
-                            <AvatarFallback className="bg-gradient-to-br from-[#FC8936] to-[#E67A2E] text-white text-xs">
+                          <Avatar className="h-8 w-8 mr-2.5 rounded-lg">
+                            <AvatarImage src={profile.avatar} alt={profile.name} className="rounded-lg" />
+                            <AvatarFallback className="bg-secondary text-secondary-foreground text-xs rounded-lg">
                               {getInitials(profile.name)}
                             </AvatarFallback>
                           </Avatar>
@@ -334,7 +315,7 @@ export function TopBar({
                             <p className="text-xs text-muted-foreground truncate">{profile.sport}</p>
                           </div>
                           {currentProfile === 'squad' && currentProfileId === profile.id && (
-                            <Badge className="ml-2 bg-gradient-to-r from-[#FC8936] to-[#E67A2E] text-white text-xs" variant="secondary">Active</Badge>
+                            <Badge className="ml-1 bg-secondary text-secondary-foreground text-[10px]" variant="secondary">Active</Badge>
                           )}
                         </DropdownMenuItem>
                       ))}
@@ -342,19 +323,19 @@ export function TopBar({
                   )}
                   <DropdownMenuItem 
                     onClick={onCreateSquad}
-                    className="cursor-pointer rounded-lg mx-1 my-0.5 text-[#003C66] font-medium hover:bg-blue-50"
+                    className="cursor-pointer rounded-lg mx-1.5 my-0.5 text-primary font-medium hover:bg-primary/5 p-2.5"
                   >
-                    <Plus className="w-4 h-4 mr-3" />
+                    <Plus className="w-4 h-4 mr-2.5" />
                     <span>Create New Squad</span>
                   </DropdownMenuItem>
                   
-                  <DropdownMenuSeparator className="my-2" />
-                  <DropdownMenuItem onClick={() => onNavigate?.('settings')} className="cursor-pointer rounded-lg mx-1 my-0.5">
-                    <Settings className="w-4 h-4 mr-3 text-gray-600" />
+                  <DropdownMenuSeparator className="my-1.5" />
+                  <DropdownMenuItem onClick={() => onNavigate?.('settings')} className="cursor-pointer rounded-lg mx-1.5 my-0.5 p-2.5">
+                    <Settings className="w-4 h-4 mr-2.5 text-muted-foreground" />
                     <span className="font-medium">Settings</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600 cursor-pointer rounded-lg mx-1 my-0.5 mb-1">
-                    <LogOut className="w-4 h-4 mr-3" />
+                  <DropdownMenuItem className="text-destructive cursor-pointer rounded-lg mx-1.5 my-0.5 mb-1.5 p-2.5">
+                    <LogOut className="w-4 h-4 mr-2.5" />
                     <span className="font-medium">Logout</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

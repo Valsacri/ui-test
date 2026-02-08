@@ -24,7 +24,6 @@ import {
   Send,
 } from "lucide-react";
 import { EmptyState } from "@/app/components/EmptyState";
-import { spacing, elevation, iconSize } from "@/lib/design-system";
 
 interface HomeProps {
   onActivityClick: (activityId: string) => void;
@@ -56,9 +55,9 @@ export function Home({ onActivityClick }: HomeProps) {
   };
 
   return (
-    <div className={spacing.md}>
+    <div className="space-y-4">
       {/* Stories */}
-      <div className={`bg-white ${elevation.low} rounded-lg p-4`}>
+      <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
         <Stories
           stories={MOCK_STORIES}
           onStoryClick={(id) =>
@@ -70,66 +69,62 @@ export function Home({ onActivityClick }: HomeProps) {
 
       {/* Feed Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full grid grid-cols-2 bg-white border border-gray-200 shadow-sm">
-          <TabsTrigger value="for-you" className="data-[state=active]:bg-[#003C66] data-[state=active]:text-white">
+        <TabsList className="w-full grid grid-cols-2 bg-card border border-border shadow-sm h-10 rounded-lg">
+          <TabsTrigger 
+            value="for-you" 
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md text-sm"
+          >
             For You
           </TabsTrigger>
-          <TabsTrigger value="following" className="data-[state=active]:bg-[#003C66] data-[state=active]:text-white">
+          <TabsTrigger 
+            value="following" 
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md text-sm"
+          >
             Following
           </TabsTrigger>
         </TabsList>
-      </Tabs>
 
-      {/* Feed Content */}
-      <Tabs value={activeTab} className={spacing.md}>
         {/* For You Tab */}
-        <TabsContent value="for-you" className={`${spacing.md} mt-0`}>
-          <div className={spacing.md}>
-            {MOCK_POSTS.map((post) => (
-              <PostCard
-                key={post.id}
-                {...post}
-                onLike={() => handleLike(post.id)}
-                onComment={() => handleComment(post.id)}
-                onShare={() => handleShare(post.id)}
-                onLocationClick={() =>
-                  toast("Opening map view...")
-                }
-                onActivityClick={() =>
-                  post.activity &&
-                  onActivityClick(post.activity.id)
-                }
-              />
-            ))}
-          </div>
+        <TabsContent value="for-you" className="space-y-4 mt-4">
+          {MOCK_POSTS.map((post) => (
+            <PostCard
+              key={post.id}
+              {...post}
+              onLike={() => handleLike(post.id)}
+              onComment={() => handleComment(post.id)}
+              onShare={() => handleShare(post.id)}
+              onLocationClick={() =>
+                toast("Opening map view...")
+              }
+              onActivityClick={() =>
+                post.activity &&
+                onActivityClick(post.activity.id)
+              }
+            />
+          ))}
         </TabsContent>
 
         {/* Following Tab */}
-        <TabsContent
-          value="following"
-          className={`${spacing.md} mt-0`}
-        >
+        <TabsContent value="following" className="space-y-4 mt-4">
           {MOCK_POSTS.filter((p) => !p.sponsored).length > 0 ? (
-            <div className={spacing.md}>
-              {MOCK_POSTS.filter((p) => !p.sponsored).map(
-                (post) => (
-                  <PostCard
-                    key={post.id}
-                    {...post}
-                    onLike={() => handleLike(post.id)}
-                    onComment={() => handleComment(post.id)}
-                    onShare={() => handleShare(post.id)}
-                    onLocationClick={() =>
-                      toast("Opening map view...")
-                    }
-                    onActivityClick={() =>
-                      post.activity &&
-                      onActivityClick(post.activity.id)
-                    }
-                  />
-                ),
-              )}
-            </div>
+            MOCK_POSTS.filter((p) => !p.sponsored).map(
+              (post) => (
+                <PostCard
+                  key={post.id}
+                  {...post}
+                  onLike={() => handleLike(post.id)}
+                  onComment={() => handleComment(post.id)}
+                  onShare={() => handleShare(post.id)}
+                  onLocationClick={() =>
+                    toast("Opening map view...")
+                  }
+                  onActivityClick={() =>
+                    post.activity &&
+                    onActivityClick(post.activity.id)
+                  }
+                />
+              ),
+            )
           ) : (
             <EmptyState
               icon={Smile}
@@ -150,37 +145,25 @@ export function Home({ onActivityClick }: HomeProps) {
           <DialogHeader>
             <DialogTitle>Create Post</DialogTitle>
           </DialogHeader>
-          <div className={spacing.md}>
+          <div className="space-y-4">
             <Textarea
               placeholder="What's on your mind?"
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               rows={4}
-              className="resize-none focus:ring-2 focus:ring-[#003C66]/30"
+              className="resize-none"
             />
 
-            <div className={`flex items-center ${spacing.xs} flex-wrap`}>
-              <Button
-                variant="outline"
-                size="sm"
-                className={spacing.xs}
-              >
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" className="gap-1.5">
                 <ImageIcon className="w-4 h-4" />
                 Photo
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={spacing.xs}
-              >
+              <Button variant="outline" size="sm" className="gap-1.5">
                 <MapPin className="w-4 h-4" />
                 Location
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={spacing.xs}
-              >
+              <Button variant="outline" size="sm" className="gap-1.5">
                 <Smile className="w-4 h-4" />
                 Feeling
               </Button>
@@ -195,7 +178,7 @@ export function Home({ onActivityClick }: HomeProps) {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+                className="flex-1 bg-primary hover:bg-primary/90"
                 onClick={handleCreatePost}
                 disabled={!postContent.trim()}
               >

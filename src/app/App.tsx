@@ -67,6 +67,7 @@ import { ManageResources } from '@/app/screens/business/ManageResources';
 import { ManageCustomers } from '@/app/screens/business/ManageCustomers';
 import { TeamManagement } from '@/app/screens/business/TeamManagement';
 import { CreateBusiness } from '@/app/screens/business/CreateBusiness';
+import { CreateCampaign } from '@/app/screens/business/CreateCampaign';
 
 // Squad Screens
 import { SquadDashboard } from '@/app/screens/squad/SquadDashboard';
@@ -144,6 +145,7 @@ type Screen =
   | 'add-team-member'
   | 'add-resource'
   | 'create-activity'
+  | 'create-campaign'
   | 'store-detail'
   | 'manage-resources'
   | 'manage-customers'
@@ -520,6 +522,39 @@ export default function App() {
       );
     }
 
+    if (currentScreen === 'create-campaign') {
+      return (
+        <RootLayout
+          activeScreen={currentScreen}
+          onNavigate={handleNavigate}
+          onNotifications={() => setCurrentScreen('notifications')}
+          onMessages={() => setCurrentScreen('messages')}
+          onProfile={() => setCurrentScreen('business')}
+          onSwitchProfile={(type, profileId) => {
+            setUserType(type);
+            if (type === 'user') {
+              setCurrentScreen('profile');
+            } else if (type === 'business' && profileId) {
+              setCurrentBusinessId(profileId);
+              setCurrentScreen('business');
+            }
+          }}
+          currentProfile="business"
+          currentProfileId={currentBusinessId}
+          notificationCount={3}
+          messageCount={2}
+        >
+          <CreateCampaign
+            onBack={() => setCurrentScreen('business-campaigns')}
+            onNotifications={() => setCurrentScreen('notifications')}
+            onMessages={() => setCurrentScreen('messages')}
+            onProfile={() => setCurrentScreen('business')}
+            currentBusinessId={currentBusinessId}
+          />
+        </RootLayout>
+      );
+    }
+
     // Render different business pages based on screen
     let businessContent;
     switch (currentScreen) {
@@ -531,7 +566,11 @@ export default function App() {
         );
         break;
       case 'business-campaigns':
-        businessContent = <BusinessCampaigns />;
+        businessContent = (
+          <BusinessCampaigns
+            onCreateCampaign={() => setCurrentScreen('create-campaign')}
+          />
+        );
         break;
       case 'business-customers':
         businessContent = (
@@ -624,6 +663,7 @@ export default function App() {
             onManageCustomers={() => setCurrentScreen('manage-customers')}
             onManageTeam={() => setCurrentScreen('manage-team')}
             onCreateBusiness={() => setCurrentScreen('create-business')}
+            onCreateCampaign={() => setCurrentScreen('create-campaign')}
             onNotifications={() => setCurrentScreen('notifications')}
             onMessages={() => setCurrentScreen('messages')}
             onProfile={() => setCurrentScreen('business')}

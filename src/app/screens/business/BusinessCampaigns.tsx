@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
-import { Plus, DollarSign, TrendingUp, Users, Eye, Target, MoreVertical, ChartBar } from 'lucide-react';
-import { PageHeader } from '@/app/components/PageHeader';
+import { Plus, DollarSign, TrendingUp, Eye, Target, BarChart3 } from 'lucide-react';
 
 interface BusinessCampaignsProps {
   onCreateCampaign?: () => void;
@@ -43,148 +41,110 @@ export function BusinessCampaigns({ onCreateCampaign }: BusinessCampaignsProps) 
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <PageHeader
-        title="Sponsorship & Campaigns"
-        subtitle="Manage marketing campaigns and sponsorship deals"
-        actions={
-          <Button 
-            onClick={onCreateCampaign}
-            className="bg-[#FC8936] hover:bg-[#E67A2F] gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Create Campaign
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Campaigns</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage marketing campaigns and sponsorship deals</p>
+        </div>
+        <Button 
+          onClick={onCreateCampaign}
+          size="sm"
+          className="bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-1.5"
+        >
+          <Plus className="w-4 h-4" />
+          Create Campaign
+        </Button>
+      </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <DollarSign className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Budget</p>
-                <p className="text-2xl font-bold">${totalBudget.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Spent</p>
-                <p className="text-2xl font-bold">${totalSpent.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-pink-100 rounded-lg">
-                <Eye className="w-6 h-6 text-pink-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Social Impact</p>
-                <p className="text-2xl font-bold">{(totalReach / 1000).toFixed(1)}K</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Target className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Conversions</p>
-                <p className="text-2xl font-bold">{totalConversions}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { icon: DollarSign, label: 'Total Budget', value: `$${totalBudget.toLocaleString()}`, color: 'text-primary', bg: 'bg-primary/10' },
+          { icon: TrendingUp, label: 'Spent', value: `$${totalSpent.toLocaleString()}`, color: 'text-green-600', bg: 'bg-green-50' },
+          { icon: Eye, label: 'Social Impact', value: `${(totalReach / 1000).toFixed(1)}K`, color: 'text-secondary', bg: 'bg-secondary/10' },
+          { icon: Target, label: 'Conversions', value: totalConversions.toString(), color: 'text-primary', bg: 'bg-primary/10' },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label} className="border-border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`w-5 h-5 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    <p className="text-xl font-bold text-foreground">{stat.value}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Active Campaigns */}
-      <Card>
-        <CardHeader>
+      <Card className="border-border shadow-sm">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <ChartBar className="w-5 h-5" />
-                Active Campaigns
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Currently running marketing campaigns
-              </p>
-            </div>
-            <Badge variant="secondary">{campaigns.filter(c => c.status === 'active').length}</Badge>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              Active Campaigns
+            </CardTitle>
+            <Badge variant="secondary" className="text-xs">{campaigns.filter(c => c.status === 'active').length}</Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {campaigns.map((campaign) => (
-              <div key={campaign.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={campaign.id} className="border border-border rounded-xl p-5 hover:shadow-sm transition-all bg-card">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{campaign.name}</h3>
+                      <h3 className="font-semibold text-foreground">{campaign.name}</h3>
                       <Badge 
-                        variant={campaign.status === 'active' ? 'default' : 'secondary'}
-                        className={campaign.status === 'active' ? 'bg-green-500' : ''}
+                        className={`text-[10px] border-0 ${
+                          campaign.status === 'active' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}
                       >
                         {campaign.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {campaign.startDate} - {campaign.endDate}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="text-xs h-8">
                     View Details
                   </Button>
                 </div>
 
                 {/* Campaign Metrics */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <p className="text-xs text-gray-500">Budget</p>
-                    <p className="font-semibold">${campaign.budget.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Spent</p>
-                    <p className="font-semibold">${campaign.spent.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Reach</p>
-                    <p className="font-semibold">{campaign.reach.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Conversions</p>
-                    <p className="font-semibold">{campaign.conversions}</p>
-                  </div>
+                <div className="grid grid-cols-4 gap-4 mb-4">
+                  {[
+                    { label: 'Budget', value: `$${campaign.budget.toLocaleString()}` },
+                    { label: 'Spent', value: `$${campaign.spent.toLocaleString()}` },
+                    { label: 'Reach', value: campaign.reach.toLocaleString() },
+                    { label: 'Conversions', value: campaign.conversions.toString() },
+                  ].map((metric) => (
+                    <div key={metric.label}>
+                      <p className="text-[11px] text-muted-foreground">{metric.label}</p>
+                      <p className="text-sm font-semibold text-foreground">{metric.value}</p>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Progress Bar */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Budget Usage</span>
-                    <span className="font-medium">{Math.round((campaign.spent / campaign.budget) * 100)}%</span>
+                    <span className="text-muted-foreground">Budget Usage</span>
+                    <span className="font-semibold text-foreground">{Math.round((campaign.spent / campaign.budget) * 100)}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                     <div 
-                      className="bg-[#003C66] h-2 rounded-full transition-all"
+                      className="bg-primary h-full rounded-full transition-all duration-500"
                       style={{ width: `${(campaign.spent / campaign.budget) * 100}%` }}
                     />
                   </div>
@@ -194,11 +154,14 @@ export function BusinessCampaigns({ onCreateCampaign }: BusinessCampaignsProps) 
           </div>
 
           {campaigns.length === 0 && (
-            <div className="text-center py-12">
-              <ChartBar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">No campaigns yet</p>
-              <Button onClick={onCreateCampaign} className="bg-[#FC8936] hover:bg-[#E67A2F]">
-                <Plus className="w-4 h-4 mr-2" />
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                <BarChart3 className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground mb-1">No campaigns yet</p>
+              <p className="text-xs text-muted-foreground mb-4">Create your first campaign to start reaching your audience</p>
+              <Button onClick={onCreateCampaign} className="bg-secondary hover:bg-secondary/90 text-secondary-foreground">
+                <Plus className="w-4 h-4 mr-1.5" />
                 Create Your First Campaign
               </Button>
             </div>
@@ -206,47 +169,32 @@ export function BusinessCampaigns({ onCreateCampaign }: BusinessCampaignsProps) 
         </CardContent>
       </Card>
 
-      {/* Campaign Performance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ChartBar className="w-5 h-5" />
+      {/* Performance Overview */}
+      <Card className="border-border shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <TrendingUp className="w-4 h-4 text-primary" />
             Performance Overview
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Eye className="w-4 h-4 text-blue-500" />
-                  <p className="text-sm font-medium">Avg. Reach per Campaign</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { icon: Eye, label: 'Avg. Reach per Campaign', value: campaigns.length > 0 ? Math.round(totalReach / campaigns.length).toLocaleString() : '0', color: 'text-primary' },
+              { icon: Target, label: 'Conversion Rate', value: `${totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : 0}%`, color: 'text-green-600' },
+              { icon: DollarSign, label: 'Cost per Conversion', value: `$${totalConversions > 0 ? (totalSpent / totalConversions).toFixed(2) : 0}`, color: 'text-secondary' },
+            ].map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <div key={metric.label} className="p-4 bg-muted rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon className={`w-4 h-4 ${metric.color}`} />
+                    <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{metric.value}</p>
                 </div>
-                <p className="text-2xl font-bold">
-                  {campaigns.length > 0 ? Math.round(totalReach / campaigns.length).toLocaleString() : 0}
-                </p>
-              </div>
-
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-green-500" />
-                  <p className="text-sm font-medium">Conversion Rate</p>
-                </div>
-                <p className="text-2xl font-bold">
-                  {totalReach > 0 ? ((totalConversions / totalReach) * 100).toFixed(2) : 0}%
-                </p>
-              </div>
-
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-purple-500" />
-                  <p className="text-sm font-medium">Cost per Conversion</p>
-                </div>
-                <p className="text-2xl font-bold">
-                  ${totalConversions > 0 ? (totalSpent / totalConversions).toFixed(2) : 0}
-                </p>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

@@ -2,44 +2,15 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
-import { Plus, Calendar, Users, MapPin, QrCode, Dumbbell, Trophy, Mountain, Tent, Activity as ActivityIcon, Award } from 'lucide-react';
+import { Plus, Calendar, Users, MapPin, QrCode, Dumbbell, Trophy, Award } from 'lucide-react';
 import { MOCK_ACTIVITIES, ACTIVITY_TYPES } from '@/app/data/mockData';
 import { OrganizerPortfolio } from '@/app/components/OrganizerPortfolio';
-import { PageHeader } from '@/app/components/PageHeader';
-import Slider from 'react-slick';
-import 'slick-carousel/slick/slick.css';
-import 'slick-carousel/slick/slick-theme.css';
 
 interface BusinessActivitiesProps {
   onCreateActivity: () => void;
   onManageAttendance?: (activityId: string) => void;
   onManageSponsors?: (activityId: string) => void;
 }
-
-// Custom arrow components
-const CustomNextArrow = (props: any) => {
-  const { className, style, onClick } = props;
-  return (
-    <button
-      className={className}
-      style={{ ...style, display: 'block' }}
-      onClick={onClick}
-      aria-label="Next"
-    />
-  );
-};
-
-const CustomPrevArrow = (props: any) => {
-  const { className, style, onClick } = props;
-  return (
-    <button
-      className={className}
-      style={{ ...style, display: 'block' }}
-      onClick={onClick}
-      aria-label="Previous"
-    />
-  );
-};
 
 export function BusinessActivities({ onCreateActivity, onManageAttendance, onManageSponsors }: BusinessActivitiesProps) {
   const [showPortfolio, setShowPortfolio] = useState(false);
@@ -49,218 +20,144 @@ export function BusinessActivities({ onCreateActivity, onManageAttendance, onMan
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <PageHeader
-        title="Activities"
-        subtitle="Manage events, sessions, and activities"
-        actions={
-          <>
-            <Button 
-              onClick={() => setShowPortfolio(true)}
-              variant="outline"
-              className="gap-2"
-            >
-              <Award className="w-4 h-4" />
-              Portfolio
-            </Button>
-            <Button 
-              onClick={onCreateActivity}
-              className="bg-[#FC8936] hover:bg-[#E67A2F] gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create Activity
-            </Button>
-          </>
-        }
-      />
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Calendar className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Activities</p>
-                <p className="text-2xl font-bold">{myActivities.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Users className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Participants</p>
-                <p className="text-2xl font-bold">245</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Trophy className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Events Hosted</p>
-                <p className="text-2xl font-bold">{sponsoredEvents.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Dumbbell className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Active Sessions</p>
-                <p className="text-2xl font-bold">8</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Activities</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage events, sessions, and training programs</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={() => setShowPortfolio(true)}
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+          >
+            <Award className="w-4 h-4" />
+            Portfolio
+          </Button>
+          <Button 
+            onClick={onCreateActivity}
+            size="sm"
+            className="bg-secondary hover:bg-secondary/90 text-secondary-foreground gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Create Activity
+          </Button>
+        </div>
       </div>
 
-      {/* Regular Activities Section */}
-      <Card>
-        <CardHeader>
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { icon: Calendar, label: 'Total Activities', value: myActivities.length, color: 'text-primary', bg: 'bg-primary/10' },
+          { icon: Users, label: 'Participants', value: '245', color: 'text-green-600', bg: 'bg-green-50' },
+          { icon: Trophy, label: 'Events Hosted', value: sponsoredEvents.length, color: 'text-secondary', bg: 'bg-secondary/10' },
+          { icon: Dumbbell, label: 'Active Sessions', value: '8', color: 'text-primary', bg: 'bg-primary/10' },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label} className="border-border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 ${stat.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`w-5 h-5 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    <p className="text-xl font-bold text-foreground">{stat.value}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Activity Grid */}
+      <Card className="border-border shadow-sm">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Dumbbell className="w-5 h-5" />
-                Regular Activities
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Recurring workouts, sessions, and training
-              </p>
-            </div>
-            <Badge variant="secondary">{myActivities.length}</Badge>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Dumbbell className="w-4 h-4 text-primary" />
+              Regular Activities
+            </CardTitle>
+            <Badge variant="secondary" className="text-xs">{myActivities.length}</Badge>
           </div>
         </CardHeader>
         <CardContent>
           {myActivities.length > 0 ? (
-            <Slider
-              dots={false}
-              infinite={false}
-              speed={500}
-              slidesToShow={3}
-              slidesToScroll={1}
-              arrows={true}
-              nextArrow={<CustomNextArrow />}
-              prevArrow={<CustomPrevArrow />}
-              responsive={[
-                {
-                  breakpoint: 1024,
-                  settings: {
-                    slidesToShow: 2,
-                    slidesToScroll: 1,
-                  }
-                },
-                {
-                  breakpoint: 768,
-                  settings: {
-                    slidesToShow: 1,
-                    slidesToScroll: 1,
-                  }
-                }
-              ]}
-            >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {myActivities.map((activity) => (
-                <div key={activity.id} className="px-2">
-                  <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
-                    <div className="relative h-40 bg-gray-200">
-                      <img 
-                        src={activity.image} 
-                        alt={activity.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <Badge 
-                        variant="secondary"
-                        className="absolute top-2 right-2"
-                      >
-                        Active
-                      </Badge>
-                    </div>
+                <div key={activity.id} className="group border border-border rounded-xl overflow-hidden hover:shadow-md transition-all bg-card">
+                  <div className="relative h-36 bg-muted">
+                    <img 
+                      src={activity.image} 
+                      alt={activity.title}
+                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                    />
+                    <Badge className="absolute top-2.5 right-2.5 bg-green-500 text-white border-0 text-[10px] px-2">
+                      Active
+                    </Badge>
+                  </div>
+                  
+                  <div className="p-4">
+                    <h3 className="font-semibold text-sm text-foreground mb-0.5 line-clamp-1">{activity.title}</h3>
+                    <p className="text-xs text-muted-foreground mb-3">{activity.sport}</p>
                     
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-sm flex-1">{activity.title}</h3>
-                        {(activity as any).activityType && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            {ACTIVITY_TYPES.find(t => t.id === (activity as any).activityType)?.icon}
-                          </Badge>
-                        )}
+                    <div className="space-y-1.5 text-xs mb-4">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{activity.date}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-3">{activity.sport}</p>
-                      
-                      <div className="flex flex-col gap-2 text-xs mb-3">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          <span>{activity.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Users className="w-3 h-3" />
-                          <span>{activity.participants}/{activity.maxParticipants} participants</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="w-3 h-3" />
-                          <span>{activity.location}</span>
-                        </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="w-3.5 h-3.5" />
+                        <span>{activity.participants}/{activity.maxParticipants} participants</span>
                       </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span className="line-clamp-1">{activity.location}</span>
+                      </div>
+                    </div>
 
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full text-xs h-8 flex items-center gap-1.5 hover:bg-[#003C66] hover:text-white transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onManageAttendance) {
-                              onManageAttendance(activity.id);
-                            }
-                          }}
-                        >
-                          <QrCode className="w-3.5 h-3.5" />
-                          Manage Attendance
-                        </Button>
-                        
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full text-xs h-8 flex items-center gap-1.5 hover:bg-[#FC8936] hover:text-white transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onManageSponsors) {
-                              onManageSponsors(activity.id);
-                            }
-                          }}
-                        >
-                          <Trophy className="w-3.5 h-3.5" />
-                          Manage Sponsors
-                        </Button>
-                      </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-[11px] h-8 gap-1 hover:bg-primary hover:text-primary-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onManageAttendance?.(activity.id);
+                        }}
+                      >
+                        <QrCode className="w-3 h-3" />
+                        Attendance
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-[11px] h-8 gap-1 hover:bg-secondary hover:text-secondary-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onManageSponsors?.(activity.id);
+                        }}
+                      >
+                        <Trophy className="w-3 h-3" />
+                        Sponsors
+                      </Button>
                     </div>
                   </div>
                 </div>
               ))}
-            </Slider>
+            </div>
           ) : (
-            <div className="text-center py-12">
-              <Dumbbell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">No activities yet</p>
-              <Button onClick={onCreateActivity} className="bg-[#FC8936] hover:bg-[#E67A2F]">
-                <Plus className="w-4 h-4 mr-2" />
+            <div className="text-center py-16">
+              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                <Dumbbell className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground mb-1">No activities yet</p>
+              <p className="text-xs text-muted-foreground mb-4">Create your first activity to get started</p>
+              <Button onClick={onCreateActivity} className="bg-secondary hover:bg-secondary/90 text-secondary-foreground">
+                <Plus className="w-4 h-4 mr-1.5" />
                 Create Your First Activity
               </Button>
             </div>

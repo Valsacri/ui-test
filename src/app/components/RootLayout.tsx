@@ -18,7 +18,7 @@ interface RootLayoutProps {
   currentProfileId?: string;
   notificationCount?: number;
   messageCount?: number;
-  rightSidebarContent?: ReactNode; // Dynamic right sidebar content
+  rightSidebarContent?: ReactNode;
 }
 
 export function RootLayout({
@@ -35,13 +35,12 @@ export function RootLayout({
   messageCount = 2,
   rightSidebarContent,
 }: RootLayoutProps) {
-  // Get current business profile data
   const currentBusiness = currentProfile === 'business' 
     ? MOCK_BUSINESS_PROFILES.find(b => b.id === currentProfileId) || MOCK_BUSINESS_PROFILES[0]
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* TopBar */}
       <TopBar
         onGoals={() => onNavigate('goals')}
@@ -63,11 +62,11 @@ export function RootLayout({
         currentProfileId={currentProfileId}
       />
 
-      {/* Main Layout with Sidebars */}
+      {/* Main Layout */}
       <div className="max-w-[1600px] mx-auto px-4 pb-8">
-        <div className="flex gap-6 bg-transparent pt-4">
-          {/* Left Sidebar - Hidden on mobile, visible on xl+ */}
-          <div className="hidden xl:block w-72 flex-shrink-0">
+        <div className="flex gap-6 pt-5">
+          {/* Left Sidebar */}
+          <div className="hidden xl:block w-64 flex-shrink-0">
             {currentProfile === 'user' ? (
               <ExploreSidebar onNavigate={onNavigate} currentPage={activeScreen} />
             ) : (
@@ -75,12 +74,12 @@ export function RootLayout({
             )}
           </div>
 
-          {/* Main Content Area */}
+          {/* Main Content */}
           <div className="flex-1 min-w-0">
             {children}
           </div>
 
-          {/* Right Sidebar - Hidden on mobile, visible on lg+ */}
+          {/* Right Sidebar */}
           <div className="hidden lg:block w-80 flex-shrink-0">
             {rightSidebarContent ? (
               rightSidebarContent

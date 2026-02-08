@@ -1,5 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { LayoutDashboard, Calendar, Users, Package, TrendingUp, Settings, Megaphone, Briefcase, ChevronRight, BarChart3, DollarSign, UserCheck, Building2 } from 'lucide-react';
+import { Card, CardContent } from '@/app/components/ui/card';
+import { 
+  LayoutDashboard, Calendar, Users, Package, TrendingUp, Settings, 
+  Megaphone, Briefcase, Building2, BarChart3, UserCheck, Plus 
+} from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 
 interface BusinessExploreSidebarProps {
@@ -13,163 +16,140 @@ export function BusinessExploreSidebar({ onNavigate, currentPage }: BusinessExpl
       id: 'dashboard',
       icon: LayoutDashboard,
       label: 'Dashboard',
-      description: 'Overview & insights',
-      color: 'bg-[#003C66] text-white',
       destination: 'business-dashboard',
     },
     {
       id: 'activities',
       icon: Calendar,
       label: 'Activities',
-      description: 'Manage events & sessions',
-      color: 'bg-[#003C66] text-white',
       destination: 'business-activities',
     },
     {
       id: 'campaigns',
       icon: Megaphone,
       label: 'Campaigns',
-      description: 'Sponsorship & marketing',
-      color: 'bg-[#003C66] text-white',
       destination: 'business-campaigns',
     },
     {
       id: 'customers',
       icon: Users,
       label: 'Customers',
-      description: 'Manage relationships',
-      color: 'bg-[#003C66] text-white',
       destination: 'business-customers',
     },
     {
       id: 'resources',
       icon: Package,
       label: 'Resources',
-      description: 'Products & facilities',
-      color: 'bg-[#003C66] text-white',
       destination: 'business-resources',
     },
     {
       id: 'analytics',
       icon: BarChart3,
       label: 'Analytics',
-      description: 'Performance metrics',
-      color: 'bg-[#003C66] text-white',
       destination: 'business-analytics',
     },
     {
       id: 'athletes',
       icon: UserCheck,
-      label: 'Athletes & Influencers',
-      description: 'Collaboration partners',
-      color: 'bg-[#003C66] text-white',
+      label: 'Athletes',
       destination: 'business-athletes',
     },
     {
       id: 'businesses',
       icon: Building2,
-      label: 'Businesses',
-      description: 'Business partnerships',
-      color: 'bg-[#003C66] text-white',
+      label: 'Partners',
       destination: 'business-partners',
     },
     {
       id: 'team',
       icon: Briefcase,
       label: 'Team',
-      description: 'Staff & permissions',
-      color: 'bg-[#003C66] text-white',
       destination: 'business-team',
     },
   ];
 
-  const handleItemClick = (destination: string) => {
-    if (onNavigate) {
-      onNavigate(destination);
-    }
-  };
-
   return (
-    <div className="space-y-4 sticky top-[3.5rem] max-h-[calc(100vh-3.5rem)] overflow-y-auto pb-4">
-      {/* Quick Actions Card */}
-      <Card className="border border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-[#003C66]">Business Hub</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
-          {businessItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentPage === item.destination;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleItemClick(item.destination)}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all group ${
-                  isActive 
-                    ? 'bg-[#003C66] text-white shadow-md' 
-                    : 'hover:bg-gray-100 text-gray-700'
-                }`}
-              >
-                <div className={`p-2 rounded-lg ${isActive ? 'bg-white/20' : 'bg-gray-100 group-hover:bg-white'}`}>
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#003C66]'}`} />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className={`font-semibold text-sm ${isActive ? 'text-white' : 'text-gray-900'}`}>
-                    {item.label}
-                  </p>
-                  <p className={`text-xs ${isActive ? 'text-white/80' : 'text-gray-500'}`}>
-                    {item.description}
-                  </p>
-                </div>
-                <ChevronRight className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
-              </button>
-            );
-          })}
+    <div className="space-y-4 sticky top-[3.75rem] max-h-[calc(100vh-3.75rem)] overflow-y-auto pb-4">
+      {/* Quick Actions */}
+      <div className="flex gap-2">
+        <Button 
+          size="sm" 
+          className="flex-1 bg-primary hover:bg-primary/90 gap-1.5 h-9 text-xs"
+          onClick={() => onNavigate?.('create-activity')}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Activity
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="flex-1 gap-1.5 h-9 text-xs border-secondary text-secondary hover:bg-secondary/10"
+          onClick={() => onNavigate?.('create-campaign')}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Campaign
+        </Button>
+      </div>
+
+      {/* Navigation */}
+      <Card className="border-border shadow-sm">
+        <CardContent className="p-2">
+          <nav className="space-y-0.5">
+            {businessItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentPage === item.destination || 
+                (!currentPage && item.id === 'dashboard') ||
+                (currentPage === 'business' && item.id === 'dashboard');
+              
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onNavigate?.(item.destination)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
+                    isActive 
+                      ? 'bg-primary text-primary-foreground font-medium shadow-sm' 
+                      : 'text-foreground hover:bg-muted font-normal'
+                  }`}
+                >
+                  <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </CardContent>
       </Card>
 
       {/* Quick Stats */}
-      <Card className="border border-gray-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-[#003C66]">Quick Stats</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <TrendingUp className="w-4 h-4 text-blue-600" />
-              </div>
-              <span className="text-sm text-gray-700">Revenue</span>
-            </div>
-            <span className="font-semibold text-sm">$2,450</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Calendar className="w-4 h-4 text-green-600" />
-              </div>
-              <span className="text-sm text-gray-700">Active Events</span>
-            </div>
-            <span className="font-semibold text-sm">8</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Users className="w-4 h-4 text-purple-600" />
-              </div>
-              <span className="text-sm text-gray-700">Customers</span>
-            </div>
-            <span className="font-semibold text-sm">245</span>
+      <Card className="border-border shadow-sm">
+        <CardContent className="p-4 space-y-3">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Quick Stats</h4>
+          <div className="space-y-2.5">
+            {[
+              { icon: TrendingUp, label: 'Revenue', value: '$2,450', color: 'text-green-600' },
+              { icon: Calendar, label: 'Active Events', value: '8', color: 'text-primary' },
+              { icon: Users, label: 'Customers', value: '245', color: 'text-secondary' },
+            ].map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`w-4 h-4 ${stat.color}`} />
+                    <span className="text-sm text-muted-foreground">{stat.label}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">{stat.value}</span>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* Settings Quick Link */}
+      {/* Settings */}
       <Button 
-        variant="outline" 
-        className="w-full justify-start gap-2"
-        onClick={() => handleItemClick('business-settings')}
+        variant="ghost" 
+        className="w-full justify-start gap-2.5 text-sm text-muted-foreground hover:text-foreground h-10"
+        onClick={() => onNavigate?.('business-settings')}
       >
         <Settings className="w-4 h-4" />
         Settings

@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { ActivityStepForm } from '@/app/components/ActivityStepForm';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
+import { Button } from '@/app/components/ui/button';
 
 interface CreateActivityProps {
   onBack: () => void;
@@ -17,33 +16,40 @@ interface CreateActivityProps {
 
 export function CreateActivity({ onBack, onSubmit, onMetricsChange }: CreateActivityProps) {
   return (
-    <div className="w-full">
+    <div className="w-full max-w-4xl mx-auto">
       {/* Header */}
-      <div className="bg-white rounded-lg border mb-6 p-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-xl font-bold">Create New Activity</h1>
+      <div className="bg-card rounded-xl border border-border mb-6 overflow-hidden">
+        <div className="bg-primary/[0.03] border-b border-border px-6 py-5">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="h-9 w-9 p-0 rounded-lg hover:bg-primary/10"
+            >
+              <ArrowLeft className="w-5 h-5 text-primary" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-secondary" />
+                <h1 className="text-xl font-semibold text-foreground">Create New Activity</h1>
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5 ml-7">Set up your event, session, or training program</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity Details</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="p-6">
           <ActivityStepForm
             onCancel={onBack}
             onSubmit={onSubmit}
             onMetricsChange={onMetricsChange}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
