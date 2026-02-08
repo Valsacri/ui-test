@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { SignUp } from '@/app/screens/onboarding/SignUp';
 import { ChooseSports } from '@/app/screens/onboarding/ChooseSports';
 import { SportWithLevel } from '@/app/components/SportSelector';
-import { ExperienceLevel } from '@/app/screens/onboarding/ExperienceLevel';
+
 import { SetGoals } from '@/app/screens/onboarding/SetGoals';
 import { Confirmation } from '@/app/screens/onboarding/Confirmation';
 
@@ -87,7 +87,7 @@ import { ServicesFilterSidebar } from '@/app/components/ServicesFilterSidebar';
 import { BusinessesFilterSidebar } from '@/app/components/BusinessesFilterSidebar';
 import { FACILITIES, PRODUCTS, SERVICES } from '@/app/data/exploreData';
 
-type OnboardingStep = 'signup' | 'sports' | 'level' | 'goals' | 'confirmation';
+type OnboardingStep = 'signup' | 'sports' | 'goals' | 'confirmation';
 type UserType = 'user' | 'business';
 type Screen = 
   | 'home'
@@ -184,7 +184,6 @@ export default function App() {
 
   // Onboarding state
   const [selectedSports, setSelectedSports] = useState<SportWithLevel[]>([]);
-  const [experienceLevel, setExperienceLevel] = useState<string>('');
   const [goals, setGoals] = useState<string[]>([]);
 
   // Onboarding handlers
@@ -194,11 +193,6 @@ export default function App() {
 
   const handleSportsComplete = (sports: SportWithLevel[]) => {
     setSelectedSports(sports);
-    setOnboardingStep('goals');
-  };
-
-  const handleLevelComplete = (level: string) => {
-    setExperienceLevel(level);
     setOnboardingStep('goals');
   };
 
@@ -391,41 +385,17 @@ export default function App() {
         return <SignUp onComplete={handleSignUpComplete} />;
       case 'sports':
         return (
-          <RootLayout
-            activeScreen="onboarding"
-            onNavigate={handleNavigate}
-            onNotifications={() => setCurrentScreen('notifications')}
-            onMessages={() => setCurrentScreen('messages')}
-            onProfile={() => setCurrentScreen('profile')}
-            onSwitchProfile={handleSwitchProfile}
-            currentProfile={userType}
-            currentProfileId={currentProfileId}
-            rightSidebarContent={null}
-          >
-            <ChooseSports
-              onComplete={handleSportsComplete}
-              onBack={() => setOnboardingStep('signup')}
-            />
-          </RootLayout>
+          <ChooseSports
+            onComplete={handleSportsComplete}
+            onBack={() => setOnboardingStep('signup')}
+          />
         );
       case 'goals':
         return (
-          <RootLayout
-            activeScreen="onboarding"
-            onNavigate={handleNavigate}
-            onNotifications={() => setCurrentScreen('notifications')}
-            onMessages={() => setCurrentScreen('messages')}
-            onProfile={() => setCurrentScreen('profile')}
-            onSwitchProfile={handleSwitchProfile}
-            currentProfile={userType}
-            currentProfileId={currentProfileId}
-            rightSidebarContent={null}
-          >
-            <SetGoals
-              onComplete={handleGoalsComplete}
-              onBack={() => setOnboardingStep('sports')}
-            />
-          </RootLayout>
+          <SetGoals
+            onComplete={handleGoalsComplete}
+            onBack={() => setOnboardingStep('sports')}
+          />
         );
       case 'confirmation':
         return <Confirmation onComplete={handleOnboardingComplete} />;

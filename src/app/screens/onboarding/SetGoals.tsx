@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { GOAL_CATEGORIES } from '@/app/data/mockData';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Activity } from 'lucide-react';
 import { cn } from '@/app/components/ui/utils';
 
 interface SetGoalsProps {
   onComplete: (goals: string[]) => void;
   onBack: () => void;
 }
+
+const STEPS = [
+  { label: 'Sports', active: true },
+  { label: 'Goals', active: true },
+  { label: 'Ready', active: false },
+];
 
 export function SetGoals({ onComplete, onBack }: SetGoalsProps) {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
@@ -27,69 +33,85 @@ export function SetGoals({ onComplete, onBack }: SetGoalsProps) {
   };
 
   return (
-    <div className="w-full">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
+      <header className="sticky top-0 z-20 bg-card/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-2xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
             <button
               onClick={onBack}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
+              Back
             </button>
-            <div className="flex-1">
-              <div className="flex gap-2">
-                {[1, 2, 3].map((step) => (
-                  <div
-                    key={step}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
-                      step <= 2 ? 'bg-primary' : 'bg-gray-200'
-                    }`}
-                  />
-                ))}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+                <Activity className="w-4 h-4 text-primary-foreground" />
               </div>
+              <span className="text-sm font-semibold text-foreground">Sporgates</span>
             </div>
+            <div className="w-14" />
+          </div>
+
+          {/* Step indicator */}
+          <div className="flex items-center gap-2">
+            {STEPS.map((step) => (
+              <div key={step.label} className="flex-1 flex flex-col items-center gap-1.5">
+                <div
+                  className={`h-1.5 w-full rounded-full transition-colors ${
+                    step.active ? 'bg-primary' : 'bg-border'
+                  }`}
+                />
+                <span className={`text-[10px] font-medium uppercase tracking-wider ${
+                  step.active ? 'text-primary' : 'text-muted-foreground'
+                }`}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-12 pb-24">
-        <div className="space-y-8">
-          <div className="space-y-3 text-center">
-            <h1 className="text-3xl font-bold text-[#003C66]">What are your goals?</h1>
-            <p className="text-muted-foreground">
-              Select one or more goals. Our AI will create a personalized plan for you.
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-6 py-10 pb-32">
+          <div className="space-y-2 mb-8">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              What are your goals?
+            </h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Select one or more goals. We will use AI to create a personalized plan tailored to your ambitions.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {GOAL_CATEGORIES.map((goal) => {
               const isSelected = selectedGoals.includes(goal.id);
-              
+
               return (
                 <button
                   key={goal.id}
                   onClick={() => handleToggle(goal.id)}
                   className={cn(
-                    "relative p-6 rounded-xl border-2 transition-all",
-                    "hover:shadow-md active:scale-[0.98]",
+                    "relative p-5 rounded-xl border-2 transition-all text-left",
+                    "hover:shadow-sm active:scale-[0.97]",
                     isSelected
-                      ? "border-[#FC8936] bg-[#FC8936]/5 shadow-sm"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-secondary bg-secondary/5"
+                      : "border-border bg-card hover:border-secondary/30"
                   )}
                 >
                   {isSelected && (
-                    <div className="absolute top-3 right-3 w-5 h-5 bg-[#FC8936] rounded-full flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
+                    <div className="absolute top-2.5 right-2.5 w-5 h-5 bg-secondary rounded-full flex items-center justify-center">
+                      <Check className="w-3 h-3 text-secondary-foreground" />
                     </div>
                   )}
-                  <div className="text-center space-y-2">
-                    <div className="text-4xl">{goal.icon}</div>
+                  <div className="space-y-2">
+                    <span className="text-2xl block">{goal.icon}</span>
                     <h3 className={cn(
-                      "font-semibold",
-                      isSelected ? "text-[#003C66]" : "text-gray-900"
+                      "text-sm font-semibold",
+                      isSelected ? "text-foreground" : "text-foreground"
                     )}>
                       {goal.label}
                     </h3>
@@ -100,22 +122,25 @@ export function SetGoals({ onComplete, onBack }: SetGoalsProps) {
           </div>
 
           {selectedGoals.length > 0 && (
-            <p className="text-sm text-center text-muted-foreground">
-              {selectedGoals.length} {selectedGoals.length === 1 ? 'goal' : 'goals'} selected
-            </p>
+            <div className="mt-6 text-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/10 text-secondary text-xs font-medium">
+                {selectedGoals.length} {selectedGoals.length === 1 ? 'goal' : 'goals'} selected
+              </span>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Fixed Bottom Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-20">
+      {/* Fixed Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 bg-card/80 backdrop-blur-md border-t border-border p-4 z-20">
         <div className="max-w-2xl mx-auto">
           <Button
             onClick={handleContinue}
             disabled={selectedGoals.length === 0}
-            className="w-full bg-gradient-to-r from-[#003C66] to-[#FC8936] hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-40 gap-2"
           >
             Continue
+            <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
