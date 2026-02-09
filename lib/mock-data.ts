@@ -349,7 +349,7 @@ export const services = [
     currency: "$",
     rating: 4.6,
     reviews: 42,
-    image: "https://images.unsplash.com/photo-1461896836934-bd45ba9c646b?w=400&h=250&fit=crop",
+    image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=250&fit=crop",
     category: "Training",
     verified: false,
     description: "8-week structured running program from 5K to half marathon.",
