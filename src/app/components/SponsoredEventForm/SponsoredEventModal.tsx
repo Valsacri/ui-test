@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +6,8 @@ import {
   DialogTitle,
 } from '@/app/components/ui/dialog';
 import { Button } from '@/app/components/ui/button';
-import { SponsoredEventFormProvider, SponsoredEventForm } from './SponsoredEventForm';
+import { SponsoredEventForm } from './SponsoredEventForm';
+import { SponsoredEventFormProvider } from './SponsoredEventFormContext';
 
 interface SponsoredEventModalProps {
   open: boolean;

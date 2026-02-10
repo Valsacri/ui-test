@@ -683,7 +683,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
 
             {/* Sponsorship Configuration (shown when toggled on and expanded) */}
             {isSponsoredEvent && !isSponsorshipExpanded && (
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4">
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-4 mt-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
@@ -693,41 +693,14 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                     </div>
                     <div>
                       <p className="font-semibold text-green-900">Sponsorship Enabled</p>
-                      <p className="text-sm text-green-700">Event is ready for sponsor opportunities</p>
+                      <p className="text-sm text-green-700">Complete the sponsored event details in the modal to the right</p>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsSponsorshipExpanded(true)}
-                    className="border-green-300 hover:bg-green-100"
-                  >
-                    Configure Details
-                  </Button>
                 </div>
               </div>
             )}
-
-            {isSponsoredEvent && isSponsorshipExpanded && (
-              <div className="space-y-6 p-4 bg-gradient-to-br from-orange-50 to-blue-50 border-2 border-secondary rounded-lg">
                 {/* Sponsorship Header with Collapse Button */}
-                <div className="flex items-center justify-between pb-3 border-b-2 border-secondary/30">
-                  <div>
-                    <h3 className="font-bold text-primary text-lg">Sponsorship Configuration</h3>
-                    <p className="text-sm text-muted-foreground mt-1">Step {sponsorshipSubStep} of 4</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setIsSponsorshipExpanded(false);
-                      setSponsorshipSubStep(1);
-                    }}
-                    className="border-border"
-                  >
-                    Collapse
-                  </Button>
-                </div>
+                {/* Removed - Sponsorship now handled in modal */}
 
                 {/* Sub-step 1: Mission, Goals & Target Audience */}
                 {sponsorshipSubStep === 1 && (
