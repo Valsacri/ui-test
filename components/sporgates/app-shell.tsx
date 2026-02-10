@@ -144,7 +144,7 @@ export function AppShell() {
       case "facility-detail":
         return <FacilityDetailPage facilityId={detailId || "1"} onNavigate={navigate} />
       case "marketplace":
-        return <MarketplacePage onNavigate={navigate} />
+        return <MarketplacePage onNavigate={navigate} isBusinessMode={isBusinessMode} />
       case "products":
         return <ProductsPage onNavigate={navigate} />
       case "product-detail":

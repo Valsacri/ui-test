@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 
 interface MarketplacePageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
+  isBusinessMode?: boolean
 }
 
 interface CartItem {
@@ -28,7 +29,7 @@ interface CartItem {
 const categories = ["All", "Footwear", "Equipment", "Apparel", "Wearables", "Nutrition"]
 const priceRanges = ["Any Price", "Under $50", "$50-$100", "$100-$200", "Over $200"]
 
-export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
+export function MarketplacePage({ onNavigate, isBusinessMode = false }: MarketplacePageProps) {
   const [activeCategory, setActiveCategory] = useState("All")
   const [showCart, setShowCart] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
@@ -107,13 +108,15 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowCollections(true)}
-            className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-          >
-            Collections
-          </button>
+          {isBusinessMode && (
+            <button
+              type="button"
+              onClick={() => setShowCollections(true)}
+              className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              Collections
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onNavigate("products")}

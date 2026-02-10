@@ -1584,22 +1584,37 @@ export function TeamManagementPage({ onNavigate }: BusinessFormPageProps) {
 // ==================== BusinessProfile ====================
 export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
   const data = businessDashboardData
+  const [activeTab, setActiveTab] = useState("overview")
+  const [businessInfo, setBusinessInfo] = useState({
+    name: "Chelsea Piers Sports",
+    type: "Sports Complex",
+    description: "Premier multi-sport complex in NYC offering basketball, swimming, tennis, and more.",
+    location: "Chelsea, NYC",
+    phone: "+1 (212) 555-0199",
+    email: "info@chelseapierssports.com",
+    website: "www.chelseapierssports.com",
+    openingHours: "Mon-Fri: 6:00 AM - 10:00 PM",
+  })
+
+  const handleSave = () => {
+    setActiveTab("overview")
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="gradient-primary h-32" />
-        <div className="px-6 pb-6">
-          <div className="-mt-10 flex items-end gap-4">
-            <div className="gradient-secondary flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-card text-2xl font-bold text-white shadow-lg">
+        <div className="px-6 pb-6 pt-6">
+          <div className="-mt-12 flex items-end gap-4">
+            <div className="gradient-secondary flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border-4 border-card text-2xl font-bold text-white shadow-lg">
               <Building2 className="h-8 w-8" />
             </div>
-            <div className="flex-1 pb-1">
+            <div className="min-w-0 flex-1 pt-4">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-foreground">Chelsea Piers Sports</h1>
-                <BadgeCheck className="h-5 w-5 text-primary" />
+                <h1 className="truncate text-xl font-bold text-foreground">{businessInfo.name}</h1>
+                <BadgeCheck className="h-5 w-5 shrink-0 text-primary" />
               </div>
-              <p className="text-sm text-muted-foreground">Sports Complex</p>
+              <p className="text-sm text-muted-foreground">{businessInfo.type}</p>
             </div>
             <div className="hidden items-center gap-2 md:flex">
               <button
@@ -1609,18 +1624,11 @@ export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
               >
                 Create Activity
               </button>
-              <button
-                type="button"
-                onClick={() => onNavigate("create-business")}
-                className="rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary hover:bg-primary hover:text-white"
-              >
-                Edit Profile
-              </button>
             </div>
           </div>
-          <p className="mt-3 text-sm text-foreground">Premier multi-sport complex in NYC offering basketball, swimming, tennis, and more.</p>
+          <p className="mt-3 text-sm text-foreground">{businessInfo.description}</p>
           <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />Chelsea, NYC</span>
+            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{businessInfo.location}</span>
             <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-secondary text-secondary" />4.8 (312 reviews)</span>
             <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />2,450 followers</span>
           </div>
@@ -1632,50 +1640,207 @@ export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
             >
               Create Activity
             </button>
-            <button
-              type="button"
-              onClick={() => onNavigate("create-business")}
-              className="flex-1 rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary hover:bg-primary hover:text-white"
-            >
-              Edit Profile
-            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-          <p className="text-xl font-bold text-primary">${(data.totalRevenue / 1000).toFixed(1)}K</p>
-          <p className="text-[11px] text-muted-foreground">Revenue</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-          <p className="text-xl font-bold text-secondary">{data.totalBookings}</p>
-          <p className="text-[11px] text-muted-foreground">Bookings</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-          <p className="text-xl font-bold text-primary">{data.activeActivities}</p>
-          <p className="text-[11px] text-muted-foreground">Activities</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-          <p className="text-xl font-bold text-secondary">{data.teamMembers.length}</p>
-          <p className="text-[11px] text-muted-foreground">Team</p>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {[
+          { key: "overview", label: "Overview" },
+          { key: "edit", label: "Edit Profile" },
+        ].map((tab) => (
+          <button
+            type="button"
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all",
+              activeTab === tab.key
+                ? "gradient-primary text-white shadow-md"
+                : "bg-card text-foreground border border-border hover:bg-muted"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <h3 className="mb-4 text-sm font-bold text-foreground">Top Activities</h3>
-        <div className="space-y-3">
-          {data.topActivities.map((activity) => (
-            <div key={activity.name} className="flex items-center justify-between">
-              <span className="text-xs font-medium text-foreground">{activity.name}</span>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <span>{activity.bookings} bookings</span>
-                <span className="font-semibold text-primary">${activity.revenue}</span>
+      {activeTab === "overview" && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
+              <p className="text-xl font-bold text-primary">${(data.totalRevenue / 1000).toFixed(1)}K</p>
+              <p className="text-[11px] text-muted-foreground">Revenue</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
+              <p className="text-xl font-bold text-secondary">{data.totalBookings}</p>
+              <p className="text-[11px] text-muted-foreground">Bookings</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
+              <p className="text-xl font-bold text-primary">{data.activeActivities}</p>
+              <p className="text-[11px] text-muted-foreground">Activities</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
+              <p className="text-xl font-bold text-secondary">{data.teamMembers.length}</p>
+              <p className="text-[11px] text-muted-foreground">Team</p>
+            </div>
+          </div>
+
+          {/* Business Info Summary */}
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-foreground">Business Information</h3>
+              <button
+                type="button"
+                onClick={() => setActiveTab("edit")}
+                className="flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+              >
+                <Edit3 className="h-3 w-3" />
+                Edit
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {[
+                { label: "Phone", value: businessInfo.phone },
+                { label: "Email", value: businessInfo.email },
+                { label: "Website", value: businessInfo.website },
+                { label: "Hours", value: businessInfo.openingHours },
+                { label: "Location", value: businessInfo.location },
+                { label: "Type", value: businessInfo.type },
+              ].map((item) => (
+                <div key={item.label}>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                  <p className="text-xs font-medium text-foreground">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Activities */}
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Top Activities</h3>
+            <div className="space-y-3">
+              {data.topActivities.map((activity) => (
+                <div key={activity.name} className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-foreground">{activity.name}</span>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>{activity.bookings} bookings</span>
+                    <span className="font-semibold text-primary">${activity.revenue}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "edit" && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-5 text-sm font-bold text-foreground">Edit Business Information</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Business Name</label>
+                <input
+                  type="text"
+                  value={businessInfo.name}
+                  onChange={(e) => setBusinessInfo({ ...businessInfo, name: e.target.value })}
+                  className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Business Type</label>
+                <Select value={businessInfo.type} onValueChange={(val) => setBusinessInfo({ ...businessInfo, type: val })}>
+                  <SelectTrigger className="h-10 w-full rounded-xl border border-border bg-background text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Sports Complex", "Gym", "Training Center", "Club", "Academy", "Studio", "Outdoor Facility"].map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Description</label>
+                <textarea
+                  value={businessInfo.description}
+                  onChange={(e) => setBusinessInfo({ ...businessInfo, description: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Location</label>
+                  <input
+                    type="text"
+                    value={businessInfo.location}
+                    onChange={(e) => setBusinessInfo({ ...businessInfo, location: e.target.value })}
+                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Phone</label>
+                  <input
+                    type="tel"
+                    value={businessInfo.phone}
+                    onChange={(e) => setBusinessInfo({ ...businessInfo, phone: e.target.value })}
+                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Email</label>
+                  <input
+                    type="email"
+                    value={businessInfo.email}
+                    onChange={(e) => setBusinessInfo({ ...businessInfo, email: e.target.value })}
+                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Website</label>
+                  <input
+                    type="url"
+                    value={businessInfo.website}
+                    onChange={(e) => setBusinessInfo({ ...businessInfo, website: e.target.value })}
+                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Opening Hours</label>
+                <input
+                  type="text"
+                  value={businessInfo.openingHours}
+                  onChange={(e) => setBusinessInfo({ ...businessInfo, openingHours: e.target.value })}
+                  className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
               </div>
             </div>
-          ))}
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab("overview")}
+                className="rounded-full border border-border px-5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="rounded-full bg-primary px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary/90"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

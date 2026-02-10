@@ -92,6 +92,30 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
         </button>
       </div>
 
+      {/* Business Profile */}
+      <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="gradient-secondary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
+          <Building2 className="h-6 w-6" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-base font-bold text-foreground">Chelsea Piers Sports</p>
+            <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
+              Business
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">Sports Complex</p>
+          <p className="text-xs text-muted-foreground">info@chelseapierssports.com</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate("business-profile")}
+          className="rounded-full bg-secondary/10 px-4 py-2 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/20"
+        >
+          View Profile
+        </button>
+      </div>
+
       {/* Start a Business CTA */}
       <button
         type="button"

@@ -63,7 +63,7 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
       {/* Profile Header */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="gradient-primary h-32" />
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 pt-6">
           <div className="-mt-12 flex items-end gap-4">
             <div className="gradient-primary flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card text-2xl font-bold text-white shadow-lg">
               {userProfile.avatar}

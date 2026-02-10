@@ -36,7 +36,7 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
-        <div className="px-6 pb-6 pt-4">
+        <div className="px-6 pb-6 pt-6">
           <div className="-mt-8 flex items-end gap-4">
             <div className="gradient-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-4 border-card text-lg font-bold text-white shadow-lg">
               <ShoppingBag className="h-7 w-7" />
