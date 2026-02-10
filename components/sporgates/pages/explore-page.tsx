@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search, SlidersHorizontal, MapPin } from "lucide-react"
+import { Search, SlidersHorizontal, MapPin, Building2, ArrowRight } from "lucide-react"
 import { activities, facilities, services, businesses, people } from "@/lib/mock-data"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
@@ -211,6 +211,23 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
               />
             ))}
           </div>
+          {/* Start Your Business CTA */}
+          <button
+            type="button"
+            onClick={() => onNavigate("create-business")}
+            className="mt-4 flex w-full items-center gap-4 rounded-2xl border border-dashed border-primary/30 bg-gradient-to-r from-primary/5 to-secondary/5 p-5 transition-all hover:border-primary/60 hover:shadow-md"
+          >
+            <div className="gradient-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white shadow-md">
+              <Building2 className="h-6 w-6" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-bold text-foreground">Own a sports business?</p>
+              <p className="text-xs text-muted-foreground">
+                List your facility on Sporgates and reach thousands of athletes
+              </p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-primary" />
+          </button>
         </div>
       )}
 

@@ -57,6 +57,9 @@ import { SquadDashboardPage } from "@/components/sporgates/pages/squad-dashboard
 import { StoreDetailPage } from "@/components/sporgates/pages/store-detail-page"
 import { SettingsDataPermissionsPage } from "@/components/sporgates/pages/settings-data-permissions-page"
 import { SettingsTransactionsPage } from "@/components/sporgates/pages/settings-transactions-page"
+import { CreateFacilityPage } from "@/components/sporgates/pages/create-facility-page"
+import { CreateSquadPage } from "@/components/sporgates/pages/create-squad-page"
+import { BusinessOnboardingPage } from "@/components/sporgates/pages/business-onboarding-page"
 import {
   CreateActivityPage,
   CreateActivityStepsPage,
@@ -95,13 +98,20 @@ export function AppShell() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }, [])
 
+  const [hasCompletedBusinessOnboarding, setHasCompletedBusinessOnboarding] = useState(false)
+
   const toggleBusinessMode = useCallback(() => {
     setIsBusinessMode((prev) => {
       const next = !prev
-      setCurrentPage(next ? "business-dashboard" : "home")
+      if (next && !hasCompletedBusinessOnboarding) {
+        setCurrentPage("business-onboarding")
+        setHasCompletedBusinessOnboarding(true)
+      } else {
+        setCurrentPage(next ? "business-dashboard" : "home")
+      }
       return next
     })
-  }, [])
+  }, [hasCompletedBusinessOnboarding])
 
   const isAuth = authPages.includes(currentPage)
   const showSidebars = !isAuth && currentPage !== "messages"
@@ -241,6 +251,12 @@ export function AppShell() {
         return <TeamManagementPage onNavigate={navigate} />
       case "attendance-management":
         return <AttendanceManagementPage onNavigate={navigate} />
+      case "create-facility":
+        return <CreateFacilityPage onNavigate={navigate} />
+      case "create-squad":
+        return <CreateSquadPage onNavigate={navigate} />
+      case "business-onboarding":
+        return <BusinessOnboardingPage onNavigate={navigate} />
       case "signin":
       case "signup":
       case "forgot-password":

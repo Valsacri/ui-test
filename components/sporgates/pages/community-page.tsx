@@ -210,7 +210,7 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-foreground">Your Squads</h2>
-              <button type="button" className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <button type="button" onClick={() => onNavigate("create-squad")} className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                 <Plus className="h-3.5 w-3.5" />
                 Create Squad
               </button>

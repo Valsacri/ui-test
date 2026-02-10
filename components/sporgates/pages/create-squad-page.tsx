@@ -1,0 +1,255 @@
+"use client"
+
+import { useState } from "react"
+import {
+    ArrowLeft,
+    Users,
+    Lock,
+    Globe,
+    Search,
+    X,
+    Shield,
+    Trophy,
+} from "lucide-react"
+import { sports, people } from "@/lib/mock-data"
+import type { PageRoute } from "@/lib/navigation"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+
+interface CreateSquadPageProps {
+    onNavigate: (page: PageRoute) => void
+}
+
+export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
+    const [formData, setFormData] = useState({
+        name: "",
+        sport: "",
+        description: "",
+        maxMembers: "20",
+    })
+    const [privacy, setPrivacy] = useState<"public" | "private">("public")
+    const [invitedPeople, setInvitedPeople] = useState<string[]>([])
+    const [searchQuery, setSearchQuery] = useState("")
+
+    const filteredPeople = people.filter(
+        (p) =>
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            !invitedPeople.includes(p.id)
+    )
+
+    const handleSubmit = () => {
+        if (!formData.name || !formData.sport) {
+            toast.error("Please fill in squad name and sport")
+            return
+        }
+        toast.success("Squad created successfully!")
+        onNavigate("community")
+    }
+
+    return (
+        <div className="space-y-6 pb-20 lg:pb-0">
+            <div className="flex items-center gap-3">
+                <button
+                    type="button"
+                    onClick={() => onNavigate("community")}
+                    className="rounded-full p-2 hover:bg-muted"
+                >
+                    <ArrowLeft className="h-5 w-5 text-foreground" />
+                </button>
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Create Squad</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Build your sports team and invite members
+                    </p>
+                </div>
+            </div>
+
+            {/* Icon & Name */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-sm font-bold text-foreground">Squad Identity</h3>
+                <div className="flex items-center gap-5 mb-4">
+                    <div className="gradient-secondary flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg">
+                        <Shield className="h-8 w-8" />
+                    </div>
+                    <div className="flex-1 space-y-3">
+                        <div>
+                            <label className="mb-1.5 block text-xs font-medium text-foreground">
+                                Squad Name
+                            </label>
+                            <input
+                                type="text"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                placeholder="e.g., Thunder Hawks"
+                                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
+                    <select
+                        value={formData.sport}
+                        onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
+                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                    >
+                        <option value="">Select a sport</option>
+                        {sports.map((sport) => (
+                            <option key={sport.id} value={sport.name}>
+                                {sport.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Description & Settings */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-sm font-bold text-foreground">Details</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="mb-1.5 block text-xs font-medium text-foreground">
+                            Description
+                        </label>
+                        <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            placeholder="What's your squad about? Goals, vibe, schedule..."
+                            rows={3}
+                            className="w-full resize-none rounded-xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary"
+                        />
+                    </div>
+                    <div>
+                        <label className="mb-1.5 block text-xs font-medium text-foreground">
+                            Max Members
+                        </label>
+                        <input
+                            type="number"
+                            value={formData.maxMembers}
+                            onChange={(e) => setFormData({ ...formData, maxMembers: e.target.value })}
+                            className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Privacy */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-sm font-bold text-foreground">Privacy</h3>
+                <div className="grid grid-cols-2 gap-3">
+                    {([
+                        { id: "public" as const, label: "Public", desc: "Anyone can find and join", icon: Globe },
+                        { id: "private" as const, label: "Private", desc: "Invite only", icon: Lock },
+                    ]).map((option) => (
+                        <button
+                            type="button"
+                            key={option.id}
+                            onClick={() => setPrivacy(option.id)}
+                            className={cn(
+                                "flex flex-col items-center gap-2 rounded-xl border p-4 transition-all",
+                                privacy === option.id
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:bg-muted"
+                            )}
+                        >
+                            <option.icon
+                                className={cn(
+                                    "h-6 w-6",
+                                    privacy === option.id ? "text-primary" : "text-muted-foreground"
+                                )}
+                            />
+                            <p className="text-xs font-semibold text-foreground">{option.label}</p>
+                            <p className="text-[10px] text-muted-foreground text-center">{option.desc}</p>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Invite Members */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-foreground">
+                    <Users className="h-4 w-4 text-primary" />
+                    Invite Members
+                    {invitedPeople.length > 0 && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            {invitedPeople.length}
+                        </span>
+                    )}
+                </h3>
+
+                {/* Invited chips */}
+                {invitedPeople.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-2">
+                        {invitedPeople.map((id) => {
+                            const person = people.find((p) => p.id === id)
+                            return person ? (
+                                <div
+                                    key={id}
+                                    className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1"
+                                >
+                                    <span className="text-xs font-medium text-primary">{person.name}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setInvitedPeople((prev) => prev.filter((p) => p !== id))}
+                                    >
+                                        <X className="h-3 w-3 text-primary" />
+                                    </button>
+                                </div>
+                            ) : null
+                        })}
+                    </div>
+                )}
+
+                <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search people to invite..."
+                        className="h-10 w-full rounded-xl border border-border bg-muted pl-9 pr-4 text-sm outline-none focus:border-primary"
+                    />
+                </div>
+
+                <div className="max-h-48 space-y-1 overflow-y-auto">
+                    {filteredPeople.slice(0, 6).map((person) => (
+                        <button
+                            type="button"
+                            key={person.id}
+                            onClick={() => setInvitedPeople((prev) => [...prev, person.id])}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted"
+                        >
+                            <div className="gradient-primary flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white">
+                                {person.avatar}
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className="text-sm font-medium text-foreground">{person.name}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                    {person.sport} • {person.location}
+                                </p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+                <button
+                    type="button"
+                    onClick={() => onNavigate("community")}
+                    className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    onClick={handleSubmit}
+                    className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+                >
+                    Create Squad
+                </button>
+            </div>
+        </div>
+    )
+}

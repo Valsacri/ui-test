@@ -9,6 +9,7 @@ import {
   Globe,
   ChevronRight,
   LogOut,
+  Building2,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { userProfile } from "@/lib/mock-data"
@@ -90,6 +91,24 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
           View Profile
         </button>
       </div>
+
+      {/* Start a Business CTA */}
+      <button
+        type="button"
+        onClick={() => onNavigate("create-business")}
+        className="flex w-full items-center gap-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 p-5 shadow-sm transition-all hover:shadow-md"
+      >
+        <div className="gradient-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white shadow-md">
+          <Building2 className="h-6 w-6" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-bold text-foreground">Start a Business</p>
+          <p className="text-xs text-muted-foreground">
+            Create activities, manage teams, and grow your sports business
+          </p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-primary" />
+      </button>
 
       {/* Settings Groups */}
       {settingsGroups.map((group) => (

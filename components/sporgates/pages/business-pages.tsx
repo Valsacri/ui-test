@@ -280,13 +280,22 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
           <h1 className="text-2xl font-bold text-foreground">Resources</h1>
           <p className="text-sm text-muted-foreground">Track facility resources and utilization</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsAddResourceOpen(true)}
-          className="gradient-primary rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
-        >
-          Add Resource
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigate("create-facility")}
+            className="rounded-xl border border-primary px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
+          >
+            Add Facility
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsAddResourceOpen(true)}
+            className="gradient-primary rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
+          >
+            Add Resource
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
