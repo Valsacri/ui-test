@@ -21,6 +21,7 @@ import { DateTimePicker } from './DateTimePicker';
 import { ResourceCarousel } from './ResourceCarousel';
 import { AthleteCollaborationSelector } from './AthleteCollaborationSelector';
 import { CommunicationPhaseContent } from './CommunicationPhaseContent';
+import { SponsoredEventModal } from './SponsoredEventForm/SponsoredEventModal';
 
 interface ActivityStepFormProps {
   onCancel: () => void;
@@ -52,6 +53,7 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isSponsoredEvent, setIsSponsoredEvent] = useState(false);
+  const [isSponsoredEventModalOpen, setIsSponsoredEventModalOpen] = useState(false);
   const [maxParticipants, setMaxParticipants] = useState<number>(0);
   const [price, setPrice] = useState<number>(0);
   const [selectedDate, setSelectedDate] = useState('');
@@ -667,9 +669,11 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
                   checked={isSponsoredEvent}
                   onCheckedChange={(checked) => {
                     setIsSponsoredEvent(checked);
-                    setIsSponsorshipExpanded(checked);
-                    if (!checked) {
-                      setSponsorshipSubStep(1); // Reset sub-steps when disabled
+                    if (checked) {
+                      // Open the new sponsored event modal
+                      setIsSponsoredEventModalOpen(true);
+                    } else {
+                      setSponsorshipSubStep(1);
                     }
                   }}
                   className="data-[state=checked]:bg-primary"
@@ -2495,6 +2499,20 @@ export function ActivityStepForm({ onCancel, onSubmit, onMetricsChange }: Activi
           )}
         </Button>
       </div>
+
+      {/* Sponsored Event Modal */}
+      <SponsoredEventModal
+        open={isSponsoredEventModalOpen}
+        onOpenChange={setIsSponsoredEventModalOpen}
+        onCancel={() => {
+          setIsSponsoredEvent(false);
+          setIsSponsoredEventModalOpen(false);
+        }}
+        onSubmit={() => {
+          // The sponsored event data would be handled here
+          setIsSponsoredEventModalOpen(false);
+        }}
+      />
     </div>
   );
 }
