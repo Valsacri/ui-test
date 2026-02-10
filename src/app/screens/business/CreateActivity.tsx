@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ActivityStepForm } from '@/app/components/ActivityStepForm';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
@@ -15,6 +16,20 @@ interface CreateActivityProps {
 }
 
 export function CreateActivity({ onBack, onSubmit, onMetricsChange }: CreateActivityProps) {
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const handleNext = () => {
+    setCurrentStep(prev => prev + 1);
+  };
+
+  const handlePrev = () => {
+    setCurrentStep(prev => Math.max(1, prev - 1));
+  };
+
+  const handleSubmit = () => {
+    onSubmit();
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Header */}
@@ -44,9 +59,11 @@ export function CreateActivity({ onBack, onSubmit, onMetricsChange }: CreateActi
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="p-6">
           <ActivityStepForm
+            currentStep={currentStep}
+            onNext={handleNext}
+            onPrev={handlePrev}
             onCancel={onBack}
-            onSubmit={onSubmit}
-            onMetricsChange={onMetricsChange}
+            onSubmit={handleSubmit}
           />
         </div>
       </div>
