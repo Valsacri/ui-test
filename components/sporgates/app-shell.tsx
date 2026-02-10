@@ -40,6 +40,7 @@ import { FacilityDetailPage } from "@/components/sporgates/pages/facility-detail
 import { ProductDetailPage } from "@/components/sporgates/pages/product-detail-page"
 import { ServiceDetailPage } from "@/components/sporgates/pages/service-detail-page"
 import { BusinessDetailPage } from "@/components/sporgates/pages/business-detail-page"
+import { OrganizerPortfolio } from "@/components/sporgates/business/organizer-portfolio"
 import {
   BusinessActivitiesPage,
   BusinessCustomersPage,
@@ -110,6 +111,7 @@ export function AppShell() {
     "product-detail",
     "service-detail",
     "business-detail",
+    "organizer-portfolio",
     "person-detail",
     "squad-profile",
   ]
@@ -143,6 +145,8 @@ export function AppShell() {
         return <BusinessesPage onNavigate={navigate} />
       case "business-detail":
         return <BusinessDetailPage businessId={detailId || "1"} onNavigate={navigate} />
+      case "organizer-portfolio":
+        return <OrganizerPortfolio onClose={() => navigate("business-detail", detailId || "1")} />
       case "jobs":
         return <JobsPage onNavigate={navigate} />
       case "messages":

@@ -12,6 +12,7 @@ export type PageRoute =
   | "service-detail"
   | "businesses"
   | "business-detail"
+  | "organizer-portfolio"
   | "jobs"
   | "community"
   | "messages"

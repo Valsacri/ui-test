@@ -73,8 +73,14 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
           {userProfile.avatar}
         </div>
         <div className="flex-1">
-          <p className="text-base font-bold text-foreground">{userProfile.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-base font-bold text-foreground">{userProfile.name}</p>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              Personal
+            </span>
+          </div>
           <p className="text-sm text-muted-foreground">{userProfile.username}</p>
+          <p className="text-xs text-muted-foreground">alex.johnson@email.com</p>
         </div>
         <button
           type="button"
@@ -97,9 +103,8 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
                 type="button"
                 key={item.label}
                 onClick={() => onNavigate(item.page)}
-                className={`flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-muted ${
-                  index < group.items.length - 1 ? "border-b border-border" : ""
-                }`}
+                className={`flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-muted ${index < group.items.length - 1 ? "border-b border-border" : ""
+                  }`}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                   <item.icon className="h-5 w-5 text-primary" />

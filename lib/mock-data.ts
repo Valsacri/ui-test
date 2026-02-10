@@ -496,6 +496,11 @@ export const goals = [
     unit: "miles",
     deadline: "Mar 31, 2026",
     sport: "Running",
+    milestones: [
+      { id: "m1", title: "Run 10 miles without stopping", completed: true },
+      { id: "m2", title: "Complete 5 interval training sessions", completed: true },
+      { id: "m3", title: "Run a half-marathon distance", completed: false },
+    ],
   },
   {
     id: "2",
@@ -505,6 +510,11 @@ export const goals = [
     unit: "games",
     deadline: "Jun 30, 2026",
     sport: "Basketball",
+    milestones: [
+      { id: "m1", title: "Join 5 pickup games", completed: true },
+      { id: "m2", title: "Play in a league match", completed: true },
+      { id: "m3", title: "Complete a tournament", completed: false },
+    ],
   },
   {
     id: "3",
@@ -514,6 +524,11 @@ export const goals = [
     unit: "laps",
     deadline: "Weekly",
     sport: "Swimming",
+    milestones: [
+      { id: "m1", title: "Swim 20 laps without rest", completed: true },
+      { id: "m2", title: "Improve 100m time by 10%", completed: false },
+      { id: "m3", title: "Complete 50 laps in one session", completed: false },
+    ],
   },
 ]
 
@@ -893,3 +908,217 @@ export const businessDashboardData = {
     { name: "Emily Park", role: "Instructor", avatar: "EP", status: "on-leave" },
   ],
 }
+
+export const communityPeople = [
+  {
+    id: "cp-1",
+    name: "Sarah Mitchell",
+    avatar: "SM",
+    location: "New York, NY",
+    sports: ["Running", "Yoga", "Cycling"],
+    level: "Advanced",
+    activities: 156,
+    squads: 3,
+    bio: "Marathon runner and yoga instructor. Love connecting with fitness enthusiasts!",
+    isConnected: true,
+    mutualConnections: 12,
+  },
+  {
+    id: "cp-2",
+    name: "Mike Chen",
+    avatar: "MC",
+    location: "Brooklyn, NY",
+    sports: ["Basketball", "Swimming", "Tennis"],
+    level: "Intermediate",
+    activities: 89,
+    squads: 2,
+    bio: "Basketball enthusiast and weekend warrior. Always up for a challenge!",
+    isConnected: false,
+    mutualConnections: 8,
+  },
+  {
+    id: "cp-3",
+    name: "Emily Rodriguez",
+    avatar: "ER",
+    location: "Manhattan, NY",
+    sports: ["Yoga", "Pilates"],
+    level: "Expert",
+    activities: 234,
+    squads: 4,
+    bio: "Certified yoga instructor with 10+ years of experience.",
+    isConnected: true,
+    mutualConnections: 15,
+  },
+  {
+    id: "cp-4",
+    name: "James Park",
+    avatar: "JP",
+    location: "Queens, NY",
+    sports: ["CrossFit", "Running", "Boxing"],
+    level: "Advanced",
+    activities: 178,
+    squads: 3,
+    bio: "CrossFit coach and personal trainer. Pushing limits every day!",
+    isConnected: false,
+    mutualConnections: 5,
+  },
+  {
+    id: "cp-5",
+    name: "Lisa Anderson",
+    avatar: "LA",
+    location: "Brooklyn, NY",
+    sports: ["Swimming", "Cycling"],
+    level: "Advanced",
+    activities: 201,
+    squads: 5,
+    bio: "Triathlete and endurance athlete. Training for Ironman 2026!",
+    isConnected: false,
+    mutualConnections: 10,
+  },
+  {
+    id: "cp-6",
+    name: "David Kim",
+    avatar: "DK",
+    location: "Manhattan, NY",
+    sports: ["Tennis", "Badminton"],
+    level: "Intermediate",
+    activities: 92,
+    squads: 2,
+    bio: "Racket sports enthusiast. Looking for tennis partners!",
+    isConnected: true,
+    mutualConnections: 7,
+  },
+  {
+    id: "cp-7",
+    name: "Amanda Foster",
+    avatar: "AF",
+    location: "Upper West Side, NY",
+    sports: ["Dancing", "Zumba", "Yoga"],
+    level: "Intermediate",
+    activities: 145,
+    squads: 3,
+    bio: "Dance fitness instructor spreading joy through movement!",
+    isConnected: false,
+    mutualConnections: 9,
+  },
+  {
+    id: "cp-8",
+    name: "Marcus Johnson",
+    avatar: "MJ",
+    location: "Bronx, NY",
+    sports: ["Soccer", "Football", "Running"],
+    level: "Advanced",
+    activities: 167,
+    squads: 4,
+    bio: "Soccer coach and fitness enthusiast. Team player at heart!",
+    isConnected: false,
+    mutualConnections: 11,
+  },
+]
+
+export const communityGroups = [
+  {
+    id: "cg-1",
+    name: "NYC Fitness Community",
+    sport: "Multi-Sport",
+    members: 156,
+    description: "General fitness group for all sports and activities in NYC.",
+    activityLevel: "High",
+    isJoined: true,
+  },
+  {
+    id: "cg-2",
+    name: "Weekend Warriors Basketball",
+    sport: "Basketball",
+    members: 48,
+    description: "Casual basketball games every Saturday and Sunday.",
+    activityLevel: "Moderate",
+    isJoined: false,
+  },
+  {
+    id: "cg-3",
+    name: "Manhattan Yoga Circle",
+    sport: "Yoga",
+    members: 92,
+    description: "Outdoor yoga sessions in Central Park and rooftop studios.",
+    activityLevel: "High",
+    isJoined: true,
+  },
+  {
+    id: "cg-4",
+    name: "Brooklyn Runners United",
+    sport: "Running",
+    members: 210,
+    description: "Running club for all levels. Weekly group runs and races.",
+    activityLevel: "Very High",
+    isJoined: false,
+  },
+  {
+    id: "cg-5",
+    name: "NYC Tennis Network",
+    sport: "Tennis",
+    members: 67,
+    description: "Connect with tennis players for matches and coaching.",
+    activityLevel: "Moderate",
+    isJoined: false,
+  },
+  {
+    id: "cg-6",
+    name: "CrossFit NYC Crew",
+    sport: "CrossFit",
+    members: 35,
+    description: "High-intensity training group for CrossFit enthusiasts.",
+    activityLevel: "Very High",
+    isJoined: false,
+  },
+]
+
+// ==================== Profile Enhanced Data ====================
+
+export const achievements = [
+  { id: "1", title: "Early Bird", description: "Joined 10 morning activities", icon: "Trophy", date: "Jan 15, 2026", color: "text-yellow-500" },
+  { id: "2", title: "Social Butterfly", description: "Connected with 50+ people", icon: "Users", date: "Jan 20, 2026", color: "text-pink-500" },
+  { id: "3", title: "Fitness Streak", description: "30-day activity streak", icon: "Target", date: "Feb 1, 2026", color: "text-green-500" },
+  { id: "4", title: "Multi-Sport Athlete", description: "Tried 5 different sports", icon: "Award", date: "Jan 25, 2026", color: "text-blue-500" },
+]
+
+export const activityHistory = [
+  { id: "1", title: "Morning Yoga Flow", sport: "Yoga", date: "Feb 10, 2026", status: "upcoming" as const },
+  { id: "2", title: "Basketball Pickup Game", sport: "Basketball", date: "Feb 8, 2026", status: "completed" as const },
+  { id: "3", title: "HIIT Training Session", sport: "Fitness", date: "Feb 6, 2026", status: "completed" as const },
+  { id: "4", title: "Weekend Soccer Match", sport: "Soccer", date: "Feb 5, 2026", status: "completed" as const },
+  { id: "5", title: "Swimming Drills", sport: "Swimming", date: "Feb 3, 2026", status: "completed" as const },
+]
+
+export const progressData = [
+  { date: "Jan 25", value: 185 },
+  { date: "Jan 27", value: 184 },
+  { date: "Jan 29", value: 183 },
+  { date: "Jan 31", value: 181 },
+  { date: "Feb 2", value: 180 },
+  { date: "Feb 5", value: 179 },
+  { date: "Feb 8", value: 178 },
+]
+
+export const personalProfile = {
+  height: "5'10\"",
+  currentWeight: "178 lbs",
+  targetWeight: "170 lbs",
+  bmi: 25.5,
+  bodyFat: "18%",
+}
+
+export const recommendedActivities = [
+  { id: "ra-1", title: "Morning HIIT Blast", sport: "Fitness", date: "Feb 12, 2026", time: "7:00 AM", location: "Chelsea Piers Gym", spots: 4 },
+  { id: "ra-2", title: "5K Recovery Run", sport: "Running", date: "Feb 13, 2026", time: "6:30 AM", location: "Central Park, NYC", spots: 12 },
+  { id: "ra-3", title: "Yoga for Athletes", sport: "Yoga", date: "Feb 14, 2026", time: "8:00 AM", location: "Brooklyn Yoga Studio", spots: 6 },
+]
+
+// ==================== Marketplace Stores ====================
+
+export const marketplaceStores = [
+  { id: "decathlon", name: "Decathlon", logo: "🏃", description: "Sports equipment for all", productCount: 245, rating: 4.6 },
+  { id: "nike", name: "Nike", logo: "✓", description: "Just Do It", productCount: 189, rating: 4.8 },
+  { id: "adidas", name: "Adidas", logo: "⚡", description: "Impossible is Nothing", productCount: 203, rating: 4.7 },
+  { id: "underarmour", name: "Under Armour", logo: "🎯", description: "Performance gear", productCount: 156, rating: 4.5 },
+]

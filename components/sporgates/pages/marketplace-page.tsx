@@ -1,14 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Package } from "lucide-react"
-import { products } from "@/lib/mock-data"
+import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Package, Star } from "lucide-react"
+import { products, marketplaceStores } from "@/lib/mock-data"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { MarketplaceFilterSidebar } from "@/components/sporgates/filters/marketplace-filter-sidebar"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
 import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loading-cards"
 import { ResourceCarousel } from "@/components/sporgates/business/resource-carousel"
 import { CollectionsModal } from "@/components/sporgates/business/collections-modal"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -34,6 +41,7 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
   const [priceRange, setPriceRange] = useState("Any Price")
   const [selectedResources, setSelectedResources] = useState<string[]>([])
   const [showCollections, setShowCollections] = useState(false)
+  const [sortBy, setSortBy] = useState("relevance")
   const isLoading = false
   const [cartItems, setCartItems] = useState<CartItem[]>([
     { productId: "1", name: "Pro Basketball Shoes", price: 149.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop", quantity: 1 },
@@ -157,6 +165,30 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
         ))}
       </div>
 
+      {/* Featured Stores */}
+      <div>
+        <h2 className="mb-3 text-base font-bold text-foreground">Featured Stores</h2>
+        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+          {marketplaceStores.map((store) => (
+            <div
+              key={store.id}
+              className="flex min-w-[200px] shrink-0 flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+            >
+              <span className="text-3xl">{store.logo}</span>
+              <p className="text-sm font-bold text-foreground">{store.name}</p>
+              <p className="text-[10px] text-muted-foreground text-center">{store.description}</p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{store.productCount} products</span>
+                <span className="flex items-center gap-0.5">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  {store.rating}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <ResourceCarousel
         title="Curated Picks"
         icon={<Package className="h-4 w-4" />}
@@ -181,13 +213,18 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{filteredProducts.length}</span> products found
         </p>
-        <select className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs outline-none">
-          <option>Sort by: Relevance</option>
-          <option>Price: Low to High</option>
-          <option>Price: High to Low</option>
-          <option>Rating</option>
-          <option>Newest</option>
-        </select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="h-8 rounded-lg border border-border bg-card px-3 text-xs">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="relevance">Sort by: Relevance</SelectItem>
+            <SelectItem value="price-low">Price: Low to High</SelectItem>
+            <SelectItem value="price-high">Price: High to Low</SelectItem>
+            <SelectItem value="rating">Rating</SelectItem>
+            <SelectItem value="newest">Newest</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -226,7 +263,7 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
           <div
             className="fixed inset-0 z-[60] bg-foreground/40 transition-opacity"
             onClick={() => setShowCart(false)}
-            onKeyDown={() => {}}
+            onKeyDown={() => { }}
             role="button"
             tabIndex={-1}
           />

@@ -9,6 +9,13 @@ import { EmptyState } from "@/components/sporgates/ux/empty-state"
 import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface ProductsPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -21,6 +28,7 @@ export function ProductsPage({ onNavigate }: ProductsPageProps) {
   const [showFilters, setShowFilters] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState("All")
   const [priceRange, setPriceRange] = useState("Any Price")
+  const [sortBy, setSortBy] = useState("relevance")
   const isLoading = false
 
   const categories = useMemo(
@@ -99,12 +107,17 @@ export function ProductsPage({ onNavigate }: ProductsPageProps) {
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{filteredProducts.length}</span> products found
         </p>
-        <select className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs outline-none">
-          <option>Sort by: Relevance</option>
-          <option>Price: Low to High</option>
-          <option>Price: High to Low</option>
-          <option>Rating</option>
-        </select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="h-8 rounded-lg border border-border bg-card px-3 text-xs">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="relevance">Sort by: Relevance</SelectItem>
+            <SelectItem value="price-low">Price: Low to High</SelectItem>
+            <SelectItem value="price-high">Price: High to Low</SelectItem>
+            <SelectItem value="rating">Rating</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (

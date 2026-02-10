@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { ArrowRight, Zap, Trophy, TrendingUp, Target, Users, Calendar } from "lucide-react"
 import { activities, facilities, goals, userProfile, posts, services } from "@/lib/mock-data"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
@@ -14,6 +15,9 @@ interface HomePageProps {
 }
 
 export function HomePage({ onNavigate }: HomePageProps) {
+  const [feedTab, setFeedTab] = useState<"foryou" | "following">("foryou")
+  const displayedPosts = feedTab === "foryou" ? posts.slice(0, 3) : posts.slice(0, 2)
+
   return (
     <div className="space-y-8 pb-20 lg:pb-0">
       {/* Hero Banner */}
@@ -158,8 +162,23 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <span className="text-xs text-muted-foreground">2.4k active now</span>
           </div>
         </div>
+        <div className="mb-4 flex gap-2">
+          {(["foryou", "following"] as const).map((tab) => (
+            <button
+              type="button"
+              key={tab}
+              onClick={() => setFeedTab(tab)}
+              className={`rounded-full px-5 py-2 text-xs font-semibold transition-all ${feedTab === tab
+                  ? "gradient-primary text-white shadow-md"
+                  : "bg-card text-foreground border border-border hover:bg-muted"
+                }`}
+            >
+              {tab === "foryou" ? "For You" : "Following"}
+            </button>
+          ))}
+        </div>
         <div className="space-y-4">
-          {posts.slice(0, 3).map((post) => (
+          {displayedPosts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}
         </div>

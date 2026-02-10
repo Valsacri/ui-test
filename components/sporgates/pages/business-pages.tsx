@@ -552,6 +552,21 @@ export function BusinessAnalyticsPage({ onNavigate }: BusinessSubPageProps) {
           })}
         </div>
       </div>
+
+      {/* Insights */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {[
+          { label: "Customer Satisfaction", value: "4.8/5", sub: "From 156 reviews", color: "text-yellow-500" },
+          { label: "Profile Views", value: "1,247", sub: "Last 30 days", color: "text-blue-500" },
+          { label: "Avg. Attendance", value: "87%", sub: "Across all activities", color: "text-green-500" },
+        ].map((insight) => (
+          <div key={insight.label} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-[11px] text-muted-foreground">{insight.label}</p>
+            <p className={cn("mt-1 text-xl font-bold", insight.color)}>{insight.value}</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{insight.sub}</p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
