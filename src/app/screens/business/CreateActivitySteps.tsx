@@ -146,27 +146,36 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
   };
 
   const canProceed = () => {
+    // For steps, we'll be more lenient - require at least one field filled per step
     switch (currentStep) {
       case 1:
-        return formData.title && formData.sport && formData.level;
+        // Just need a title to proceed from basic info
+        return formData.title.trim().length > 0;
       case 2:
-        return formData.location.address && formData.location.city;
+        return formData.location.city.length > 0;
       case 3:
-        return formData.date && formData.time;
+        return formData.date !== undefined;
       case 4:
-        return formData.maxParticipants > 0;
+        return true; // Resources are optional
+      case 5:
+        return true; // Sponsorship is optional
       default:
         return true;
     }
   };
 
   const handleNext = () => {
+    console.log("[v0] handleNext called, currentStep:", currentStep);
+    console.log("[v0] canProceed():", canProceed());
+    console.log("[v0] formData:", formData);
+    
     if (!canProceed()) {
-      toast.error('Please fill in all required fields');
+      toast.error('Please fill in the required fields');
       return;
     }
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
+      console.log("[v0] Moving to step:", currentStep + 1);
     }
   };
 
@@ -253,7 +262,8 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
+        {console.log("[v0] Current step:", currentStep, "Total steps:", STEPS.length)}
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
           <Card>
