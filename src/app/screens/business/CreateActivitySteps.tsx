@@ -263,7 +263,6 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
-        {console.log("[v0] Current step:", currentStep, "Total steps:", STEPS.length)}
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
           <Card>
