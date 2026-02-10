@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -51,6 +51,9 @@ interface ActivityFormData {
   sport: string;
   level: string;
   description: string;
+  date?: Date;
+  time: string;
+  duration: number;
   location: {
     address: string;
     city: string;
@@ -58,6 +61,11 @@ interface ActivityFormData {
     lat: number;
     lng: number;
   };
+  maxParticipants: number;
+  price: number;
+  selectedResources: string[];
+  customTiers: SponsorshipTier[];
+}
   date?: Date;
   time: string;
   duration: number;
@@ -95,6 +103,10 @@ const STEPS = [
 export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isActivityDetailsCollapsed, setIsActivityDetailsCollapsed] = useState(true);
+
+  useEffect(() => {
+    console.log("[v0] CreateActivitySteps mounted, currentStep:", currentStep);
+  }, [currentStep]);
   const [formData, setFormData] = useState<ActivityFormData>({
     title: '',
     sport: '',
@@ -265,8 +277,8 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
       <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
-          <Card>
-            <CardContent className="p-6 space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div className="p-6 space-y-6">
               <div>
                 <h2 className="text-xl font-semibold mb-1">Basic Information</h2>
                 <p className="text-sm text-muted-foreground">Tell us about your activity</p>
@@ -386,14 +398,14 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Step 2: Location */}
         {currentStep === 2 && (
-          <Card>
-            <CardContent className="p-6 space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div className="p-6 space-y-6">
               <div>
                 <h2 className="text-xl font-semibold mb-1">Location</h2>
                 <p className="text-sm text-muted-foreground">Where will this activity take place?</p>
@@ -481,14 +493,14 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Step 3: Schedule */}
         {currentStep === 3 && (
-          <Card>
-            <CardContent className="p-6 space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div className="p-6 space-y-6">
               <div>
                 <h2 className="text-xl font-semibold mb-1">Schedule</h2>
                 <p className="text-sm text-muted-foreground">When will this activity happen?</p>
@@ -540,14 +552,14 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Step 4: Resources */}
         {currentStep === 4 && (
-          <Card>
-            <CardContent className="p-6 space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div className="p-6 space-y-6">
               <div>
                 <h2 className="text-xl font-semibold mb-1">Resources & Amenities</h2>
                 <p className="text-sm text-muted-foreground">Select facilities, products, and services</p>
@@ -649,16 +661,16 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Step 5: Sponsorship */}
         {currentStep === 5 && (
           <div className="space-y-4">
             {/* Collapsible Activity Details Summary */}
-            <Card>
-              <CardContent className="p-0">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+              <div className="p-0">
                 <button
                   onClick={() => setIsActivityDetailsCollapsed(!isActivityDetailsCollapsed)}
                   className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
@@ -796,12 +808,12 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Sponsorship Configuration */}
-            <Card>
-              <CardContent className="p-6 space-y-6">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+              <div className="p-6 space-y-6">
                 <div>
                   <h2 className="text-xl font-semibold mb-1">Sponsorship Visibility Tiers</h2>
                   <p className="text-sm text-muted-foreground">Create custom sponsorship tiers with visual logo placements</p>
@@ -813,15 +825,15 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   eventPoster={formData.eventPoster}
                   onPosterUpload={(url) => updateFormData({ eventPoster: url })}
                 />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Step 6: Review */}
         {currentStep === 6 && (
-          <Card>
-            <CardContent className="p-6 space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div className="p-6 space-y-6">
               <div>
                 <h2 className="text-xl font-semibold mb-1">Review & Publish</h2>
                 <p className="text-sm text-muted-foreground">Review your activity before publishing</p>
@@ -975,8 +987,8 @@ export function CreateActivitySteps({ onBack, onSubmit }: CreateActivityStepsPro
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
 
