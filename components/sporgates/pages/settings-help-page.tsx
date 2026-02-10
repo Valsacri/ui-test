@@ -13,6 +13,13 @@ import {
   ArrowLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface SettingsHelpPageProps {
   onBack: () => void
@@ -243,17 +250,18 @@ export function SettingsHelpPage({ onBack }: SettingsHelpPageProps) {
           {/* Subject */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-foreground">Subject</label>
-            <select
-              value={formSubject}
-              onChange={(e) => setFormSubject(e.target.value)}
-              className="h-10 w-full appearance-none rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            >
-              {subjects.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            <Select value={formSubject} onValueChange={setFormSubject}>
+              <SelectTrigger className="h-10 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                <SelectValue placeholder="Select subject" />
+              </SelectTrigger>
+              <SelectContent>
+                {subjects.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Message */}

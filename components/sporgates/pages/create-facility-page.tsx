@@ -16,6 +16,13 @@ import {
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 interface CreateFacilityPageProps {
     onNavigate: (page: PageRoute) => void
@@ -137,18 +144,21 @@ export function CreateFacilityPage({ onNavigate }: CreateFacilityPageProps) {
                         <label className="mb-1.5 block text-xs font-medium text-foreground">
                             Facility Type
                         </label>
-                        <select
+                        <Select
                             value={formData.type}
-                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                            className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                            onValueChange={(val) => setFormData({ ...formData, type: val })}
                         >
-                            <option value="">Select type</option>
-                            {facilityTypes.map((type) => (
-                                <option key={type} value={type}>
-                                    {type}
-                                </option>
-                            ))}
-                        </select>
+                            <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                                <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {facilityTypes.map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                        {type}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <label className="mb-1.5 block text-xs font-medium text-foreground">

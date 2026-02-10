@@ -9,13 +9,7 @@ import { EmptyState } from "@/components/sporgates/ux/empty-state"
 import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SortFilter } from "@/components/sporgates/filters/sort-filter"
 
 interface ProductsPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -107,17 +101,16 @@ export function ProductsPage({ onNavigate }: ProductsPageProps) {
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{filteredProducts.length}</span> products found
         </p>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="h-8 rounded-lg border border-border bg-card px-3 text-xs">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="relevance">Sort by: Relevance</SelectItem>
-            <SelectItem value="price-low">Price: Low to High</SelectItem>
-            <SelectItem value="price-high">Price: High to Low</SelectItem>
-            <SelectItem value="rating">Rating</SelectItem>
-          </SelectContent>
-        </Select>
+        <SortFilter
+          value={sortBy}
+          onValueChange={setSortBy}
+          options={[
+            { value: "relevance", label: "Sort by: Relevance" },
+            { value: "price-low", label: "Price: Low to High" },
+            { value: "price-high", label: "Price: High to Low" },
+            { value: "rating", label: "Rating" },
+          ]}
+        />
       </div>
 
       {isLoading ? (

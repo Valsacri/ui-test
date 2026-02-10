@@ -60,6 +60,7 @@ import { SettingsTransactionsPage } from "@/components/sporgates/pages/settings-
 import { CreateFacilityPage } from "@/components/sporgates/pages/create-facility-page"
 import { CreateSquadPage } from "@/components/sporgates/pages/create-squad-page"
 import { BusinessOnboardingPage } from "@/components/sporgates/pages/business-onboarding-page"
+import { userBusinesses as initialBusinesses } from "@/lib/mock-data"
 import {
   CreateActivityPage,
   CreateActivityStepsPage,
@@ -90,7 +91,9 @@ const authPages: PageRoute[] = [
 export function AppShell() {
   const [currentPage, setCurrentPage] = useState<PageRoute>("home")
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [isBusinessMode, setIsBusinessMode] = useState(false)
+  const [businesses, setBusinesses] = useState(initialBusinesses)
+  const [activeBusinessId, setActiveBusinessId] = useState<string | null>(null)
+  const isBusinessMode = activeBusinessId !== null
 
   const navigate = useCallback((page: PageRoute, id?: string) => {
     setCurrentPage(page)
@@ -98,20 +101,19 @@ export function AppShell() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }, [])
 
-  const [hasCompletedBusinessOnboarding, setHasCompletedBusinessOnboarding] = useState(false)
+  const switchBusiness = useCallback((bizId: string) => {
+    setActiveBusinessId(bizId)
+    setCurrentPage("business-dashboard")
+  }, [])
 
-  const toggleBusinessMode = useCallback(() => {
-    setIsBusinessMode((prev) => {
-      const next = !prev
-      if (next && !hasCompletedBusinessOnboarding) {
-        setCurrentPage("business-onboarding")
-        setHasCompletedBusinessOnboarding(true)
-      } else {
-        setCurrentPage(next ? "business-dashboard" : "home")
-      }
-      return next
-    })
-  }, [hasCompletedBusinessOnboarding])
+  const switchToUser = useCallback(() => {
+    setActiveBusinessId(null)
+    setCurrentPage("home")
+  }, [])
+
+  const createNewBusiness = useCallback(() => {
+    setCurrentPage("business-onboarding")
+  }, [])
 
   const isAuth = authPages.includes(currentPage)
   const showSidebars = !isAuth && currentPage !== "messages"
@@ -286,7 +288,11 @@ export function AppShell() {
       <TopBar
         onNavigate={navigate}
         isBusinessMode={isBusinessMode}
-        onToggleBusinessMode={toggleBusinessMode}
+        businesses={businesses}
+        activeBusinessId={activeBusinessId}
+        onSwitchBusiness={switchBusiness}
+        onSwitchToUser={switchToUser}
+        onCreateNewBusiness={createNewBusiness}
         unreadMessages={3}
         unreadNotifications={2}
       />

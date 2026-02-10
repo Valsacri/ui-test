@@ -18,6 +18,13 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { AthleteCollaborationSelector } from "@/components/sporgates/business/athlete-collaboration-selector"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface AthleteOption {
   id: string
@@ -101,6 +108,10 @@ export function CommunicationPhaseContent({
 }: CommunicationPhaseContentProps) {
   const config = phaseConfig[phase]
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
+  const [frequency, setFrequency] = useState("Daily")
+  const [duration, setDuration] = useState("1 week")
+  const [printType, setPrintType] = useState(phaseConfig[phase].printOptions[0])
+  const [provider, setProvider] = useState("")
 
   const togglePlatform = (name: string) => {
     setSelectedPlatforms((prev) =>
@@ -193,29 +204,33 @@ export function CommunicationPhaseContent({
               <Label htmlFor={`${phase}-frequency`} className="text-xs">
                 Posting Frequency
               </Label>
-              <select
-                id={`${phase}-frequency`}
-                className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-3 text-xs"
-              >
-                <option>Daily</option>
-                <option>Every 2 days</option>
-                <option>Weekly</option>
-                <option>Bi-weekly</option>
-              </select>
+              <Select value={frequency} onValueChange={setFrequency}>
+                <SelectTrigger className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-3 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Daily">Daily</SelectItem>
+                  <SelectItem value="Every 2 days">Every 2 days</SelectItem>
+                  <SelectItem value="Weekly">Weekly</SelectItem>
+                  <SelectItem value="Bi-weekly">Bi-weekly</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor={`${phase}-duration`} className="text-xs">
                 Campaign Duration
               </Label>
-              <select
-                id={`${phase}-duration`}
-                className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-3 text-xs"
-              >
-                <option>1 week</option>
-                <option>2 weeks</option>
-                <option>1 month</option>
-                <option>2 months</option>
-              </select>
+              <Select value={duration} onValueChange={setDuration}>
+                <SelectTrigger className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-3 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1 week">1 week</SelectItem>
+                  <SelectItem value="2 weeks">2 weeks</SelectItem>
+                  <SelectItem value="1 month">1 month</SelectItem>
+                  <SelectItem value="2 months">2 months</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -260,14 +275,16 @@ export function CommunicationPhaseContent({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <Label htmlFor={`${phase}-print-type`} className="text-xs">Type</Label>
-                    <select
-                      id={`${phase}-print-type`}
-                      className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-2 text-xs"
-                    >
-                      {config.printOptions.map((option) => (
-                        <option key={option}>{option}</option>
-                      ))}
-                    </select>
+                    <Select value={printType} onValueChange={setPrintType}>
+                      <SelectTrigger className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-2 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {config.printOptions.map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor={`${phase}-print-units`} className="text-xs">Quantity</Label>
@@ -276,17 +293,18 @@ export function CommunicationPhaseContent({
                 </div>
                 <div>
                   <Label htmlFor={`${phase}-print-provider`} className="text-xs">Service Provider</Label>
-                  <select
-                    id={`${phase}-print-provider`}
-                    className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-2 text-xs"
-                  >
-                    <option value="">Select provider...</option>
-                    <option>PrintHub Co.</option>
-                    <option>QuickPrint Services</option>
-                    <option>ProDesign Printing</option>
-                    <option>FastTrack Media</option>
-                    <option>Custom Provider</option>
-                  </select>
+                  <Select value={provider} onValueChange={setProvider}>
+                    <SelectTrigger className="mt-1 h-9 w-full rounded-xl border border-border bg-muted px-2 text-xs">
+                      <SelectValue placeholder="Select provider..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PrintHub Co.">PrintHub Co.</SelectItem>
+                      <SelectItem value="QuickPrint Services">QuickPrint Services</SelectItem>
+                      <SelectItem value="ProDesign Printing">ProDesign Printing</SelectItem>
+                      <SelectItem value="FastTrack Media">FastTrack Media</SelectItem>
+                      <SelectItem value="Custom Provider">Custom Provider</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor={`${phase}-print-cost`} className="text-xs">Print Cost</Label>

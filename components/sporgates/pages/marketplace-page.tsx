@@ -1,21 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Package, Star } from "lucide-react"
+import { useMemo, useState } from "react"
+import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Star } from "lucide-react"
 import { products, marketplaceStores } from "@/lib/mock-data"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { MarketplaceFilterSidebar } from "@/components/sporgates/filters/marketplace-filter-sidebar"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
 import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loading-cards"
-import { ResourceCarousel } from "@/components/sporgates/business/resource-carousel"
+
 import { CollectionsModal } from "@/components/sporgates/business/collections-modal"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SortFilter } from "@/components/sporgates/filters/sort-filter"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -39,9 +33,10 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
   const [showCart, setShowCart] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [priceRange, setPriceRange] = useState("Any Price")
-  const [selectedResources, setSelectedResources] = useState<string[]>([])
+
   const [showCollections, setShowCollections] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
+  const [searchQuery, setSearchQuery] = useState("")
   const isLoading = false
   const [cartItems, setCartItems] = useState<CartItem[]>([
     { productId: "1", name: "Pro Basketball Shoes", price: 149.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop", quantity: 1 },
@@ -67,14 +62,40 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
   const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
-  const filteredProducts = products.filter((p) => {
-    if (activeCategory !== "All" && p.category !== activeCategory) return false
-    if (priceRange === "Under $50" && p.price >= 50) return false
-    if (priceRange === "$50-$100" && (p.price < 50 || p.price > 100)) return false
-    if (priceRange === "$100-$200" && (p.price < 100 || p.price > 200)) return false
-    if (priceRange === "Over $200" && p.price <= 200) return false
-    return true
-  })
+  const filteredProducts = useMemo(() => {
+    let result = products.filter((p) => {
+      if (activeCategory !== "All" && p.category !== activeCategory) return false
+      if (priceRange === "Under $50" && p.price >= 50) return false
+      if (priceRange === "$50-$100" && (p.price < 50 || p.price > 100)) return false
+      if (priceRange === "$100-$200" && (p.price < 100 || p.price > 200)) return false
+      if (priceRange === "Over $200" && p.price <= 200) return false
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        if (!p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) return false
+      }
+      return true
+    })
+
+    // Sort
+    if (sortBy !== "relevance") {
+      result = [...result].sort((a, b) => {
+        switch (sortBy) {
+          case "price-low":
+            return a.price - b.price
+          case "price-high":
+            return b.price - a.price
+          case "rating":
+            return b.rating - a.rating
+          case "newest":
+            return Number(b.id) - Number(a.id)
+          default:
+            return 0
+        }
+      })
+    }
+
+    return result
+  }, [activeCategory, priceRange, searchQuery, sortBy])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -120,6 +141,8 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search products..."
             className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
           />
@@ -165,66 +188,51 @@ export function MarketplacePage({ onNavigate }: MarketplacePageProps) {
         ))}
       </div>
 
-      {/* Featured Stores */}
+      {/* Featured Brands */}
       <div>
-        <h2 className="mb-3 text-base font-bold text-foreground">Featured Stores</h2>
-        <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-bold text-foreground">Featured Brands</h2>
+          <button className="text-xs font-medium text-primary hover:underline">View All</button>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {marketplaceStores.map((store) => (
-            <div
+            <button
               key={store.id}
-              className="flex min-w-[200px] shrink-0 flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+              onClick={() => onNavigate("store-detail", store.id)}
+              className="group flex min-w-[140px] flex-col items-center justify-between rounded-xl border border-border bg-card p-4 text-center transition-all hover:border-primary/50 hover:shadow-md"
             >
-              <span className="text-3xl">{store.logo}</span>
-              <p className="text-sm font-bold text-foreground">{store.name}</p>
-              <p className="text-[10px] text-muted-foreground text-center">{store.description}</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{store.productCount} products</span>
-                <span className="flex items-center gap-0.5">
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  {store.rating}
-                </span>
+              <div>
+                <p className="font-bold text-foreground group-hover:text-primary transition-colors">
+                  {store.name}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {store.productCount} products
+                </p>
               </div>
-            </div>
+              <div className="mt-3 flex items-center justify-center gap-1">
+                <Star className="h-3 w-3 fill-primary text-primary" />
+                <span className="text-xs font-semibold text-foreground">{store.rating}</span>
+              </div>
+            </button>
           ))}
         </div>
       </div>
-
-      <ResourceCarousel
-        title="Curated Picks"
-        icon={<Package className="h-4 w-4" />}
-        resources={products.slice(0, 6).map((product) => ({
-          id: product.id,
-          name: product.name,
-          type: product.category,
-          price: product.price,
-          image: product.image,
-          businessName: product.seller,
-        }))}
-        selectedResources={selectedResources}
-        onToggle={(id) =>
-          setSelectedResources((prev) =>
-            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-          )
-        }
-        colorScheme="orange"
-      />
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{filteredProducts.length}</span> products found
         </p>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="h-8 rounded-lg border border-border bg-card px-3 text-xs">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="relevance">Sort by: Relevance</SelectItem>
-            <SelectItem value="price-low">Price: Low to High</SelectItem>
-            <SelectItem value="price-high">Price: High to Low</SelectItem>
-            <SelectItem value="rating">Rating</SelectItem>
-            <SelectItem value="newest">Newest</SelectItem>
-          </SelectContent>
-        </Select>
+        <SortFilter
+          value={sortBy}
+          onValueChange={setSortBy}
+          options={[
+            { value: "relevance", label: "Sort by: Relevance" },
+            { value: "price-low", label: "Price: Low to High" },
+            { value: "price-high", label: "Price: High to Low" },
+            { value: "rating", label: "Rating" },
+            { value: "newest", label: "Newest" },
+          ]}
+        />
       </div>
 
       {isLoading ? (

@@ -2,6 +2,13 @@
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface CreateJobOfferModalProps {
   isOpen: boolean
@@ -62,27 +69,29 @@ export function CreateJobOfferModal({ isOpen, onClose, onCreate }: CreateJobOffe
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-xs font-semibold text-muted-foreground">Job Type</label>
-              <select
-                value={jobType}
-                onChange={(event) => setJobType(event.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none"
-              >
-                <option>Full-Time</option>
-                <option>Part-Time</option>
-                <option>Contract</option>
-              </select>
+              <Select value={jobType} onValueChange={setJobType}>
+                <SelectTrigger className="mt-1 h-11 w-full rounded-xl border border-border bg-muted px-3 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Full-Time">Full-Time</SelectItem>
+                  <SelectItem value="Part-Time">Part-Time</SelectItem>
+                  <SelectItem value="Contract">Contract</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground">Work Location</label>
-              <select
-                value={locationType}
-                onChange={(event) => setLocationType(event.target.value)}
-                className="mt-1 h-11 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none"
-              >
-                <option>On-site</option>
-                <option>Remote</option>
-                <option>Hybrid</option>
-              </select>
+              <Select value={locationType} onValueChange={setLocationType}>
+                <SelectTrigger className="mt-1 h-11 w-full rounded-xl border border-border bg-muted px-3 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="On-site">On-site</SelectItem>
+                  <SelectItem value="Remote">Remote</SelectItem>
+                  <SelectItem value="Hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div>

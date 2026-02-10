@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
 import { businesses } from "@/lib/mock-data"
 import { BusinessCard } from "@/components/sporgates/cards/business-card"
+import { SortFilter } from "@/components/sporgates/filters/sort-filter"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -16,12 +17,33 @@ const filters = ["All", "Sports Complex", "Gym & Training", "Tennis Academy", "A
 export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [query, setQuery] = useState("")
+  const [sortBy, setSortBy] = useState("rating")
 
-  const filteredBusinesses = businesses.filter((b) => {
-    const matchesFilter = activeFilter === "All" || b.type === activeFilter
-    const matchesQuery = !query || b.name.toLowerCase().includes(query.toLowerCase()) || b.type.toLowerCase().includes(query.toLowerCase())
-    return matchesFilter && matchesQuery
-  })
+  const filteredBusinesses = useMemo(() => {
+    let result = businesses.filter((b) => {
+      const matchesFilter = activeFilter === "All" || b.type === activeFilter
+      const matchesQuery = !query || b.name.toLowerCase().includes(query.toLowerCase()) || b.type.toLowerCase().includes(query.toLowerCase())
+      return matchesFilter && matchesQuery
+    })
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return b.rating - a.rating
+        case "followers":
+          return b.followers - a.followers
+        case "activities":
+          return b.activities - a.activities
+        case "newest":
+          return Number(b.id) - Number(a.id)
+        default:
+          return 0
+      }
+    })
+
+    return result
+  }, [activeFilter, query, sortBy])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -80,12 +102,16 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
         <p className="text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{filteredBusinesses.length}</span> businesses found
         </p>
-        <select className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs outline-none">
-          <option>Sort by: Rating</option>
-          <option>Most Followers</option>
-          <option>Most Activities</option>
-          <option>Newest</option>
-        </select>
+        <SortFilter
+          value={sortBy}
+          onValueChange={setSortBy}
+          options={[
+            { value: "rating", label: "Sort by: Rating" },
+            { value: "followers", label: "Most Followers" },
+            { value: "activities", label: "Most Activities" },
+            { value: "newest", label: "Newest" },
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

@@ -26,7 +26,6 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
         Back to Businesses
       </button>
 
-      {/* Store Header */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="relative h-40">
           <img
@@ -37,15 +36,15 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 pt-4">
           <div className="-mt-8 flex items-end gap-4">
-            <div className="gradient-primary flex h-16 w-16 items-center justify-center rounded-2xl border-4 border-card text-lg font-bold text-white shadow-lg">
+            <div className="gradient-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-4 border-card text-lg font-bold text-white shadow-lg">
               <ShoppingBag className="h-7 w-7" />
             </div>
-            <div className="flex-1 pb-1">
+            <div className="min-w-0 flex-1 pt-10">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-foreground">{business.name}</h1>
-                {business.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
+                <h1 className="truncate text-xl font-bold text-foreground">{business.name}</h1>
+                {business.verified && <BadgeCheck className="h-5 w-5 shrink-0 text-primary" />}
               </div>
               <p className="text-sm text-muted-foreground">{business.type}</p>
             </div>

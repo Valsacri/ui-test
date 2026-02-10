@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
 import { activities } from "@/lib/mock-data"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
@@ -11,6 +11,7 @@ import { LoadingActivityCard, LoadingGrid } from "@/components/sporgates/ux/load
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { SortFilter } from "@/components/sporgates/filters/sort-filter"
 
 interface ActivitiesPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -20,10 +21,81 @@ const filters = ["All", "Today", "This Week", "Free", "Paid", "Indoor", "Outdoor
 
 export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
+  const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
+  const [sortBy, setSortBy] = useState("relevance")
   const isMobile = useIsMobile()
   const isLoading = false
+
+  const filteredActivities = useMemo(() => {
+    const today = new Date()
+    const todayStr = today.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+
+    let result = activities.filter((a) => {
+      // Search filter
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchesSearch =
+          a.title.toLowerCase().includes(q) ||
+          a.sport.toLowerCase().includes(q) ||
+          a.location.toLowerCase().includes(q)
+        if (!matchesSearch) return false
+      }
+
+      // Pill filter
+      if (activeFilter !== "All") {
+        switch (activeFilter) {
+          case "Free":
+            if (a.price !== 0) return false
+            break
+          case "Paid":
+            if (a.price === 0) return false
+            break
+          case "Indoor":
+            if (!a.tags.includes("Indoor")) return false
+            break
+          case "Outdoor":
+            if (!a.tags.includes("Outdoor")) return false
+            break
+          case "Today": {
+            const actDate = new Date(a.date)
+            if (actDate.toDateString() !== today.toDateString()) return false
+            break
+          }
+          case "This Week": {
+            const actDate = new Date(a.date)
+            const weekEnd = new Date(today)
+            weekEnd.setDate(today.getDate() + 7)
+            if (actDate < today || actDate > weekEnd) return false
+            break
+          }
+        }
+      }
+
+      return true
+    })
+
+    // Sort
+    if (sortBy !== "relevance") {
+      result = [...result].sort((a, b) => {
+        switch (sortBy) {
+          case "price-low":
+            return a.price - b.price
+          case "price-high":
+            return b.price - a.price
+          case "rating":
+            return b.rating - a.rating
+          case "date":
+            return new Date(a.date).getTime() - new Date(b.date).getTime()
+          default:
+            return 0
+        }
+      })
+    }
+
+    return result
+  }, [searchQuery, activeFilter, sortBy])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -39,6 +111,8 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search activities..."
             className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
           />
@@ -108,35 +182,42 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">{activities.length}</span> activities found
+          <span className="font-semibold text-foreground">{filteredActivities.length}</span> activities found
         </p>
-        <select className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs outline-none">
-          <option>Sort by: Relevance</option>
-          <option>Price: Low to High</option>
-          <option>Price: High to Low</option>
-          <option>Rating</option>
-          <option>Date</option>
-        </select>
+        <SortFilter
+          value={sortBy}
+          onValueChange={setSortBy}
+          options={[
+            { value: "relevance", label: "Sort by: Relevance" },
+            { value: "price-low", label: "Price: Low to High" },
+            { value: "price-high", label: "Price: High to Low" },
+            { value: "rating", label: "Rating" },
+            { value: "date", label: "Date" },
+          ]}
+        />
       </div>
 
       {isLoading ? (
         <LoadingGrid>
           <LoadingActivityCard />
         </LoadingGrid>
-      ) : activities.length === 0 ? (
+      ) : filteredActivities.length === 0 ? (
         <EmptyState
           icon={Search}
           title="No activities found"
           description="Try adjusting your filters or search query."
           action={{
             label: "Clear Filters",
-            onClick: () => setActiveFilter("All"),
+            onClick: () => {
+              setActiveFilter("All")
+              setSearchQuery("")
+            },
             variant: "secondary",
           }}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {activities.map((activity) => (
+          {filteredActivities.map((activity) => (
             <ActivityCard
               key={activity.id}
               activity={activity}

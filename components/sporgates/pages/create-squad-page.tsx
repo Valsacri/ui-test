@@ -15,6 +15,13 @@ import { sports, people } from "@/lib/mock-data"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 interface CreateSquadPageProps {
     onNavigate: (page: PageRoute) => void
@@ -88,18 +95,21 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
                 </div>
                 <div>
                     <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
-                    <select
+                    <Select
                         value={formData.sport}
-                        onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                        onValueChange={(val) => setFormData({ ...formData, sport: val })}
                     >
-                        <option value="">Select a sport</option>
-                        {sports.map((sport) => (
-                            <option key={sport.id} value={sport.name}>
-                                {sport.name}
-                            </option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                            <SelectValue placeholder="Select a sport" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {sports.map((sport) => (
+                                <SelectItem key={sport.id} value={sport.name}>
+                                    {sport.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 

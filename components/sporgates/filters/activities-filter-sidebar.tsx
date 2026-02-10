@@ -3,6 +3,13 @@
 import { useState } from "react"
 import { X, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface ActivitiesFilterSidebarProps {
   onClose?: () => void
@@ -107,27 +114,29 @@ export function ActivitiesFilterSidebar({ onClose, onApply }: ActivitiesFilterSi
         <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="mb-2 text-xs font-semibold text-foreground">Time of Day</p>
-            <select
-              value={timeOfDay}
-              onChange={(event) => setTimeOfDay(event.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-muted px-3 text-xs outline-none"
-            >
-              {times.map((time) => (
-                <option key={time} value={time}>{time}</option>
-              ))}
-            </select>
+            <Select value={timeOfDay} onValueChange={setTimeOfDay}>
+              <SelectTrigger className="h-10 w-full rounded-xl border border-border bg-muted px-3 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {times.map((time) => (
+                  <SelectItem key={time} value={time}>{time}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <p className="mb-2 text-xs font-semibold text-foreground">Skill Level</p>
-            <select
-              value={level}
-              onChange={(event) => setLevel(event.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-muted px-3 text-xs outline-none"
-            >
-              {levels.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
+            <Select value={level} onValueChange={setLevel}>
+              <SelectTrigger className="h-10 w-full rounded-xl border border-border bg-muted px-3 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {levels.map((item) => (
+                  <SelectItem key={item} value={item}>{item}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

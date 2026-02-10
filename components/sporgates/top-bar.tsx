@@ -21,6 +21,8 @@ import { goals, userProfile, conversations, notifications } from "@/lib/mock-dat
 import { cn } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
 
+type Business = { id: string; name: string; type: string; emoji: string; location: string; rating: number; followers: number }
+
 const notifTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   activity: CalendarDays,
   social: Heart,
@@ -32,7 +34,11 @@ const notifTypeIcons: Record<string, React.ComponentType<{ className?: string }>
 interface TopBarProps {
   onNavigate: (page: PageRoute) => void
   isBusinessMode: boolean
-  onToggleBusinessMode: () => void
+  businesses: Business[]
+  activeBusinessId: string | null
+  onSwitchBusiness: (id: string) => void
+  onSwitchToUser: () => void
+  onCreateNewBusiness: () => void
   unreadMessages: number
   unreadNotifications: number
 }
@@ -40,7 +46,11 @@ interface TopBarProps {
 export function TopBar({
   onNavigate,
   isBusinessMode,
-  onToggleBusinessMode,
+  businesses,
+  activeBusinessId,
+  onSwitchBusiness,
+  onSwitchToUser,
+  onCreateNewBusiness,
   unreadMessages,
   unreadNotifications,
 }: TopBarProps) {
@@ -361,34 +371,88 @@ export function TopBar({
             <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground md:block" />
           </button>
           {showProfileMenu && (
-            <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-card py-2 shadow-lg">
-              <div className="border-b border-border px-4 pb-2">
-                <p className="text-sm font-semibold text-foreground">{userProfile.name}</p>
-                <p className="text-xs text-muted-foreground">{userProfile.username}</p>
-              </div>
-              <div className="py-1">
-                <button
-                  type="button"
-                  onClick={() => {
+            <div className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-card py-2 shadow-lg">
+              {/* User profile */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isBusinessMode) {
+                    onSwitchToUser()
+                  } else {
                     onNavigate("profile")
-                    setShowProfileMenu(false)
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-muted"
-                >
-                  <User className="h-4 w-4" />
-                  My Profile
-                </button>
+                  }
+                  setShowProfileMenu(false)
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted",
+                  !isBusinessMode && "bg-primary/5"
+                )}
+              >
+                <div className="gradient-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
+                  {userProfile.avatar}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-semibold text-foreground">{userProfile.name}</p>
+                  <p className="text-[11px] text-muted-foreground">Personal Account</p>
+                </div>
+                {!isBusinessMode && (
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                )}
+              </button>
+
+              {/* Businesses */}
+              {businesses.length > 0 && (
+                <div className="border-t border-border pt-1 mt-1">
+                  <p className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Your Businesses
+                  </p>
+                  {businesses.map((biz) => (
+                    <button
+                      type="button"
+                      key={biz.id}
+                      onClick={() => {
+                        onSwitchBusiness(biz.id)
+                        setShowProfileMenu(false)
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted",
+                        activeBusinessId === biz.id && "bg-primary/5"
+                      )}
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-base">
+                        {biz.emoji}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-semibold text-foreground">{biz.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{biz.type}</p>
+                      </div>
+                      {activeBusinessId === biz.id && (
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Create New Business */}
+              <div className="border-t border-border pt-1 mt-1">
                 <button
                   type="button"
                   onClick={() => {
-                    onToggleBusinessMode()
+                    onCreateNewBusiness()
                     setShowProfileMenu(false)
                   }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-muted"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-muted"
                 >
-                  <Building2 className="h-4 w-4" />
-                  {isBusinessMode ? "Switch to User" : "Switch to Business"}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-border">
+                    <span className="text-lg text-muted-foreground">+</span>
+                  </div>
+                  <span className="font-medium text-primary">Create New Business</span>
                 </button>
+              </div>
+
+              {/* Settings & Sign Out */}
+              <div className="border-t border-border pt-1 mt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -400,8 +464,6 @@ export function TopBar({
                   <Settings className="h-4 w-4" />
                   Settings
                 </button>
-              </div>
-              <div className="border-t border-border pt-1">
                 <button
                   type="button"
                   onClick={() => {

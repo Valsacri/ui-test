@@ -41,6 +41,13 @@ import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporg
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface BusinessFormPageProps {
   onNavigate: (page: PageRoute) => void
@@ -107,29 +114,36 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
-                  <select
+                  <Select
                     value={formData.sport}
-                    onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                    onValueChange={(val) => setFormData({ ...formData, sport: val })}
                   >
-                    <option value="">Select sport</option>
-                    {sports.map((s) => (
-                      <option key={s.id} value={s.name}>{s.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                      <SelectValue placeholder="Select sport" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sports.map((s) => (
+                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-foreground">Type</label>
-                  <select
+                  <Select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                    onValueChange={(val) => setFormData({ ...formData, type: val })}
                   >
-                    <option value="event">Event</option>
-                    <option value="session">Session</option>
-                    <option value="program">Program</option>
-                    <option value="league">League</option>
-                  </select>
+                    <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="event">Event</SelectItem>
+                      <SelectItem value="session">Session</SelectItem>
+                      <SelectItem value="program">Program</SelectItem>
+                      <SelectItem value="league">League</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div>
@@ -431,8 +445,8 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
                       isCompleted
                         ? "bg-primary text-white"
                         : isCurrent
-                        ? "border-2 border-secondary bg-secondary/10 text-secondary"
-                        : "bg-muted text-muted-foreground"
+                          ? "border-2 border-secondary bg-secondary/10 text-secondary"
+                          : "bg-muted text-muted-foreground"
                     )}
                   >
                     {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -472,29 +486,35 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
-                <select
+                <Select
                   value={formData.sport}
-                  onChange={(event) => setFormData({ ...formData, sport: event.target.value })}
-                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                  onValueChange={(val) => setFormData({ ...formData, sport: val })}
                 >
-                  <option value="">Select sport</option>
-                  {sports.map((sport) => (
-                    <option key={sport.id} value={sport.name}>{sport.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                    <SelectValue placeholder="Select sport" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sports.map((sport) => (
+                      <SelectItem key={sport.id} value={sport.name}>{sport.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Skill Level</label>
-                <select
+                <Select
                   value={formData.level}
-                  onChange={(event) => setFormData({ ...formData, level: event.target.value })}
-                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                  onValueChange={(val) => setFormData({ ...formData, level: val })}
                 >
-                  <option value="">Select level</option>
-                  {experienceLevels.map((level) => (
-                    <option key={level.id} value={level.id}>{level.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {experienceLevels.map((level) => (
+                      <SelectItem key={level.id} value={level.id}>{level.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
@@ -532,39 +552,45 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
-                <select
+                <Select
                   value={formData.location.city}
-                  onChange={(event) =>
+                  onValueChange={(val) =>
                     setFormData({
                       ...formData,
-                      location: { ...formData.location, city: event.target.value, neighborhood: "" },
+                      location: { ...formData.location, city: val, neighborhood: "" },
                     })
                   }
-                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
                 >
-                  <option value="">Select city</option>
-                  {cities.map((city) => (
-                    <option key={city.id} value={city.id}>{city.label}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                    <SelectValue placeholder="Select city" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cities.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>{city.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Neighborhood</label>
-                <select
+                <Select
                   value={formData.location.neighborhood}
-                  onChange={(event) =>
+                  onValueChange={(val) =>
                     setFormData({
                       ...formData,
-                      location: { ...formData.location, neighborhood: event.target.value },
+                      location: { ...formData.location, neighborhood: val },
                     })
                   }
-                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
                 >
-                  <option value="">Select neighborhood</option>
-                  {availableNeighborhoods.map((neighborhood) => (
-                    <option key={neighborhood} value={neighborhood}>{neighborhood}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                    <SelectValue placeholder="Select neighborhood" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableNeighborhoods.map((neighborhood) => (
+                      <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <MapView
@@ -1019,18 +1045,21 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-foreground">Business Type</label>
-              <select
+              <Select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                onValueChange={(val) => setFormData({ ...formData, type: val })}
               >
-                <option value="">Select type</option>
-                <option value="gym">Gym & Training</option>
-                <option value="sports-complex">Sports Complex</option>
-                <option value="academy">Academy</option>
-                <option value="wellness">Wellness Center</option>
-                <option value="retail">Sports Retail</option>
-              </select>
+                <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gym">Gym & Training</SelectItem>
+                  <SelectItem value="sports-complex">Sports Complex</SelectItem>
+                  <SelectItem value="academy">Academy</SelectItem>
+                  <SelectItem value="wellness">Wellness Center</SelectItem>
+                  <SelectItem value="retail">Sports Retail</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium text-foreground">Description</label>

@@ -2,6 +2,13 @@
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface AddTeamMemberModalProps {
   isOpen: boolean
@@ -37,15 +44,16 @@ export function AddTeamMemberModal({ isOpen, onClose }: AddTeamMemberModalProps)
           </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Role</label>
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
-              className="mt-1 h-11 w-full rounded-xl border border-border bg-muted px-3 text-sm outline-none"
-            >
-              <option>Staff</option>
-              <option>Manager</option>
-              <option>Owner</option>
-            </select>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="mt-1 h-11 w-full rounded-xl border border-border bg-muted px-3 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Staff">Staff</SelectItem>
+                <SelectItem value="Manager">Manager</SelectItem>
+                <SelectItem value="Owner">Owner</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Phone (optional)</label>
