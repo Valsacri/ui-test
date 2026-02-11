@@ -15,58 +15,35 @@ interface CreateActivityProps {
   }) => void;
 }
 
-export function CreateActivity({ onBack, onSubmit, onMetricsChange }: CreateActivityProps) {
-  const [currentStep, setCurrentStep] = useState(1);
-
-  const handleNext = () => {
-    setCurrentStep(prev => prev + 1);
-  };
-
-  const handlePrev = () => {
-    setCurrentStep(prev => Math.max(1, prev - 1));
-  };
-
-  const handleSubmit = () => {
-    onSubmit();
-  };
-
+export function CreateActivity({ onBack, onSubmit }: CreateActivityProps) {
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto pb-12">
       {/* Header */}
-      <div className="bg-card rounded-xl border border-border mb-6 overflow-hidden">
-        <div className="bg-primary/[0.03] border-b border-border px-6 py-5">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onBack}
-              className="h-9 w-9 p-0 rounded-lg hover:bg-primary/10"
-            >
-              <ArrowLeft className="w-5 h-5 text-primary" />
-            </Button>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-secondary" />
-                <h1 className="text-xl font-semibold text-foreground">Create New Activity</h1>
-              </div>
-              <p className="text-sm text-muted-foreground mt-0.5 ml-7">Set up your event, session, or training program</p>
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="h-9 w-9 p-0 rounded-lg hover:bg-primary/10"
+          >
+            <ArrowLeft className="w-5 h-5 text-primary" />
+          </Button>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-secondary" />
+              <h1 className="text-xl font-semibold text-foreground">Create New Activity</h1>
             </div>
+            <p className="text-sm text-muted-foreground mt-0.5 ml-7">Set up your event, session, or training program</p>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="p-6">
-          <ActivityStepForm
-            currentStep={currentStep}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            onCancel={onBack}
-            onSubmit={handleSubmit}
-          />
-        </div>
-      </div>
+      {/* Form */}
+      <ActivityStepForm
+        onCancel={onBack}
+        onSubmit={onSubmit}
+      />
     </div>
   );
 }
