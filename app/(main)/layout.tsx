@@ -6,6 +6,7 @@ import { TopBar } from "@/components/sporgates/top-bar"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
 import { FeedSidebar } from "@/components/sporgates/feed-sidebar"
 import { BottomNav } from "@/components/sporgates/bottom-nav"
+import { AuthGuard } from "@/components/sporgates/auth-guard"
 import { useBusinessContext } from "@/lib/business-context"
 import { useAppRouter } from "@/lib/route-map"
 import type { PageRoute } from "@/lib/navigation"
@@ -109,36 +110,38 @@ export default function MainLayout({
         showSidebars && !isBusinessMode && !hideRightSidebarPages.includes(currentPage)
 
     return (
-        <div className="min-h-screen bg-background">
-            <TopBar
-                onNavigate={navigate}
-                isBusinessMode={isBusinessMode}
-                businesses={businesses}
-                activeBusinessId={activeBusinessId}
-                onSwitchBusiness={switchBusiness}
-                onSwitchToUser={switchToUser}
-                onCreateNewBusiness={createNewBusiness}
-                unreadMessages={3}
-                unreadNotifications={2}
-            />
-            <div className="flex">
-                {showSidebars && (
-                    <ExploreSidebar
-                        currentPage={currentPage}
-                        onNavigate={navigate}
-                        isBusinessMode={isBusinessMode}
-                    />
-                )}
-                <main className="min-w-0 flex-1 p-4 lg:p-6">
-                    {children}
-                </main>
-                {showRightSidebar && <FeedSidebar onNavigate={navigate} />}
+        <AuthGuard>
+            <div className="min-h-screen bg-background">
+                <TopBar
+                    onNavigate={navigate}
+                    isBusinessMode={isBusinessMode}
+                    businesses={businesses}
+                    activeBusinessId={activeBusinessId}
+                    onSwitchBusiness={switchBusiness}
+                    onSwitchToUser={switchToUser}
+                    onCreateNewBusiness={createNewBusiness}
+                    unreadMessages={3}
+                    unreadNotifications={2}
+                />
+                <div className="flex">
+                    {showSidebars && (
+                        <ExploreSidebar
+                            currentPage={currentPage}
+                            onNavigate={navigate}
+                            isBusinessMode={isBusinessMode}
+                        />
+                    )}
+                    <main className="min-w-0 flex-1 p-4 lg:p-6">
+                        {children}
+                    </main>
+                    {showRightSidebar && <FeedSidebar onNavigate={navigate} />}
+                </div>
+                <BottomNav
+                    currentPage={currentPage}
+                    onNavigate={navigate}
+                    isBusinessMode={isBusinessMode}
+                />
             </div>
-            <BottomNav
-                currentPage={currentPage}
-                onNavigate={navigate}
-                isBusinessMode={isBusinessMode}
-            />
-        </div>
+        </AuthGuard>
     )
 }

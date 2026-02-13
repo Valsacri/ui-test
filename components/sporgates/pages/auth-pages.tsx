@@ -77,7 +77,8 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     setError(null)
     try {
       await authService.login({ email, password })
-      onNavigate("home")
+      // Full page reload so the (main) layout's AuthGuard picks up the token
+      window.location.href = "/"
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, "Login failed. Please try again."))
     } finally {

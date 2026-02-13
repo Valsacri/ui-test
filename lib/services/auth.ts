@@ -15,33 +15,46 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-    token: string;
-    user: {
-        id: string;
-        email: string;
-        firstName: string;
-        lastName: string;
-        username?: string;
-    };
+    accessToken: string;
+    refreshToken?: string;
+    tokenType?: string;
+    expiresIn?: number;
+    userId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    username?: string;
+    twoFactorEnabled?: boolean;
+    profileCompletion?: number;
 }
 
 export const authService = {
     login: async (data: LoginRequest): Promise<AuthResponse> => {
         const response = await apiClient.post('/auth/login', data);
-        if (response.data.token) {
-            localStorage.setItem('auth_token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+        const d = response.data;
+        if (d.accessToken) {
+            localStorage.setItem('auth_token', d.accessToken);
+            localStorage.setItem('user', JSON.stringify({
+                id: d.userId, email: d.email,
+                firstName: d.firstName, lastName: d.lastName,
+                username: d.username,
+            }));
         }
-        return response.data;
+        return d;
     },
 
     register: async (data: RegisterRequest): Promise<AuthResponse> => {
         const response = await apiClient.post('/auth/signup', data);
-        if (response.data.token) {
-            localStorage.setItem('auth_token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+        const d = response.data;
+        if (d.accessToken) {
+            localStorage.setItem('auth_token', d.accessToken);
+            localStorage.setItem('user', JSON.stringify({
+                id: d.userId, email: d.email,
+                firstName: d.firstName, lastName: d.lastName,
+                username: d.username,
+            }));
         }
-        return response.data;
+        return d;
     },
 
     logout: () => {
@@ -90,8 +103,8 @@ export const authService = {
 
     refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
         const response = await apiClient.post('/auth/refresh', { refreshToken });
-        if (response.data.token) {
-            localStorage.setItem('auth_token', response.data.token);
+        if (response.data.accessToken) {
+            localStorage.setItem('auth_token', response.data.accessToken);
         }
         return response.data;
     },
