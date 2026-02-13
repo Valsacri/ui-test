@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   MapPin,
   Calendar,
@@ -14,7 +14,8 @@ import {
   CalendarDays,
   ChevronRight,
 } from "lucide-react"
-import { userProfile, activities, goals } from "@/lib/mock-data"
+import { userProfile as mockUserProfile, activities, goals } from "@/lib/mock-data"
+import { userService, authService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -56,7 +57,26 @@ const weeklyData = [
 
 export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
+  const [userProfile, setUserProfile] = useState(mockUserProfile)
   const maxHours = Math.max(...weeklyData.map((d) => d.hours))
+
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      userService.getUserById(user.id).then((data) => {
+        if (data) {
+          setUserProfile((prev) => ({
+            ...prev,
+            name: data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : prev.name,
+            bio: data.bio || prev.bio,
+            location: data.location || prev.location,
+            avatar: prev.avatar,
+            username: data.username ? `@${data.username}` : prev.username,
+          }))
+        }
+      }).catch(() => { })
+    }
+  }, [])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

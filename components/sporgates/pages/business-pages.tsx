@@ -1,6 +1,6 @@
-"use client"
+﻿"use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Plus,
   Search,
@@ -30,12 +30,56 @@ import { EditResourceModal } from "@/components/sporgates/business/edit-resource
 import { AddTeamMemberModal } from "@/components/sporgates/business/add-team-member-modal"
 import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporgates/business/sponsorship-tier-builder"
 import { AthleteCollaborationSelector } from "@/components/sporgates/business/athlete-collaboration-selector"
+import { facilitiesService } from "@/lib/services/facilities"
+import { marketplaceService } from "@/lib/services/marketplace"
+import { servicesService } from "@/lib/services/services"
+import { activitiesService } from "@/lib/services/activities"
+import { businessesService } from "@/lib/services/businesses"
 
 interface BusinessSubPageProps {
   onNavigate: (page: PageRoute) => void
 }
 
 export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
+  const [activityList, setActivityList] = useState<Array<{
+    id: string; name: string; sportName?: string; startDateTime?: string; pricePerPerson?: number;
+    currentParticipants?: number; maxParticipants?: number; coverImage?: string; status?: string
+  }>>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      setLoading(true)
+      try {
+        const data = await activitiesService.getAll()
+        const list = Array.isArray(data) ? data : []
+        setActivityList(list)
+      } catch {
+        // Fallback to mock data
+        setActivityList(
+          activities.map((a) => ({
+            id: a.id,
+            name: a.title,
+            sportName: a.sport,
+            startDateTime: a.date,
+            pricePerPerson: a.price,
+            currentParticipants: a.spots,
+            maxParticipants: a.totalSpots,
+            coverImage: a.image,
+          }))
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchActivities()
+  }, [])
+
+  const filteredActivities = searchQuery
+    ? activityList.filter((a) => a.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : activityList
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex items-center justify-between">
@@ -58,45 +102,61 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
         <input
           type="text"
           placeholder="Search activities..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none focus:border-primary"
         />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Activity</th>
-              <th className="hidden px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">Sport</th>
-              <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</th>
-              <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Price</th>
-              <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Spots</th>
-              <th className="px-5 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {activities.map((activity) => (
-              <tr key={activity.id} className="border-b border-border last:border-0 hover:bg-muted/50">
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <img src={activity.image || "/placeholder.svg"} alt="" className="h-10 w-10 rounded-lg object-cover" crossOrigin="anonymous" />
-                    <span className="text-xs font-semibold text-foreground">{activity.title}</span>
-                  </div>
-                </td>
-                <td className="hidden px-5 py-3 text-xs text-muted-foreground md:table-cell">{activity.sport}</td>
-                <td className="px-5 py-3 text-xs text-muted-foreground">{activity.date}</td>
-                <td className="px-5 py-3 text-xs font-semibold text-foreground">${activity.price}</td>
-                <td className="px-5 py-3 text-xs text-muted-foreground">{activity.spots}/{activity.totalSpots}</td>
-                <td className="px-5 py-3">
-                  <button type="button" className="rounded-full p-1 hover:bg-muted">
-                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </td>
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      {!loading && filteredActivities.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-sm text-muted-foreground">No activities found. Create your first activity to get started.</p>
+        </div>
+      )}
+
+      {!loading && filteredActivities.length > 0 && (
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Activity</th>
+                <th className="hidden px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">Sport</th>
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</th>
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Price</th>
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Spots</th>
+                <th className="px-5 py-3" />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filteredActivities.map((activity) => (
+                <tr key={activity.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <img src={activity.coverImage || "/placeholder.svg"} alt="" className="h-10 w-10 rounded-lg object-cover" crossOrigin="anonymous" />
+                      <span className="text-xs font-semibold text-foreground">{activity.name}</span>
+                    </div>
+                  </td>
+                  <td className="hidden px-5 py-3 text-xs text-muted-foreground md:table-cell">{activity.sportName || "â€”"}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{activity.startDateTime ? new Date(activity.startDateTime).toLocaleDateString() : "â€”"}</td>
+                  <td className="px-5 py-3 text-xs font-semibold text-foreground">${activity.pricePerPerson ?? 0}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{activity.currentParticipants ?? 0}/{activity.maxParticipants ?? 0}</td>
+                  <td className="px-5 py-3">
+                    <button type="button" className="rounded-full p-1 hover:bg-muted">
+                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -196,8 +256,45 @@ export function BusinessCustomersPage({ onNavigate }: BusinessSubPageProps) {
 }
 
 export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
-  const data = businessDashboardData
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<Array<{
+    id?: string; name: string; avatar: string; role?: string; status: string; email?: string
+  }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      setLoading(true)
+      try {
+        // First get the user's business
+        const businesses = await businessesService.getMyBusinesses()
+        const bizList = businesses?.content || (Array.isArray(businesses) ? businesses : [])
+        if (bizList.length > 0) {
+          const businessId = bizList[0].id
+          const staff = await businessesService.getStaff(businessId)
+          const staffList = Array.isArray(staff) ? staff : []
+          setTeamMembers(
+            staffList.map((s: { id?: string; firstName?: string; lastName?: string; email?: string; role?: string; username?: string }) => ({
+              id: s.id,
+              name: `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.username || 'Unknown',
+              avatar: `${(s.firstName || '?')[0]}${(s.lastName || '?')[0]}`,
+              role: s.role || 'Staff',
+              status: 'active',
+              email: s.email,
+            }))
+          )
+        } else {
+          // Fallback to mock data
+          setTeamMembers(businessDashboardData.teamMembers)
+        }
+      } catch {
+        setTeamMembers(businessDashboardData.teamMembers)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchTeam()
+  }, [])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -216,10 +313,22 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
         </button>
       </div>
 
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      {!loading && teamMembers.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-sm text-muted-foreground">No team members yet. Add your first team member.</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {data.teamMembers.map((member) => (
+        {teamMembers.map((member) => (
           <div
-            key={member.name}
+            key={member.id || member.name}
             className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm"
           >
             <div className="gradient-primary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
@@ -250,57 +359,361 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
 }
 
 export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
-  type BusinessResource = (typeof businessResources)[number] & {
+  type ResourceType = "facility" | "product" | "service"
+  type BusinessResource = {
+    id: string
+    name: string
+    type: string
+    resourceType: ResourceType
+    status: string
+    bookingsToday: number
+    revenue: number
+    image: string
+    description?: string
     price?: number
     pricePerHour?: number
-    description?: string
+    capacity?: number
+    address?: string
+    city?: string
+    sport?: string
+    brand?: string
+    category?: string
+    originalPrice?: number
+    duration?: string
   }
 
+  const [activeTab, setActiveTab] = useState<ResourceType>("facility")
   const [isAddResourceOpen, setIsAddResourceOpen] = useState(false)
-  const [resources, setResources] = useState<BusinessResource[]>(businessResources)
   const [editingResource, setEditingResource] = useState<BusinessResource | null>(null)
+  const [viewingResource, setViewingResource] = useState<BusinessResource | null>(null)
+  const [dropdownResourceId, setDropdownResourceId] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<BusinessResource | null>(null)
+  const [facilities, setFacilities] = useState<BusinessResource[]>([])
+  const [products, setProducts] = useState<BusinessResource[]>([])
+  const [services, setServices] = useState<BusinessResource[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
-  const resourceTypeLabels: Record<"facility" | "product" | "service", string> = {
-    facility: "Court",
-    product: "Product",
-    service: "Service",
-  }
+  const tabs: { key: ResourceType; label: string; count: number }[] = [
+    { key: "facility", label: "Facilities", count: facilities.length },
+    { key: "product", label: "Products", count: products.length },
+    { key: "service", label: "Services", count: services.length },
+  ]
 
-  const resolveResourceType = (type: string) => {
+  const activeResources = activeTab === "facility" ? facilities : activeTab === "product" ? products : services
+
+  const resolveResourceType = (type: string): ResourceType => {
     const normalized = type.toLowerCase()
-    if (["court", "pool", "studio", "ring"].some((item) => normalized.includes(item))) return "facility"
+    if (["court", "pool", "studio", "ring", "facility"].some((item) => normalized.includes(item))) return "facility"
     if (["product", "gear", "item"].some((item) => normalized.includes(item))) return "product"
     return "service"
   }
+
+  // Fetch all resources on mount
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true)
+      setError("")
+
+      try {
+        const data = await facilitiesService.getAll()
+        const list = Array.isArray(data) ? data : []
+        setFacilities(
+          list.map((f: Record<string, unknown>) => ({
+            id: f.id as string,
+            name: (f.name as string) || "Unnamed Facility",
+            type: "Facility",
+            resourceType: "facility" as ResourceType,
+            status: f.isActive ? "available" : "inactive",
+            bookingsToday: 0, revenue: 0,
+            image: (f.coverImage as string) || ((f.imageUrls as string[])?.[0]) || "/placeholder.svg",
+            description: f.description as string | undefined,
+            pricePerHour: f.pricePerHour as number | undefined,
+            capacity: f.capacity as number | undefined,
+            address: f.address as string | undefined,
+            city: f.city as string | undefined,
+            sport: ((f.sports as string[]) || [])[0] || undefined,
+            category: ((f.sports as string[]) || [])[0] || undefined,
+          }))
+        )
+      } catch { /* skip */ }
+
+      try {
+        const data = await marketplaceService.getAll()
+        const list = Array.isArray(data) ? data : []
+        setProducts(
+          list.map((p: Record<string, unknown>) => ({
+            id: p.id as string,
+            name: (p.name as string) || "Unnamed Product",
+            type: "Product",
+            resourceType: "product" as ResourceType,
+            status: p.inStock ? "available" : "inactive",
+            bookingsToday: 0, revenue: 0,
+            image: (p.image as string) || "/placeholder.svg",
+            description: p.description as string | undefined,
+            price: p.price as number | undefined,
+            brand: p.brand as string | undefined,
+            category: p.category as string | undefined,
+            originalPrice: p.originalPrice as number | undefined,
+          }))
+        )
+      } catch { /* skip */ }
+
+      try {
+        const data = await servicesService.getAll()
+        const list = Array.isArray(data) ? data : []
+        setServices(
+          list.map((s: Record<string, unknown>) => ({
+            id: s.id as string,
+            name: (s.name as string) || "Unnamed Service",
+            type: "Service",
+            resourceType: "service" as ResourceType,
+            status: s.verified ? "available" : "inactive",
+            bookingsToday: 0, revenue: 0,
+            image: (s.image as string) || "/placeholder.svg",
+            description: s.description as string | undefined,
+            price: s.price as number | undefined,
+            category: s.category as string | undefined,
+            duration: s.duration as string | undefined,
+          }))
+        )
+      } catch { /* skip */ }
+
+      // Mock fallback
+      setFacilities((prev) => prev.length > 0 ? prev : businessResources.filter((r) => resolveResourceType(r.type) === "facility").map((r) => ({ ...r, resourceType: "facility" as ResourceType })))
+      setProducts((prev) => prev.length > 0 ? prev : businessResources.filter((r) => resolveResourceType(r.type) === "product").map((r) => ({ ...r, resourceType: "product" as ResourceType })))
+      setServices((prev) => prev.length > 0 ? prev : businessResources.filter((r) => resolveResourceType(r.type) === "service").map((r) => ({ ...r, resourceType: "service" as ResourceType })))
+
+      setLoading(false)
+    }
+    fetchAll()
+  }, [])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!dropdownResourceId) return
+    const handler = () => setDropdownResourceId(null)
+    document.addEventListener("click", handler)
+    return () => document.removeEventListener("click", handler)
+  }, [dropdownResourceId])
+
+  const handleCreateResource = async (resource: {
+    name: string
+    resourceType: ResourceType
+    description: string
+    image: string
+    pricePerHour?: number
+    capacity?: number
+    address?: string
+    city?: string
+    sport?: string
+    price?: number
+    brand?: string
+    category?: string
+    originalPrice?: number
+    duration?: string
+  }) => {
+    const newItem: BusinessResource = {
+      id: `resource-${Date.now()}`,
+      name: resource.name,
+      type: resource.resourceType === "facility" ? "Facility" : resource.resourceType === "product" ? "Product" : "Service",
+      resourceType: resource.resourceType,
+      status: "available",
+      bookingsToday: 0, revenue: 0,
+      image: resource.image || "/placeholder.svg",
+      description: resource.description,
+      price: resource.price,
+      pricePerHour: resource.pricePerHour,
+      capacity: resource.capacity,
+      address: resource.address,
+      city: resource.city,
+      sport: resource.sport,
+      brand: resource.brand,
+      category: resource.category,
+      originalPrice: resource.originalPrice,
+      duration: resource.duration,
+    }
+
+    try {
+      if (resource.resourceType === "facility") {
+        const created = await facilitiesService.create({
+          name: resource.name,
+          description: resource.description,
+          coverImage: resource.image,
+          pricePerHour: resource.pricePerHour,
+          capacity: resource.capacity,
+          address: resource.address,
+          city: resource.city,
+          sports: resource.sport ? [resource.sport] : [],
+          businessId: "default",
+        })
+        newItem.id = created.id || newItem.id
+        setFacilities((prev) => [newItem, ...prev])
+      } else if (resource.resourceType === "product") {
+        const created = await marketplaceService.create({
+          name: resource.name,
+          description: resource.description,
+          image: resource.image,
+          price: resource.price,
+          brand: resource.brand,
+          category: resource.category || "General",
+          originalPrice: resource.originalPrice,
+        })
+        newItem.id = created.id || newItem.id
+        setProducts((prev) => [newItem, ...prev])
+      } else {
+        const created = await servicesService.create({
+          name: resource.name,
+          description: resource.description,
+          image: resource.image,
+          price: resource.price,
+          category: resource.category || "General",
+          duration: resource.duration,
+        })
+        newItem.id = created.id || newItem.id
+        setServices((prev) => [newItem, ...prev])
+      }
+    } catch {
+      // Fallback: add locally
+      if (resource.resourceType === "facility") setFacilities((prev) => [newItem, ...prev])
+      else if (resource.resourceType === "product") setProducts((prev) => [newItem, ...prev])
+      else setServices((prev) => [newItem, ...prev])
+    }
+    setActiveTab(resource.resourceType)
+  }
+
+  const handleSaveResource = async (updated: Record<string, unknown>) => {
+    const resType = activeTab
+    const id = updated.id as string
+
+    try {
+      if (resType === "facility") {
+        await facilitiesService.update(id, {
+          name: updated.name,
+          description: updated.description,
+          coverImage: updated.image,
+          pricePerHour: updated.pricePerHour,
+          capacity: updated.capacity,
+          address: updated.address,
+          city: updated.city,
+          sports: updated.sport ? [updated.sport] : undefined,
+        })
+      } else if (resType === "product") {
+        await marketplaceService.update(id, {
+          name: updated.name,
+          description: updated.description,
+          image: updated.image,
+          price: updated.price,
+          brand: updated.brand,
+          category: updated.category,
+          originalPrice: updated.originalPrice,
+        })
+      } else {
+        await servicesService.update(id, {
+          name: updated.name,
+          description: updated.description,
+          image: updated.image,
+          price: updated.price,
+          category: updated.category,
+          duration: updated.duration,
+        })
+      }
+    } catch { /* update locally anyway */ }
+
+    const setter = resType === "facility" ? setFacilities : resType === "product" ? setProducts : setServices
+    setter((prev: BusinessResource[]) => prev.map((item) => (item.id === id ? { ...item, ...updated } as BusinessResource : item)))
+    setEditingResource(null)
+  }
+
+  const handleDeleteResource = async (resource?: BusinessResource) => {
+    const target = resource || editingResource
+    if (!target) return
+    const resType = target.resourceType
+
+    try {
+      if (resType === "facility") await facilitiesService.delete(target.id)
+      else if (resType === "product") await marketplaceService.delete(target.id)
+      else await servicesService.delete(target.id)
+    } catch { /* remove locally anyway */ }
+
+    if (resType === "facility") setFacilities((prev) => prev.filter((item) => item.id !== target.id))
+    else if (resType === "product") setProducts((prev) => prev.filter((item) => item.id !== target.id))
+    else setServices((prev) => prev.filter((item) => item.id !== target.id))
+    setEditingResource(null)
+    setDeleteConfirm(null)
+  }
+
+  const tabLabels: Record<ResourceType, string> = { facility: "Facility", product: "Product", service: "Service" }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Resources</h1>
-          <p className="text-sm text-muted-foreground">Track facility resources and utilization</p>
+          <p className="text-sm text-muted-foreground">Manage your facilities, products, and services</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => onNavigate("create-facility")}
-            className="rounded-xl border border-primary px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
-          >
-            Add Facility
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsAddResourceOpen(true)}
-            className="gradient-primary rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
-          >
-            Add Resource
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsAddResourceOpen(true)}
+          className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" />
+          Add {tabLabels[activeTab]}
+        </button>
       </div>
 
+      {/* Tab Bar */}
+      <div className="flex gap-1 rounded-xl border border-border bg-muted/50 p-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "flex-1 rounded-lg px-4 py-2.5 text-xs font-semibold transition-all",
+              activeTab === tab.key
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {tab.label}
+            <span className={cn(
+              "ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px]",
+              activeTab === tab.key ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            )}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {!loading && activeResources.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-sm text-muted-foreground">
+            No {tabLabels[activeTab].toLowerCase()}s yet. Click &quot;Add {tabLabels[activeTab]}&quot; to create one.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {resources.map((resource) => (
-          <div key={resource.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        {activeResources.map((resource) => (
+          <div
+            key={resource.id}
+            className="rounded-2xl border border-border bg-card p-4 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-primary/30"
+            onClick={() => setViewingResource(resource)}
+          >
             <div className="flex items-center gap-4">
               <img
                 src={resource.image}
@@ -308,21 +721,35 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
                 className="h-16 w-16 rounded-xl object-cover"
                 crossOrigin="anonymous"
               />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">{resource.name}</p>
-                <p className="text-xs text-muted-foreground">{resource.type}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{resource.name}</p>
+                <p className="text-xs text-muted-foreground">{resource.type}{resource.category ? ` • ${resource.category}` : ""}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-foreground">
-                    {resource.bookingsToday} bookings today
-                  </span>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-primary">
-                    ${resource.revenue} revenue
-                  </span>
+                  {resource.pricePerHour != null && (
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-primary">
+                      ${resource.pricePerHour}/hr
+                    </span>
+                  )}
+                  {resource.price != null && (
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-primary">
+                      ${resource.price}
+                    </span>
+                  )}
+                  {resource.capacity != null && resource.capacity > 0 && (
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-foreground">
+                      <Users className="mr-1 inline h-3 w-3" />{resource.capacity}
+                    </span>
+                  )}
+                  {resource.duration && (
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-foreground">
+                      <Clock className="mr-1 inline h-3 w-3" />{resource.duration}
+                    </span>
+                  )}
                 </div>
               </div>
               <span
                 className={cn(
-                  "rounded-full px-2.5 py-0.5 text-[10px] font-semibold",
+                  "rounded-full px-2.5 py-0.5 text-[10px] font-semibold shrink-0",
                   resource.status === "available"
                     ? "bg-green-100 text-green-700"
                     : resource.status === "maintenance"
@@ -332,53 +759,199 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
               >
                 {resource.status}
               </span>
-              <button
-                type="button"
-                onClick={() => setEditingResource(resource)}
-                className="rounded-full p-2 hover:bg-muted"
-              >
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-              </button>
+              {/* 3-dot dropdown */}
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setDropdownResourceId(dropdownResourceId === resource.id ? null : resource.id) }}
+                  className="rounded-full p-2 hover:bg-muted"
+                >
+                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                </button>
+                {dropdownResourceId === resource.id && (
+                  <div className="absolute right-0 top-10 z-50 min-w-[140px] rounded-xl border border-border bg-card py-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => { setViewingResource(resource); setDropdownResourceId(null) }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                      View Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditingResource(resource); setDropdownResourceId(null) }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Edit3 className="h-3.5 w-3.5 text-muted-foreground" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setDeleteConfirm(resource); setDropdownResourceId(null) }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-xs font-medium text-destructive hover:bg-destructive/5 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Add Resource Modal */}
       <AddResourceModal
         isOpen={isAddResourceOpen}
         onClose={() => setIsAddResourceOpen(false)}
-        onCreate={(resource) => {
-          const label = resourceTypeLabels[resource.resourceType]
-          const nextResource = {
-            id: `resource-${Date.now()}`,
-            name: resource.name || `New ${label}`,
-            type: label,
-            status: "available",
-            bookingsToday: 0,
-            revenue: 0,
-            image: resource.image || "/placeholder.svg",
-            description: resource.description,
-            price: resource.resourceType === "facility" ? undefined : resource.price,
-            pricePerHour: resource.resourceType === "facility" ? resource.price : undefined,
-          }
-          setResources((prev) => [nextResource, ...prev])
-        }}
+        onCreate={handleCreateResource}
+        defaultResourceType={activeTab}
       />
+
+      {/* Edit Resource Modal */}
       {editingResource && (
         <EditResourceModal
           isOpen={!!editingResource}
           onClose={() => setEditingResource(null)}
-          onDelete={() => {
-            setResources((prev) => prev.filter((item) => item.id !== editingResource.id))
-            setEditingResource(null)
-          }}
-          onSave={(updated) => {
-            setResources((prev) => prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)))
-            setEditingResource(null)
-          }}
+          onDelete={() => handleDeleteResource(editingResource)}
+          onSave={handleSaveResource}
           resource={editingResource}
-          resourceType={resolveResourceType(editingResource.type)}
+          resourceType={editingResource.resourceType}
         />
+      )}
+
+      {/* View Resource Detail Modal */}
+      {viewingResource && (
+        <Dialog open={!!viewingResource} onOpenChange={() => setViewingResource(null)}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
+            <DialogTitle className="sr-only">Resource Details</DialogTitle>
+            {/* Header image */}
+            {viewingResource.image && viewingResource.image !== "/placeholder.svg" && (
+              <div className="relative">
+                <img src={viewingResource.image} alt={viewingResource.name} className="h-48 w-full object-cover" crossOrigin="anonymous" />
+                <button type="button" onClick={() => setViewingResource(null)} className="absolute right-3 top-3 rounded-full bg-black/40 p-1.5 text-white hover:bg-black/60">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            <div className="space-y-4 px-5 py-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">{viewingResource.name}</h2>
+                  <p className="text-xs text-muted-foreground">{viewingResource.type}{viewingResource.category ? ` • ${viewingResource.category}` : ""}</p>
+                </div>
+                <span className={cn(
+                  "rounded-full px-3 py-1 text-xs font-semibold shrink-0",
+                  viewingResource.status === "available" ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
+                )}>
+                  {viewingResource.status}
+                </span>
+              </div>
+
+              {viewingResource.description && (
+                <p className="text-sm text-muted-foreground leading-relaxed">{viewingResource.description}</p>
+              )}
+
+              {/* Detail rows */}
+              <div className="space-y-2">
+                {viewingResource.pricePerHour != null && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground">Price per Hour</span>
+                    <span className="text-sm font-semibold text-foreground">${viewingResource.pricePerHour}</span>
+                  </div>
+                )}
+                {viewingResource.price != null && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground">Price</span>
+                    <span className="text-sm font-semibold text-foreground">${viewingResource.price}</span>
+                  </div>
+                )}
+                {viewingResource.originalPrice != null && viewingResource.originalPrice > 0 && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground">Original Price</span>
+                    <span className="text-sm font-semibold text-foreground line-through">${viewingResource.originalPrice}</span>
+                  </div>
+                )}
+                {viewingResource.capacity != null && viewingResource.capacity > 0 && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground">Capacity</span>
+                    <span className="text-sm font-semibold text-foreground">{viewingResource.capacity} people</span>
+                  </div>
+                )}
+                {viewingResource.duration && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground">Duration</span>
+                    <span className="text-sm font-semibold text-foreground">{viewingResource.duration}</span>
+                  </div>
+                )}
+                {viewingResource.brand && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground">Brand</span>
+                    <span className="text-sm font-semibold text-foreground">{viewingResource.brand}</span>
+                  </div>
+                )}
+                {viewingResource.sport && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground">Sport</span>
+                    <span className="text-sm font-semibold text-foreground">{viewingResource.sport}</span>
+                  </div>
+                )}
+                {(viewingResource.address || viewingResource.city) && (
+                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Location</span>
+                    <span className="text-sm font-semibold text-foreground">{[viewingResource.address, viewingResource.city].filter(Boolean).join(", ")}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setViewingResource(null)}
+                  className="flex-1 rounded-xl border border-border py-2.5 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEditingResource(viewingResource); setViewingResource(null) }}
+                  className="gradient-primary flex-1 rounded-xl py-2.5 text-xs font-semibold text-white"
+                >
+                  Edit Resource
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+          <DialogContent className="max-w-sm p-0">
+            <DialogTitle className="sr-only">Delete Confirmation</DialogTitle>
+            <div className="space-y-4 px-5 py-6 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Delete {deleteConfirm.name}?</p>
+                <p className="mt-1 text-xs text-muted-foreground">This action cannot be undone. The resource will be permanently removed.</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setDeleteConfirm(null)} className="flex-1 rounded-xl border border-border py-2.5 text-xs font-semibold text-foreground hover:bg-muted">
+                  Cancel
+                </button>
+                <button type="button" onClick={() => handleDeleteResource(deleteConfirm)} className="flex-1 rounded-xl bg-destructive py-2.5 text-xs font-semibold text-white hover:bg-destructive/90">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

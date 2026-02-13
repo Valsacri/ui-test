@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   ArrowLeft,
   Plus,
@@ -41,6 +41,9 @@ import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporg
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { activitiesService } from "@/lib/services/activities"
+import { businessesService } from "@/lib/services/businesses"
+import { facilitiesService } from "@/lib/services/facilities"
 import {
   Select,
   SelectContent,
@@ -69,6 +72,36 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
     sponsorship: false,
     sponsorBudget: 0,
   })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleCreateActivity = async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const startDateTime = formData.date && formData.startTime
+        ? `${formData.date}T${formData.startTime}:00` : undefined
+      const endDateTime = formData.date && formData.endTime
+        ? `${formData.date}T${formData.endTime}:00` : undefined
+
+      await activitiesService.create({
+        name: formData.title,
+        description: formData.description,
+        sportName: formData.sport,
+        activityType: formData.type.toUpperCase(),
+        startDateTime,
+        endDateTime,
+        locationName: formData.location,
+        maxParticipants: formData.capacity,
+        pricePerPerson: formData.price,
+      })
+      onNavigate("business-activities")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create activity")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const estimatedReach = formData.capacity * 12
   const estimatedRevenue = formData.capacity * formData.price
@@ -269,12 +302,14 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
             </button>
             <button
               type="button"
-              onClick={() => onNavigate("business-activities")}
-              className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+              onClick={handleCreateActivity}
+              disabled={submitting}
+              className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              Create Activity
+              {submitting ? "Creating..." : "Create Activity"}
             </button>
           </div>
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
         </div>
 
         {/* Live Impact Sidebar */}
@@ -413,8 +448,34 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
     setCurrentStep((prev) => Math.max(prev - 1, 1))
   }
 
-  const handleSubmit = () => {
-    onNavigate("business-activities")
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    setSubmitError("")
+    try {
+      const startDateTime = formData.date && formData.time ? `${formData.date}T${formData.time}:00` : undefined
+      await activitiesService.create({
+        title: formData.title,
+        sport: formData.sport,
+        level: formData.level,
+        description: formData.description,
+        location: formData.location.address,
+        city: formData.location.city,
+        date: startDateTime,
+        time: formData.time,
+        duration: formData.duration,
+        maxParticipants: formData.maxParticipants,
+        price: formData.price,
+      })
+      onNavigate("business-activities")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create activity"
+      setSubmitError(message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -996,6 +1057,30 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
     email: "",
     website: "",
   })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleCreateBusiness = async () => {
+    setSubmitting(true)
+    setError(null)
+    try {
+      const username = formData.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 30)
+      await businessesService.create({
+        name: formData.name,
+        username,
+        bio: formData.description,
+        address: formData.location,
+        phoneNumber: formData.phone,
+        email: formData.email,
+        website: formData.website,
+      })
+      onNavigate("business-dashboard")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create business")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -1102,10 +1187,11 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
           <button type="button" onClick={() => onNavigate("business-dashboard")} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
             Cancel
           </button>
-          <button type="button" onClick={() => onNavigate("business-dashboard")} className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90">
-            Create Business
+          <button type="button" onClick={handleCreateBusiness} disabled={submitting} className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50">
+            {submitting ? "Creating..." : "Create Business"}
           </button>
         </div>
+        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
       </div>
     </div>
   )
@@ -1114,6 +1200,29 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
 // ==================== AddResource ====================
 export function AddResourcePage({ onNavigate }: BusinessFormPageProps) {
   const [formData, setFormData] = useState({ name: "", type: "court", pricePerHour: 0, capacity: 0, description: "" })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleAddResource = async () => {
+    if (!formData.name.trim()) { setError("Name is required"); return }
+    setSubmitting(true)
+    setError("")
+    try {
+      await facilitiesService.create({
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        pricePerHour: formData.pricePerHour,
+        capacity: formData.capacity,
+        type: formData.type,
+      })
+      onNavigate("business-resources")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to add resource"
+      setError(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -1181,8 +1290,9 @@ export function AddResourcePage({ onNavigate }: BusinessFormPageProps) {
 
       <div className="flex gap-3">
         <button type="button" onClick={() => onNavigate("business-resources")} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted">Cancel</button>
-        <button type="button" onClick={() => onNavigate("business-resources")} className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md hover:opacity-90">Add Resource</button>
+        <button type="button" onClick={handleAddResource} disabled={submitting} className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md hover:opacity-90 disabled:opacity-50">{submitting ? "Adding..." : "Add Resource"}</button>
       </div>
+      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
     </div>
   )
 }
@@ -1190,6 +1300,26 @@ export function AddResourcePage({ onNavigate }: BusinessFormPageProps) {
 // ==================== AddTeamMember ====================
 export function AddTeamMemberPage({ onNavigate }: BusinessFormPageProps) {
   const [formData, setFormData] = useState({ name: "", email: "", role: "trainer", permissions: ["view-bookings"] })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleSendInvite = async () => {
+    if (!formData.email.trim()) { setError("Email is required"); return }
+    setSubmitting(true)
+    setError("")
+    try {
+      const businesses = await businessesService.getMyBusinesses()
+      const bizList = businesses?.content || (Array.isArray(businesses) ? businesses : [])
+      if (bizList.length === 0) { setError("No business found"); setSubmitting(false); return }
+      await businessesService.addStaff(bizList[0].id, formData.email.trim())
+      onNavigate("business-team")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to send invite"
+      setError(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const roles = [
     { value: "admin", label: "Admin", description: "Full access to all features" },
@@ -1251,8 +1381,9 @@ export function AddTeamMemberPage({ onNavigate }: BusinessFormPageProps) {
 
       <div className="flex gap-3">
         <button type="button" onClick={() => onNavigate("business-team")} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted">Cancel</button>
-        <button type="button" onClick={() => onNavigate("business-team")} className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md hover:opacity-90">Send Invite</button>
+        <button type="button" onClick={handleSendInvite} disabled={submitting} className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md hover:opacity-90 disabled:opacity-50">{submitting ? "Sending..." : "Send Invite"}</button>
       </div>
+      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
     </div>
   )
 }
@@ -1585,6 +1716,8 @@ export function TeamManagementPage({ onNavigate }: BusinessFormPageProps) {
 export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
   const data = businessDashboardData
   const [activeTab, setActiveTab] = useState("overview")
+  const [businessId, setBusinessId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [businessInfo, setBusinessInfo] = useState({
     name: "Chelsea Piers Sports",
     type: "Sports Complex",
@@ -1596,8 +1729,53 @@ export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
     openingHours: "Mon-Fri: 6:00 AM - 10:00 PM",
   })
 
-  const handleSave = () => {
-    setActiveTab("overview")
+  useEffect(() => {
+    const fetchBusiness = async () => {
+      try {
+        const businesses = await businessesService.getMyBusinesses()
+        const bizList = businesses?.content || (Array.isArray(businesses) ? businesses : [])
+        if (bizList.length > 0) {
+          const biz = bizList[0]
+          setBusinessId(biz.id)
+          setBusinessInfo({
+            name: biz.name || '',
+            type: biz.type || biz.category || 'Sports Complex',
+            description: biz.bio || biz.description || '',
+            location: biz.address || biz.city || '',
+            phone: biz.phoneNumber || '',
+            email: biz.email || '',
+            website: biz.website || '',
+            openingHours: biz.openingHours || 'Mon-Fri: 6:00 AM - 10:00 PM',
+          })
+        }
+      } catch {
+        // Keep defaults on error
+      }
+    }
+    fetchBusiness()
+  }, [])
+
+  const handleSave = async () => {
+    if (!businessId) {
+      setActiveTab("overview")
+      return
+    }
+    setSaving(true)
+    try {
+      await businessesService.update(businessId, {
+        name: businessInfo.name,
+        bio: businessInfo.description,
+        address: businessInfo.location,
+        phoneNumber: businessInfo.phone,
+        email: businessInfo.email,
+        website: businessInfo.website,
+      })
+      setActiveTab("overview")
+    } catch {
+      // Fail silently for now
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (

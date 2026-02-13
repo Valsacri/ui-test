@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
-import { businesses } from "@/lib/mock-data"
+import { businesses as mockBusinesses } from "@/lib/mock-data"
+import { businessesService } from "@/lib/services"
 import { BusinessCard } from "@/components/sporgates/cards/business-card"
 import { SortFilter } from "@/components/sporgates/filters/sort-filter"
 import type { PageRoute } from "@/lib/navigation"
@@ -18,6 +19,13 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("rating")
+  const [businesses, setBusinesses] = useState(mockBusinesses)
+
+  useEffect(() => {
+    businessesService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setBusinesses(data)
+    }).catch(() => { })
+  }, [])
 
   const filteredBusinesses = useMemo(() => {
     let result = businesses.filter((b) => {

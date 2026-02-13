@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
-import { facilities } from "@/lib/mock-data"
+import { facilities as mockFacilities } from "@/lib/mock-data"
+import { facilitiesService } from "@/lib/services"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { FacilitiesFilterSidebar } from "@/components/sporgates/filters/facilities-filter-sidebar"
 import { MapFilter } from "@/components/sporgates/map-filter"
@@ -26,10 +27,17 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const [facilities, setFacilities] = useState(mockFacilities)
   const mapCenter = facilities[0]?.coordinates || [40.7465, -74.0071]
   const [sortBy, setSortBy] = useState("relevance")
   const isMobile = useIsMobile()
-  const isLoading = false
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    facilitiesService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setFacilities(data)
+    }).catch(() => { }).finally(() => setIsLoading(false))
+  }, [])
 
   const filteredFacilities = useMemo(() => {
     let result = facilities.filter((f) => {

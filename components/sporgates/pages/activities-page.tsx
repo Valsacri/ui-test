@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
-import { activities } from "@/lib/mock-data"
+import { activities as mockActivities } from "@/lib/mock-data"
+import { activitiesService } from "@/lib/services"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ActivitiesFilterSidebar } from "@/components/sporgates/filters/activities-filter-sidebar"
 import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
@@ -25,8 +26,15 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
+  const [activities, setActivities] = useState(mockActivities)
   const isMobile = useIsMobile()
-  const isLoading = false
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    activitiesService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setActivities(data)
+    }).catch(() => { }).finally(() => setIsLoading(false))
+  }, [])
 
   const filteredActivities = useMemo(() => {
     const today = new Date()

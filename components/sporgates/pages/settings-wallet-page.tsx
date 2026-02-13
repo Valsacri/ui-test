@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Wallet, TrendingUp, DollarSign, RefreshCw, X } from "lucide-react"
-import { userProfile, transactionHistory } from "@/lib/mock-data"
+import { userProfile, transactionHistory as mockTransactions } from "@/lib/mock-data"
+import { walletService, authService } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
@@ -20,6 +21,20 @@ export function SettingsWalletPage({ onBack }: SettingsWalletPageProps) {
   const [topUpAmount, setTopUpAmount] = useState("")
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [balance, setBalance] = useState(userProfile.walletBalance)
+  const [transactionHistory, setTransactionHistory] = useState(mockTransactions)
+
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      walletService.getWallet(user.id).then((data) => {
+        if (data?.balance !== undefined) setBalance(data.balance)
+      }).catch(() => { })
+
+      walletService.getTransactions(user.id).then((data) => {
+        if (Array.isArray(data) && data.length > 0) setTransactionHistory(data)
+      }).catch(() => { })
+    }
+  }, [])
 
   const filteredTransactions = transactionHistory.filter((tx) => {
     if (activeFilter === "All") return true
@@ -39,6 +54,10 @@ export function SettingsWalletPage({ onBack }: SettingsWalletPageProps) {
     toast.success(`$${amount.toFixed(2)} added to wallet`)
     setTopUpAmount("")
     setShowTopUp(false)
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      walletService.deposit(user.id, { amount, description: "Manual deposit" }).catch(() => { })
+    }
   }
 
   const handleWithdraw = () => {

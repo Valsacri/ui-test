@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Search, MapPin, Briefcase, Plus } from "lucide-react"
-import { jobs } from "@/lib/mock-data"
+import { jobs as mockJobs } from "@/lib/mock-data"
+import { jobsService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
 import { CreateJobOfferModal } from "@/components/sporgates/business/create-job-offer-modal"
 import { JobCard } from "@/components/sporgates/cards/job-card"
@@ -13,8 +14,15 @@ interface JobsPageProps {
 
 export function JobsPage({ onNavigate }: JobsPageProps) {
   const [query, setQuery] = useState("")
-  const [jobList, setJobList] = useState(jobs)
+  const [jobList, setJobList] = useState(mockJobs)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
+  useEffect(() => {
+    jobsService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setJobList(data)
+    }).catch(() => { })
+  }, [])
+
   const filteredJobs = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return jobList

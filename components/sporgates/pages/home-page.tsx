@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowRight, Zap, Trophy, TrendingUp, Target, Users, Calendar } from "lucide-react"
-import { activities, facilities, goals, userProfile, posts, services } from "@/lib/mock-data"
+import { activities as mockActivities, facilities as mockFacilities, goals, userProfile, posts as mockPosts, services as mockServices } from "@/lib/mock-data"
+import { activitiesService, postsService, servicesService } from "@/lib/services"
+import { authService } from "@/lib/services"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { PostCard } from "@/components/sporgates/cards/post-card"
@@ -16,6 +18,28 @@ interface HomePageProps {
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const [feedTab, setFeedTab] = useState<"foryou" | "following">("foryou")
+  const [activities, setActivities] = useState(mockActivities)
+  const [posts, setPosts] = useState(mockPosts)
+  const [services, setServices] = useState(mockServices)
+  const [facilities] = useState(mockFacilities)
+
+  useEffect(() => {
+    const currentUser = authService.getCurrentUser()
+    const userId = currentUser?.id
+
+    activitiesService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setActivities(data)
+    }).catch(() => { })
+
+    postsService.getAll(undefined, userId).then((data) => {
+      if (Array.isArray(data) && data.length > 0) setPosts(data)
+    }).catch(() => { })
+
+    servicesService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setServices(data)
+    }).catch(() => { })
+  }, [])
+
   const displayedPosts = feedTab === "foryou" ? posts.slice(0, 3) : posts.slice(0, 2)
 
   return (
@@ -169,8 +193,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
               key={tab}
               onClick={() => setFeedTab(tab)}
               className={`rounded-full px-5 py-2 text-xs font-semibold transition-all ${feedTab === tab
-                  ? "gradient-primary text-white shadow-md"
-                  : "bg-card text-foreground border border-border hover:bg-muted"
+                ? "gradient-primary text-white shadow-md"
+                : "bg-card text-foreground border border-border hover:bg-muted"
                 }`}
             >
               {tab === "foryou" ? "For You" : "Following"}

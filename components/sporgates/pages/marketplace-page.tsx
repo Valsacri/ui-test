@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Star } from "lucide-react"
-import { products, marketplaceStores } from "@/lib/mock-data"
+import { products as mockProducts, marketplaceStores } from "@/lib/mock-data"
+import { marketplaceService } from "@/lib/services"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { MarketplaceFilterSidebar } from "@/components/sporgates/filters/marketplace-filter-sidebar"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
@@ -34,6 +35,7 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
   const [showCart, setShowCart] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [priceRange, setPriceRange] = useState("Any Price")
+  const [products, setProducts] = useState(mockProducts)
 
   const [showCollections, setShowCollections] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
@@ -43,6 +45,12 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
     { productId: "1", name: "Pro Basketball Shoes", price: 149.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop", quantity: 1 },
     { productId: "4", name: "Smart Fitness Watch", price: 299.99, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop", quantity: 1 },
   ])
+
+  useEffect(() => {
+    marketplaceService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setProducts(data)
+    }).catch(() => { })
+  }, [])
 
   const updateQuantity = (productId: string, delta: number) => {
     setCartItems((prev) =>
@@ -96,7 +104,7 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
     }
 
     return result
-  }, [activeCategory, priceRange, searchQuery, sortBy])
+  }, [products, activeCategory, priceRange, searchQuery, sortBy])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

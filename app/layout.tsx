@@ -1,6 +1,8 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { Toaster } from "sonner"
+import { BusinessProvider } from "@/lib/business-context"
 
 import './globals.css'
 
@@ -24,7 +26,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <BusinessProvider>
+          {children}
+        </BusinessProvider>
+        <Toaster position="top-right" richColors />
+      </body>
     </html>
   )
 }

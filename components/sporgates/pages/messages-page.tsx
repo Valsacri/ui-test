@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Send, Phone, Video, MoreVertical, Trash2, CheckCircle } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
-import { conversations } from "@/lib/mock-data"
+import { conversations as mockConversations } from "@/lib/mock-data"
+import { messagesService, authService } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import { ConversationItem } from "@/components/sporgates/conversation-item"
 import { SwipeableCard } from "@/components/sporgates/ux/swipeable-card"
@@ -15,7 +16,16 @@ interface MessagesPageProps {
 export function MessagesPage({ onNavigate }: MessagesPageProps) {
   const [selectedConvo, setSelectedConvo] = useState<string | null>("1")
   const [message, setMessage] = useState("")
-  const [conversationList, setConversationList] = useState(conversations)
+  const [conversationList, setConversationList] = useState(mockConversations)
+
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      messagesService.getConversations(user.id).then((data) => {
+        if (Array.isArray(data) && data.length > 0) setConversationList(data)
+      }).catch(() => { })
+    }
+  }, [])
 
   const parseRelativeTime = (value: string) => {
     const trimmed = value.trim()

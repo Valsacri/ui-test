@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Bell,
   CalendarDays,
@@ -12,6 +12,7 @@ import {
   CheckCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { notificationsService, authService } from "@/lib/services"
 
 interface Notification {
   id: string
@@ -141,18 +142,43 @@ export function NotificationsPage() {
   const [notifications, setNotifications] = useState(initialNotifications)
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
 
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      notificationsService.getByUser(user.id).then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setNotifications(data.map((n: Record<string, unknown>) => ({
+            id: String(n.id),
+            type: (n.type as Notification["type"]) || "system",
+            title: String(n.title || ""),
+            message: String(n.message || ""),
+            time: n.createdAt ? new Date(n.createdAt as string).toLocaleDateString() : "",
+            read: Boolean(n.read),
+            userName: String(n.referenceType || "Sporgates"),
+            userAvatar: String(n.referenceType || "SG").substring(0, 2).toUpperCase(),
+          })))
+        }
+      }).catch(() => { })
+    }
+  }, [])
+
   const unreadCount = notifications.filter((n) => !n.read).length
   const displayedNotifications =
     activeTab === "unread" ? notifications.filter((n) => !n.read) : notifications
 
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      notificationsService.markAllAsRead(user.id).catch(() => { })
+    }
   }
 
   const handleToggleRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
     )
+    notificationsService.markAsRead(id).catch(() => { })
   }
 
   return (

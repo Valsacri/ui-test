@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search } from "lucide-react"
-import { services } from "@/lib/mock-data"
+import { services as mockServices } from "@/lib/mock-data"
+import { servicesService } from "@/lib/services"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -15,6 +16,13 @@ const categories = ["All", "Training", "Recovery", "Wellness", "Coaching"]
 
 export function ServicesPage({ onNavigate }: ServicesPageProps) {
   const [activeCategory, setActiveCategory] = useState("All")
+  const [services, setServices] = useState(mockServices)
+
+  useEffect(() => {
+    servicesService.getAll().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setServices(data)
+    }).catch(() => { })
+  }, [])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

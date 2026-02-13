@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import {
   Eye,
   EyeOff,
@@ -15,21 +15,25 @@ import {
   Dumbbell,
   Flag,
   Trophy,
+  Clock,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { experienceLevels, sports } from "@/lib/mock-data"
+import { authService } from "@/lib/services"
+import { userService } from "@/lib/services/user"
+import { getApiErrorMessage, isApiError } from "@/lib/api-errors"
 
 interface AuthPageProps {
   page:
-    | "signin"
-    | "signup"
-    | "forgot-password"
-    | "reset-password"
-    | "verify-email"
-    | "choose-sports"
-    | "set-goals"
-    | "onboarding-confirmation"
+  | "signin"
+  | "signup"
+  | "forgot-password"
+  | "reset-password"
+  | "verify-email"
+  | "choose-sports"
+  | "set-goals"
+  | "onboarding-confirmation"
   onNavigate: (page: PageRoute) => void
 }
 
@@ -37,15 +41,94 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [selectedSports, setSelectedSports] = useState<Array<{ id: string; level: string }>>([])
   const [selectedGoals, setSelectedGoals] = useState<string[]>([])
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [fullName, setFullName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [verificationCode, setVerificationCode] = useState<string[]>(Array(6).fill(""))
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [verifySuccess, setVerifySuccess] = useState(false)
+  const [forgotSuccess, setForgotSuccess] = useState(false)
+  const [resetToken, setResetToken] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [newConfirmPassword, setNewConfirmPassword] = useState("")
+  const [tokenExpired, setTokenExpired] = useState(false)
+  const codeInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [resendCooldown])
+
+  // Restore email from localStorage on verify-email page (state is lost on navigation)
+  useEffect(() => {
+    if (page === "verify-email" && !email) {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("pending_verification_email") : null
+      if (saved) setEmail(saved)
+    }
+  }, [page, email])
+
+  const handleSignIn = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await authService.login({ email, password })
+      onNavigate("home")
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Login failed. Please try again."))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSignUp = async () => {
+    setLoading(true)
+    setError(null)
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      setLoading(false)
+      return
+    }
+    try {
+      const [firstName, ...rest] = fullName.trim().split(" ")
+      const lastName = rest.join(" ") || ""
+      const username = email.split("@")[0] || firstName.toLowerCase()
+      await authService.register({ firstName, lastName, email, password, passwordConfirm: confirmPassword, username })
+      // Save email for the verify-email page (state is lost on route change)
+      localStorage.setItem("pending_verification_email", email)
+      onNavigate("verify-email")
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, "Registration failed. Please try again."))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const sportsList = sports.map((sport) => sport.name)
   const goalCategories = [
-    { id: "fitness", label: "Stay fit and healthy", icon: Dumbbell },
-    { id: "compete", label: "Compete in leagues", icon: Trophy },
-    { id: "community", label: "Meet new people", icon: Users },
-    { id: "skills", label: "Learn a new sport", icon: Target },
-    { id: "events", label: "Train for events", icon: Flag },
+    { id: "fitness", label: "Stay fit and healthy", icon: Dumbbell, goalType: "GENERAL_FITNESS" },
+    { id: "compete", label: "Compete in leagues", icon: Trophy, goalType: "SPORTS_SKILL" },
+    { id: "community", label: "Meet new people", icon: Users, goalType: "OVERALL_HEALTH" },
+    { id: "skills", label: "Learn a new sport", icon: Target, goalType: "SPORTS_SKILL" },
+    { id: "events", label: "Train for events", icon: Flag, goalType: "ENDURANCE" },
   ]
+
+  const skillLevelMap: Record<string, string> = {
+    beginner: "BEGINNER",
+    intermediate: "INTERMEDIATE",
+    advanced: "ADVANCED",
+  }
+
+  const getUserId = (): string | null => {
+    if (typeof window === "undefined") return null
+    const userStr = localStorage.getItem("user")
+    if (!userStr) return null
+    try { return JSON.parse(userStr).id } catch { return null }
+  }
 
   if (page === "choose-sports") {
     const handleToggleSport = (sportName: string) => {
@@ -159,11 +242,33 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
           <div className="mx-auto max-w-2xl">
             <button
               type="button"
-              onClick={() => onNavigate("set-goals")}
-              disabled={selectedSports.length === 0}
+              onClick={async () => {
+                const userId = getUserId()
+                if (userId) {
+                  setLoading(true)
+                  setError(null)
+                  try {
+                    const prefs = selectedSports.map((s) => {
+                      const sport = sports.find((sp) => sp.name === s.id)
+                      return {
+                        sportId: sport?.id || s.id,
+                        sportName: s.id,
+                        skillLevel: skillLevelMap[s.level] || "BEGINNER",
+                      }
+                    })
+                    await userService.updateSportsPreferences(userId, prefs)
+                  } catch (err: unknown) {
+                    console.error("Failed to save sports preferences", err)
+                  } finally {
+                    setLoading(false)
+                  }
+                }
+                onNavigate("set-goals")
+              }}
+              disabled={selectedSports.length === 0 || loading}
               className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              Continue
+              {loading ? "Saving..." : "Continue"}
             </button>
           </div>
         </div>
@@ -264,11 +369,33 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
           <div className="mx-auto max-w-2xl">
             <button
               type="button"
-              onClick={() => onNavigate("onboarding-confirmation")}
-              disabled={selectedGoals.length === 0}
+              onClick={async () => {
+                const userId = getUserId()
+                if (userId) {
+                  setLoading(true)
+                  setError(null)
+                  try {
+                    const goalsData = selectedGoals.map((label) => {
+                      const cat = goalCategories.find((g) => g.label === label)
+                      return {
+                        type: cat?.goalType || "GENERAL_FITNESS",
+                        description: label,
+                        priority: "MEDIUM",
+                      }
+                    })
+                    await userService.updateGoals(userId, goalsData)
+                  } catch (err: unknown) {
+                    console.error("Failed to save goals", err)
+                  } finally {
+                    setLoading(false)
+                  }
+                }
+                onNavigate("onboarding-confirmation")
+              }}
+              disabled={selectedGoals.length === 0 || loading}
               className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              Get Started
+              {loading ? "Saving..." : "Get Started"}
             </button>
           </div>
         </div>
@@ -277,28 +404,134 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   }
 
   if (page === "verify-email") {
+    const handleCodeChange = (index: number, value: string) => {
+      if (value.length > 1) {
+        // Handle paste of full code
+        const digits = value.replace(/\D/g, "").slice(0, 6).split("")
+        const newCode = [...verificationCode]
+        digits.forEach((d, i) => {
+          if (index + i < 6) newCode[index + i] = d
+        })
+        setVerificationCode(newCode)
+        const nextIndex = Math.min(index + digits.length, 5)
+        codeInputRefs.current[nextIndex]?.focus()
+        return
+      }
+      if (value && !/^\d$/.test(value)) return
+      const newCode = [...verificationCode]
+      newCode[index] = value
+      setVerificationCode(newCode)
+      if (value && index < 5) {
+        codeInputRefs.current[index + 1]?.focus()
+      }
+    }
+
+    const handleCodeKeyDown = (index: number, e: React.KeyboardEvent) => {
+      if (e.key === "Backspace" && !verificationCode[index] && index > 0) {
+        codeInputRefs.current[index - 1]?.focus()
+      }
+    }
+
+    const handleVerifyEmail = async () => {
+      const code = verificationCode.join("")
+      if (code.length !== 6) {
+        setError("Please enter the full 6-digit code")
+        return
+      }
+      const verifyEmail = email || localStorage.getItem("pending_verification_email") || ""
+      if (!verifyEmail) {
+        setError("Email not found. Please go back and sign up again.")
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        await authService.verifyEmail(verifyEmail, code)
+        setVerifySuccess(true)
+        localStorage.removeItem("pending_verification_email")
+        setTimeout(() => onNavigate("choose-sports"), 1500)
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err, "Verification failed. Please try again."))
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const handleResendCode = async () => {
+      if (resendCooldown > 0) return
+      const resendEmail = email || localStorage.getItem("pending_verification_email") || ""
+      if (!resendEmail) {
+        setError("Email not found. Please go back and sign up again.")
+        return
+      }
+      try {
+        await authService.resendVerification(resendEmail)
+        setResendCooldown(60)
+        setError(null)
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err, "Failed to resend code. Please try again."))
+      }
+    }
+
     return (
       <div className="flex min-h-[80vh] items-center justify-center">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg text-center">
           <div className="gradient-secondary mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
             <Mail className="h-8 w-8 text-white" />
           </div>
-          <h1 className="mb-2 text-xl font-bold text-foreground">Check Your Email</h1>
+          <h1 className="mb-2 text-xl font-bold text-foreground">Verify Your Email</h1>
           <p className="mb-6 text-sm text-muted-foreground">
-            {"We've sent a verification link to your email address. Please click the link to verify your account."}
+            We&apos;ve sent a 6-digit verification code to{" "}
+            {email ? <span className="font-semibold text-foreground">{email}</span> : "your email"}.
+            Enter the code below to verify your account.
           </p>
+
+          <div className="flex justify-center gap-2 mb-6">
+            {verificationCode.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => { codeInputRefs.current[index] = el }}
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={digit}
+                onChange={(e) => handleCodeChange(index, e.target.value)}
+                onKeyDown={(e) => handleCodeKeyDown(index, e)}
+                onFocus={(e) => e.target.select()}
+                className={cn(
+                  "h-14 w-12 rounded-xl border-2 bg-muted text-center text-xl font-bold outline-none transition-all",
+                  "focus:border-primary focus:ring-2 focus:ring-primary/20",
+                  verifySuccess ? "border-green-500 text-green-600" : "border-border text-foreground",
+                  error && !digit ? "border-red-300" : ""
+                )}
+              />
+            ))}
+          </div>
+
+          {error && (
+            <p className="mb-4 text-xs text-red-500">{error}</p>
+          )}
+
+          {verifySuccess && (
+            <p className="mb-4 text-xs font-semibold text-green-600">Email verified successfully! Redirecting...</p>
+          )}
+
           <button
             type="button"
-            onClick={() => onNavigate("choose-sports")}
-            className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+            onClick={handleVerifyEmail}
+            disabled={loading || verifySuccess || verificationCode.join("").length !== 6}
+            className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {"I've Verified My Email"}
+            {loading ? "Verifying..." : verifySuccess ? "Verified ✓" : "Verify Email"}
           </button>
+
           <button
             type="button"
-            className="mt-3 w-full text-xs font-semibold text-secondary transition-colors hover:text-secondary/80"
+            onClick={handleResendCode}
+            disabled={resendCooldown > 0}
+            className="mt-3 w-full text-xs font-semibold text-secondary transition-colors hover:text-secondary/80 disabled:text-muted-foreground disabled:cursor-not-allowed"
           >
-            Resend verification email
+            {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend verification code"}
           </button>
         </div>
       </div>
@@ -306,6 +539,23 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   }
 
   if (page === "forgot-password") {
+    const handleForgotPassword = async () => {
+      if (!email) {
+        setError("Please enter your email address")
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        await authService.forgotPassword(email)
+        setForgotSuccess(true)
+      } catch (err: unknown) {
+        setError(getApiErrorMessage(err, "Failed to send reset link. Please try again."))
+      } finally {
+        setLoading(false)
+      }
+    }
+
     return (
       <div className="flex min-h-[80vh] items-center justify-center">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg">
@@ -326,28 +576,85 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               {"Enter your email and we'll send you a reset link"}
             </p>
           </div>
-          <div className="space-y-4">
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="email"
-                placeholder="Email address"
-                className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
+          {forgotSuccess ? (
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center dark:border-green-800 dark:bg-green-950">
+              <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                If an account exists with that email, you will receive a password reset link shortly.
+              </p>
+              <button
+                type="button"
+                onClick={() => onNavigate("signin")}
+                className="mt-3 text-sm font-semibold text-primary hover:underline"
+              >
+                Back to Sign In
+              </button>
             </div>
-            <button
-              type="button"
-              className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
-            >
-              Send Reset Link
-            </button>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {error && (
+                <div className="rounded-lg bg-red-50 p-3 text-center text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+                  {error}
+                </div>
+              )}
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={loading}
+                className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {loading ? "Sending..." : "Send Reset Link"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )
   }
 
   if (page === "reset-password") {
+    const handleResetPassword = async () => {
+      if (!newPassword || !newConfirmPassword) {
+        setError("Please fill in both password fields")
+        return
+      }
+      if (newPassword !== newConfirmPassword) {
+        setError("Passwords do not match")
+        return
+      }
+      if (newPassword.length < 6) {
+        setError("Password must be at least 6 characters")
+        return
+      }
+      const token = resetToken || (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") || "" : "")
+      if (!token) {
+        setError("Reset token is missing. Please use the link from your email.")
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        await authService.resetPassword(token, newPassword, newConfirmPassword)
+        setVerifySuccess(true)
+        setTimeout(() => onNavigate("signin"), 2000)
+      } catch (err: unknown) {
+        const expired = isApiError(err, 'reset.token.invalid', 'reset.token.expired')
+        setError(getApiErrorMessage(err, "Failed to reset password. Please try again."))
+        if (expired) setTokenExpired(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     return (
       <div className="flex min-h-[80vh] items-center justify-center">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg">
@@ -358,38 +665,84 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             <h1 className="text-xl font-bold text-foreground">Set New Password</h1>
             <p className="text-sm text-muted-foreground">Choose a strong new password</p>
           </div>
-          <div className="space-y-4">
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="New password"
-                className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-12 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
+          {tokenExpired ? (
+            <div className="space-y-4 text-center">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
+                  <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  Link Expired
+                </p>
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  This password reset link has expired or has already been used. Please request a new one.
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                onClick={() => onNavigate("forgot-password")}
+                className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                Request New Link
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate("signin")}
+                className="text-sm font-semibold text-primary hover:underline"
+              >
+                Back to Sign In
               </button>
             </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="password"
-                placeholder="Confirm password"
-                className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
+          ) : verifySuccess ? (
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center dark:border-green-800 dark:bg-green-950">
+              <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                Password reset successfully! Redirecting to sign in...
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={() => onNavigate("signin")}
-              className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
-            >
-              Save Password
-            </button>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {error && (
+                <div className="rounded-lg bg-red-50 p-3 text-center text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+                  {error}
+                </div>
+              )}
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="New password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-12 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="password"
+                  placeholder="Confirm password"
+                  value={newConfirmPassword}
+                  onChange={(e) => setNewConfirmPassword(e.target.value)}
+                  className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleResetPassword}
+                disabled={loading}
+                className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {loading ? "Resetting..." : "Save Password"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -445,6 +798,8 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               <input
                 type="text"
                 placeholder="Full name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -454,6 +809,8 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             <input
               type="email"
               placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -462,6 +819,8 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-11 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
             <button
@@ -472,6 +831,25 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+          {!isSignIn && (
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="h-12 w-full rounded-full border border-border bg-muted pl-11 pr-11 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          )}
           {isSignIn && (
             <div className="text-right">
               <button
@@ -483,12 +861,16 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               </button>
             </div>
           )}
+          {error && (
+            <p className="text-xs text-red-500 text-center">{error}</p>
+          )}
           <button
             type="button"
-            onClick={() => onNavigate(isSignIn ? "home" : "verify-email")}
-            className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+            onClick={isSignIn ? handleSignIn : handleSignUp}
+            disabled={loading}
+            className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {isSignIn ? "Sign In" : "Create Account"}
+            {loading ? "Please wait..." : isSignIn ? "Sign In" : "Create Account"}
           </button>
         </div>
 
