@@ -708,7 +708,7 @@ export const userProfile = {
 }
 
 export const userBusinesses = [
-  { id: "biz-1", name: "Chelsea Piers Sports", type: "Sports Complex", emoji: "🏟️", location: "Chelsea, NYC", rating: 4.8, followers: 2450 },
+  { id: "biz-1", name: "Chelsea Piers MOCK", type: "Sports Complex", emoji: "🏟️", location: "Chelsea, NYC", rating: 4.8, followers: 2450 },
   { id: "biz-2", name: "Brooklyn Fitness Hub", type: "Gym & Training", emoji: "🏋️", location: "Brooklyn, NY", rating: 4.6, followers: 890 },
 ]
 

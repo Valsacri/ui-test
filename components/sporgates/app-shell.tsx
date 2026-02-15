@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
+import { businessesService } from "@/lib/services/businesses"
+import { authService } from "@/lib/services/auth"
 import type { PageRoute } from "@/lib/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
@@ -60,7 +62,7 @@ import { SettingsTransactionsPage } from "@/components/sporgates/pages/settings-
 import { CreateFacilityPage } from "@/components/sporgates/pages/create-facility-page"
 import { CreateSquadPage } from "@/components/sporgates/pages/create-squad-page"
 import { BusinessOnboardingPage } from "@/components/sporgates/pages/business-onboarding-page"
-import { userBusinesses as initialBusinesses } from "@/lib/mock-data"
+// import { userBusinesses as initialBusinesses } from "@/lib/mock-data"
 import {
   CreateActivityPage,
   CreateActivityStepsPage,
@@ -91,9 +93,39 @@ const authPages: PageRoute[] = [
 export function AppShell() {
   const [currentPage, setCurrentPage] = useState<PageRoute>("home")
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [businesses, setBusinesses] = useState(initialBusinesses)
+  const [businesses, setBusinesses] = useState<any[]>([])
   const [activeBusinessId, setActiveBusinessId] = useState<string | null>(null)
   const isBusinessMode = activeBusinessId !== null
+
+  useEffect(() => {
+    const fetchBusinesses = async () => {
+      const user = authService.getCurrentUser()
+      if (user) {
+        console.log("AppShell: Fetching businesses for user", user)
+        try {
+          const data = await businessesService.getMyBusinesses()
+          console.log("AppShell: Raw businesses data", data)
+          // Handle Spring Data Page response
+          const businessList = Array.isArray(data) ? data : (data.content || [])
+
+          const mappedBusinesses = businessList.map((b: any) => ({
+            id: b.id,
+            name: b.name,
+            type: 'Business',
+            emoji: '',
+            avatar: b.avatar ? (b.avatar.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}${b.avatar}` : b.avatar) : undefined,
+            location: `${b.city || ''}, ${b.state || ''}`,
+            rating: 0,
+            followers: 0
+          }))
+          setBusinesses(mappedBusinesses)
+        } catch (error) {
+          console.error("Failed to fetch businesses", error)
+        }
+      }
+    }
+    fetchBusinesses()
+  }, [])
 
   const navigate = useCallback((page: PageRoute, id?: string) => {
     setCurrentPage(page)

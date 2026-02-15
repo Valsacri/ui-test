@@ -10,9 +10,10 @@ import {
   Share2,
   Heart,
   CheckCircle,
+  Loader2,
 } from "lucide-react"
-import { useState } from "react"
-import { activities, userProfile } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
+import { activitiesService } from "@/lib/services/activities"
 import { TicketModal } from "@/components/sporgates/attendance/ticket-modal"
 import type { PageRoute } from "@/lib/navigation"
 
@@ -21,9 +22,121 @@ interface ActivityDetailPageProps {
   onNavigate: (page: PageRoute) => void
 }
 
+const currencySymbols: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  MAD: "د.م.",
+}
+
+const parseDate = (d: any) => {
+  if (!d) return null
+  if (Array.isArray(d)) {
+    return new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0)
+  }
+  return new Date(d)
+}
+
+function formatDate(dateVal: any): string {
+  const date = parseDate(dateVal)
+  if (!date) return "TBD"
+  try {
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  } catch {
+    return "Invalid Date"
+  }
+}
+
+function formatTime(dateVal: any): string {
+  const date = parseDate(dateVal)
+  if (!date) return "TBD"
+  try {
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  } catch {
+    return "Invalid Time"
+  }
+}
+
 export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPageProps) {
-  const activity = activities.find((a) => a.id === activityId) || activities[0]
+  const [activity, setActivity] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   const [showTicket, setShowTicket] = useState(false)
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const data = await activitiesService.getById(activityId)
+        setActivity(data)
+      } catch (err) {
+        console.error("Failed to fetch activity:", err)
+        setError("Activity not found")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchActivity()
+  }, [activityId])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (error || !activity) {
+    return (
+      <div className="space-y-4 py-10 text-center">
+        <p className="text-lg font-semibold text-foreground">Activity not found</p>
+        <p className="text-sm text-muted-foreground">The activity you're looking for doesn't exist or has been removed.</p>
+        <button
+          type="button"
+          onClick={() => onNavigate("activities")}
+          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Activities
+        </button>
+      </div>
+    )
+  }
+
+  const title = activity.name || "Untitled Activity"
+  const description = activity.description || ""
+  const sport = activity.sportId || "Sport"
+  const date = formatDate(activity.startDateTime)
+  const time = formatTime(activity.startDateTime)
+  const location = activity.location || activity.city || "Location TBD"
+  const price = activity.pricePerPerson ?? 0
+  const currency = activity.currency || "USD"
+  const currencySymbol = currencySymbols[currency] || currency
+  const maxParticipants = activity.maxParticipants || 0
+  const currentParticipants = activity.currentParticipants || 0
+  const spotsLeft = Math.max(0, maxParticipants - currentParticipants)
+  const rating = activity.rating ?? 0
+  const reviewCount = activity.reviewCount ?? 0
+  const tags = activity.tags || []
+  const image = activity.coverImage || "/placeholder.svg"
+  const organizerName = activity.organizerName || "Organizer"
+  const organizerAvatar = activity.organizerAvatar
+  const organizerInitials = organizerName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase()
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -40,8 +153,8 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
       {/* Hero Image */}
       <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
         <img
-          src={activity.image || "/placeholder.svg"}
-          alt={activity.title}
+          src={image}
+          alt={title}
           className="h-full w-full object-cover"
           crossOrigin="anonymous"
         />
@@ -60,7 +173,7 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
           </button>
         </div>
         <div className="absolute bottom-4 left-4 flex gap-2">
-          {activity.tags.map((tag) => (
+          {tags.map((tag: string) => (
             <span
               key={tag}
               className="rounded-full bg-card/90 px-3 py-1 text-xs font-semibold text-foreground backdrop-blur-sm"
@@ -77,16 +190,16 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
           <div>
             <div className="mb-2 flex items-center gap-2">
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                {activity.sport}
+                {sport}
               </span>
               <div className="flex items-center gap-1">
                 <Star className="h-4 w-4 fill-secondary text-secondary" />
-                <span className="text-sm font-medium">{activity.rating}</span>
-                <span className="text-xs text-muted-foreground">({activity.reviews} reviews)</span>
+                <span className="text-sm font-medium">{rating}</span>
+                <span className="text-xs text-muted-foreground">({reviewCount} reviews)</span>
               </div>
             </div>
-            <h1 className="mb-2 text-2xl font-bold text-foreground">{activity.title}</h1>
-            <p className="text-sm text-muted-foreground">{activity.description}</p>
+            <h1 className="mb-2 text-2xl font-bold text-foreground">{title}</h1>
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -94,21 +207,21 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
               <Calendar className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-[10px] text-muted-foreground">Date</p>
-                <p className="text-sm font-semibold text-foreground">{activity.date}</p>
+                <p className="text-sm font-semibold text-foreground">{date}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl bg-card p-4 shadow-sm border border-border">
               <Clock className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-[10px] text-muted-foreground">Time</p>
-                <p className="text-sm font-semibold text-foreground">{activity.time}</p>
+                <p className="text-sm font-semibold text-foreground">{time}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl bg-card p-4 shadow-sm border border-border">
               <MapPin className="h-5 w-5 text-secondary" />
               <div>
                 <p className="text-[10px] text-muted-foreground">Location</p>
-                <p className="text-sm font-semibold text-foreground">{activity.location}</p>
+                <p className="text-sm font-semibold text-foreground">{location}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl bg-card p-4 shadow-sm border border-border">
@@ -116,7 +229,7 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
               <div>
                 <p className="text-[10px] text-muted-foreground">Spots</p>
                 <p className="text-sm font-semibold text-foreground">
-                  {activity.spots} of {activity.totalSpots} available
+                  {spotsLeft} of {maxParticipants} available
                 </p>
               </div>
             </div>
@@ -127,11 +240,15 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
             <h3 className="mb-3 text-sm font-bold text-foreground">Organizer</h3>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white">
-                  {activity.organizerAvatar}
-                </div>
+                {organizerAvatar ? (
+                  <img src={organizerAvatar} alt={organizerName} className="h-12 w-12 rounded-full object-cover" />
+                ) : (
+                  <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white">
+                    {organizerInitials}
+                  </div>
+                )}
                 <div>
-                  <p className="text-sm font-semibold text-foreground">{activity.organizer}</p>
+                  <p className="text-sm font-semibold text-foreground">{organizerName}</p>
                   <div className="flex items-center gap-1">
                     <CheckCircle className="h-3 w-3 text-primary" />
                     <span className="text-xs text-muted-foreground">Verified Organizer</span>
@@ -150,20 +267,20 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
           {/* Participants */}
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <h3 className="mb-3 text-sm font-bold text-foreground">
-              Participants ({activity.totalSpots - activity.spots}/{activity.totalSpots})
+              Participants ({currentParticipants}/{maxParticipants})
             </h3>
             <div className="flex items-center -space-x-2">
-              {["JR", "MJ", "SL", "AC", "EP", "CR", "JW"].slice(0, activity.totalSpots - activity.spots).map((avatar, i) => (
+              {Array.from({ length: Math.min(currentParticipants, 7) }).map((_, i) => (
                 <div
                   key={i}
                   className="gradient-primary flex h-9 w-9 items-center justify-center rounded-full border-2 border-card text-[10px] font-bold text-white"
                 >
-                  {avatar}
+                  P{i + 1}
                 </div>
               ))}
-              {activity.spots > 0 && (
+              {spotsLeft > 0 && (
                 <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium text-muted-foreground">
-                  +{activity.spots}
+                  +{spotsLeft}
                 </div>
               )}
             </div>
@@ -175,22 +292,22 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
           <div className="rounded-2xl border border-border bg-card p-5 shadow-lg">
             <div className="mb-4 text-center">
               <p className="text-3xl font-bold text-primary">
-                {activity.price === 0 ? "Free" : `${activity.currency}${activity.price}`}
+                {price === 0 ? "Free" : `${currencySymbol}${price}`}
               </p>
               <p className="text-xs text-muted-foreground">per person</p>
             </div>
             <div className="mb-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Date</span>
-                <span className="font-medium text-foreground">{activity.date}</span>
+                <span className="font-medium text-foreground">{date}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Time</span>
-                <span className="font-medium text-foreground">{activity.time}</span>
+                <span className="font-medium text-foreground">{time}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Available</span>
-                <span className="font-medium text-foreground">{activity.spots} spots</span>
+                <span className="font-medium text-foreground">{spotsLeft} spots</span>
               </div>
             </div>
             <button
@@ -214,12 +331,12 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
         isOpen={showTicket}
         onClose={() => setShowTicket(false)}
         activityId={activity.id}
-        userId={userProfile.username}
-        activityTitle={activity.title}
-        activityDate={activity.date}
-        activityTime={activity.time}
-        location={activity.location}
-        userName={userProfile.name}
+        userId={"user"}
+        activityTitle={title}
+        activityDate={date}
+        activityTime={time}
+        location={location}
+        userName={"User"}
       />
     </div>
   )

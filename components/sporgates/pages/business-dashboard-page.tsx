@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   DollarSign,
   CalendarDays,
@@ -14,13 +15,58 @@ import { businessDashboardData } from "@/lib/mock-data"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { ProgressChart } from "@/components/sporgates/progress-chart"
+import { useBusinessContext } from "@/lib/business-context"
+import { activitiesService } from "@/lib/services/activities"
+import { businessesService } from "@/lib/services/businesses"
 
 interface BusinessDashboardPageProps {
   onNavigate: (page: PageRoute) => void
 }
 
 export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps) {
-  const data = businessDashboardData
+  const { activeBusinessId } = useBusinessContext()
+  const [activities, setActivities] = useState<any[]>([])
+  const [teamMembers, setTeamMembers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!activeBusinessId) return
+      setLoading(true)
+      try {
+        const [activitiesData, teamData] = await Promise.all([
+          activitiesService.getAll({ organizerId: activeBusinessId }),
+          businessesService.getStaff(activeBusinessId)
+        ])
+        setActivities(Array.isArray(activitiesData) ? activitiesData : [])
+        setTeamMembers(Array.isArray(teamData) ? teamData : [])
+      } catch (error) {
+        console.error("Failed to load dashboard data", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadDashboardData()
+  }, [activeBusinessId])
+
+  // Merge mock data with real data
+  const data = {
+    ...businessDashboardData,
+    activeActivities: activities.length,
+    topActivities: activities.slice(0, 5).map(a => ({
+      name: a.name || "Untitled Activity",
+      bookings: a.currentParticipants || 0,
+      revenue: (a.pricePerPerson || 0) * (a.currentParticipants || 0)
+    })),
+    // Map team members if we have any, otherwise fall back or show empty
+    teamMembers: teamMembers.length > 0 ? teamMembers.map(m => ({
+      name: `${m.firstName || ''} ${m.lastName || ''}`.trim() || m.username || 'Unknown',
+      role: m.role || "Staff",
+      status: "active",
+      avatar: (m.firstName?.[0] || "") + (m.lastName?.[0] || "") || "U"
+    })) : []
+  }
+
   const maxRevenue = Math.max(...data.monthlyRevenue.map((d) => d.revenue))
   const revenueTrend = data.monthlyRevenue.map((item) => ({
     date: item.month,

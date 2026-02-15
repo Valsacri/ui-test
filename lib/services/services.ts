@@ -1,8 +1,8 @@
 import apiClient from '../api';
 
 export const servicesService = {
-    getAll: async (category?: string) => {
-        const response = await apiClient.get('/v1/services', { params: category ? { category } : {} });
+    getAll: async (params?: { category?: string; providerId?: string }) => {
+        const response = await apiClient.get('/v1/services', { params });
         return response.data;
     },
 

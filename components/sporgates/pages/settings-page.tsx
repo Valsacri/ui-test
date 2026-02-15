@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   User,
   Shield,
@@ -12,7 +13,7 @@ import {
   Building2,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
-import { userProfile } from "@/lib/mock-data"
+import { authService, userService, businessesService } from "@/lib/services"
 
 interface SettingsPageProps {
   onNavigate: (page: PageRoute) => void
@@ -59,6 +60,53 @@ const settingsGroups = [
 ]
 
 export function SettingsPage({ onNavigate }: SettingsPageProps) {
+  const [userProfile, setUserProfile] = useState<{
+    name: string; username: string; email: string; avatar: string; profilePicture?: string
+  }>({ name: "", username: "", email: "", avatar: "" })
+  const [firstBusiness, setFirstBusiness] = useState<{
+    name: string; bio?: string; email?: string; avatar?: string
+  } | null>(null)
+
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      userService.getUserById(user.id).then((data: any) => {
+        if (data) {
+          const fullName = [data.firstName, data.lastName].filter(Boolean).join(" ") || user.email
+          const initials = [data.firstName?.[0], data.lastName?.[0]].filter(Boolean).join("").toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
+          setUserProfile({
+            name: fullName,
+            username: data.username ? `@${data.username}` : "",
+            email: data.email || user.email || "",
+            avatar: initials,
+            profilePicture: data.profilePicture || undefined,
+          })
+        }
+      }).catch(() => {
+        // Fallback to localStorage user
+        setUserProfile({
+          name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
+          username: user.username ? `@${user.username}` : "",
+          email: user.email || "",
+          avatar: [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "U",
+        })
+      })
+
+      businessesService.getMyBusinesses().then((data: any) => {
+        const list = Array.isArray(data) ? data : (data?.content || [])
+        if (list.length > 0) {
+          const b = list[0]
+          setFirstBusiness({
+            name: b.name,
+            bio: b.bio || "",
+            email: b.email || "",
+            avatar: b.avatar || undefined,
+          })
+        }
+      }).catch(() => { })
+    }
+  }, [])
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div>
@@ -70,18 +118,27 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
 
       {/* Profile Summary */}
       <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <div className="gradient-primary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
-          {userProfile.avatar}
-        </div>
+        {userProfile.profilePicture ? (
+          <img
+            src={userProfile.profilePicture}
+            alt={userProfile.name}
+            className="h-14 w-14 rounded-xl object-cover"
+            crossOrigin="anonymous"
+          />
+        ) : (
+          <div className="gradient-primary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
+            {userProfile.avatar}
+          </div>
+        )}
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <p className="text-base font-bold text-foreground">{userProfile.name}</p>
+            <p className="text-base font-bold text-foreground">{userProfile.name || "Loading..."}</p>
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
               Personal
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">{userProfile.username}</p>
-          <p className="text-xs text-muted-foreground">alex.johnson@email.com</p>
+          {userProfile.username && <p className="text-sm text-muted-foreground">{userProfile.username}</p>}
+          {userProfile.email && <p className="text-xs text-muted-foreground">{userProfile.email}</p>}
         </div>
         <button
           type="button"
@@ -93,28 +150,39 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
       </div>
 
       {/* Business Profile */}
-      <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <div className="gradient-secondary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
-          <Building2 className="h-6 w-6" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-base font-bold text-foreground">Chelsea Piers Sports</p>
-            <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
-              Business
-            </span>
+      {firstBusiness && (
+        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+          {firstBusiness.avatar ? (
+            <img
+              src={firstBusiness.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${firstBusiness.avatar}` : firstBusiness.avatar}
+              alt={firstBusiness.name}
+              className="h-14 w-14 rounded-xl object-cover"
+              crossOrigin="anonymous"
+            />
+          ) : (
+            <div className="gradient-secondary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
+              <Building2 className="h-6 w-6" />
+            </div>
+          )}
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-base font-bold text-foreground">{firstBusiness.name}</p>
+              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
+                Business
+              </span>
+            </div>
+            {firstBusiness.bio && <p className="text-sm text-muted-foreground truncate max-w-[250px]">{firstBusiness.bio}</p>}
+            {firstBusiness.email && <p className="text-xs text-muted-foreground">{firstBusiness.email}</p>}
           </div>
-          <p className="text-sm text-muted-foreground">Sports Complex</p>
-          <p className="text-xs text-muted-foreground">info@chelseapierssports.com</p>
+          <button
+            type="button"
+            onClick={() => onNavigate("business-profile")}
+            className="rounded-full bg-secondary/10 px-4 py-2 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/20"
+          >
+            View Profile
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => onNavigate("business-profile")}
-          className="rounded-full bg-secondary/10 px-4 py-2 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/20"
-        >
-          View Profile
-        </button>
-      </div>
+      )}
 
       {/* Start a Business CTA */}
       <button

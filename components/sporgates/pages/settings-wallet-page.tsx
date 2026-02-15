@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Wallet, TrendingUp, DollarSign, RefreshCw, X } from "lucide-react"
-import { userProfile, transactionHistory as mockTransactions } from "@/lib/mock-data"
 import { walletService, authService } from "@/lib/services"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -20,8 +19,8 @@ export function SettingsWalletPage({ onBack }: SettingsWalletPageProps) {
   const [showWithdraw, setShowWithdraw] = useState(false)
   const [topUpAmount, setTopUpAmount] = useState("")
   const [withdrawAmount, setWithdrawAmount] = useState("")
-  const [balance, setBalance] = useState(userProfile.walletBalance)
-  const [transactionHistory, setTransactionHistory] = useState(mockTransactions)
+  const [balance, setBalance] = useState(0)
+  const [transactionHistory, setTransactionHistory] = useState<any[]>([])
 
   useEffect(() => {
     const user = authService.getCurrentUser()

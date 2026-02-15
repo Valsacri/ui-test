@@ -16,7 +16,7 @@ interface SponsorshipTierBuilderProps {
   tiers: SponsorshipTier[]
   onChange: (tiers: SponsorshipTier[]) => void
   eventPoster?: string
-  onPosterUpload: (url: string) => void
+  onPosterUpload: (fileOrUrl: File | string) => void
 }
 
 const logoPositions = [
@@ -77,11 +77,23 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
             </div>
           ) : (
             <div className="space-y-2">
+              <input
+                type="file"
+                id="poster-upload"
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    onPosterUpload(file)
+                  }
+                }}
+              />
               <Upload className="mx-auto h-6 w-6 text-muted-foreground" />
               <p className="text-xs text-muted-foreground">Upload a poster to preview placements</p>
               <button
                 type="button"
-                onClick={() => onPosterUpload("/placeholder.svg")}
+                onClick={() => document.getElementById("poster-upload")?.click()}
                 className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted"
               >
                 Upload Poster
@@ -94,14 +106,41 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-foreground">Sponsorship Tiers</p>
-          <button
-            type="button"
-            onClick={handleAddTier}
-            className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted"
-          >
-            <Plus className="h-3 w-3" />
-            Add Tier
-          </button>
+          <div className="flex gap-2">
+            <div className="flex gap-1 mr-2 border-r border-border pr-2">
+              {[
+                { name: "Gold", price: 5000, color: "bg-yellow-500/10 text-yellow-600 border-yellow-200" },
+                { name: "Silver", price: 2500, color: "bg-slate-200 text-slate-600 border-slate-200" },
+                { name: "Bronze", price: 1000, color: "bg-orange-500/10 text-orange-600 border-orange-200" }
+              ].map(preset => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => {
+                    const newTier = {
+                      id: `tier-${Date.now()}-${preset.name}`,
+                      name: `${preset.name} Sponsor`,
+                      price: preset.price,
+                      benefits: [`${preset.name} Tier Benefits`],
+                      logoPositions: []
+                    }
+                    onChange([...tiers, newTier])
+                  }}
+                  className={cn("text-[10px] px-2 py-1 rounded-full border font-medium transition-colors hover:opacity-80", preset.color)}
+                >
+                  +{preset.name}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={handleAddTier}
+              className="flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted"
+            >
+              <Plus className="h-3 w-3" />
+              Add Custom
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 space-y-3">

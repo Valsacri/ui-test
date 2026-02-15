@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { AddCampaignModal } from "@/components/sporgates/business/add-campaign-modal"
 import { AddResourceModal } from "@/components/sporgates/business/add-resource-modal"
-import { EditResourceModal } from "@/components/sporgates/business/edit-resource-modal"
+import { EditResourceModal, type EditableResource } from "@/components/sporgates/business/edit-resource-modal"
 import { AddTeamMemberModal } from "@/components/sporgates/business/add-team-member-modal"
 import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporgates/business/sponsorship-tier-builder"
 import { AthleteCollaborationSelector } from "@/components/sporgates/business/athlete-collaboration-selector"
@@ -42,12 +42,14 @@ import { marketplaceService } from "@/lib/services/marketplace"
 import { servicesService } from "@/lib/services/services"
 import { activitiesService } from "@/lib/services/activities"
 import { businessesService } from "@/lib/services/businesses"
+import { useBusinessContext } from "@/lib/business-context"
 
 interface BusinessSubPageProps {
   onNavigate: (page: PageRoute) => void
 }
 
 export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
+  const { activeBusinessId } = useBusinessContext()
   const [activityList, setActivityList] = useState<Array<{
     id: string; name: string; sportName?: string; startDateTime?: string; pricePerPerson?: number;
     currentParticipants?: number; maxParticipants?: number; coverImage?: string; status?: string
@@ -57,9 +59,10 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
 
   useEffect(() => {
     const fetchActivities = async () => {
+      if (!activeBusinessId) return
       setLoading(true)
       try {
-        const data = await activitiesService.getAll()
+        const data = await activitiesService.getAll({ organizerId: activeBusinessId })
         const list = Array.isArray(data) ? data : []
         setActivityList(list)
       } catch {
@@ -81,7 +84,7 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
       }
     }
     fetchActivities()
-  }, [])
+  }, [activeBusinessId])
 
   const filteredActivities = searchQuery
     ? activityList.filter((a) => a.name?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -263,6 +266,7 @@ export function BusinessCustomersPage({ onNavigate }: BusinessSubPageProps) {
 }
 
 export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
+  const { activeBusinessId } = useBusinessContext()
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
   const [teamMembers, setTeamMembers] = useState<Array<{
     id?: string; name: string; avatar: string; role?: string; status: string; email?: string
@@ -271,15 +275,12 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
 
   useEffect(() => {
     const fetchTeam = async () => {
+      if (!activeBusinessId) return
       setLoading(true)
       try {
-        // First get the user's business
-        const businesses = await businessesService.getMyBusinesses()
-        const bizList = businesses?.content || (Array.isArray(businesses) ? businesses : [])
-        if (bizList.length > 0) {
-          const businessId = bizList[0].id
-          const staff = await businessesService.getStaff(businessId)
-          const staffList = Array.isArray(staff) ? staff : []
+        const staff = await businessesService.getStaff(activeBusinessId)
+        const staffList = Array.isArray(staff) ? staff : []
+        if (staffList.length > 0) {
           setTeamMembers(
             staffList.map((s: { id?: string; firstName?: string; lastName?: string; email?: string; role?: string; username?: string }) => ({
               id: s.id,
@@ -291,17 +292,16 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
             }))
           )
         } else {
-          // Fallback to mock data
-          setTeamMembers(businessDashboardData.teamMembers)
+          setTeamMembers([])
         }
       } catch {
-        setTeamMembers(businessDashboardData.teamMembers)
+        setTeamMembers([])
       } finally {
         setLoading(false)
       }
     }
     fetchTeam()
-  }, [])
+  }, [activeBusinessId])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -366,6 +366,7 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
 }
 
 export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
+  const { activeBusinessId } = useBusinessContext()
   type ResourceType = "facility" | "product" | "service"
   type BusinessResource = {
     id: string
@@ -419,11 +420,12 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
   // Fetch all resources on mount
   useEffect(() => {
     const fetchAll = async () => {
+      if (!activeBusinessId) return
       setLoading(true)
       setError("")
 
       try {
-        const data = await facilitiesService.getAll()
+        const data = await facilitiesService.getAll({ businessId: activeBusinessId })
         const list = Array.isArray(data) ? data : []
         setFacilities(
           list.map((f: Record<string, unknown>) => ({
@@ -446,7 +448,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
       } catch { /* skip */ }
 
       try {
-        const data = await marketplaceService.getAll()
+        const data = await marketplaceService.getAll({ sellerId: activeBusinessId })
         const list = Array.isArray(data) ? data : []
         setProducts(
           list.map((p: Record<string, unknown>) => ({
@@ -467,7 +469,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
       } catch { /* skip */ }
 
       try {
-        const data = await servicesService.getAll()
+        const data = await servicesService.getAll({ providerId: activeBusinessId })
         const list = Array.isArray(data) ? data : []
         setServices(
           list.map((s: Record<string, unknown>) => ({
@@ -486,15 +488,10 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
         )
       } catch { /* skip */ }
 
-      // Mock fallback
-      setFacilities((prev) => prev.length > 0 ? prev : businessResources.filter((r) => resolveResourceType(r.type) === "facility").map((r) => ({ ...r, resourceType: "facility" as ResourceType })))
-      setProducts((prev) => prev.length > 0 ? prev : businessResources.filter((r) => resolveResourceType(r.type) === "product").map((r) => ({ ...r, resourceType: "product" as ResourceType })))
-      setServices((prev) => prev.length > 0 ? prev : businessResources.filter((r) => resolveResourceType(r.type) === "service").map((r) => ({ ...r, resourceType: "service" as ResourceType })))
-
       setLoading(false)
     }
     fetchAll()
-  }, [])
+  }, [activeBusinessId])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -552,7 +549,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
           address: resource.address,
           city: resource.city,
           sports: resource.sport ? [resource.sport] : [],
-          businessId: "default",
+          businessId: activeBusinessId,
         })
         newItem.id = created.id || newItem.id
         setFacilities((prev) => [newItem, ...prev])
@@ -565,6 +562,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
           brand: resource.brand,
           category: resource.category || "General",
           originalPrice: resource.originalPrice,
+          sellerId: activeBusinessId,
         })
         newItem.id = created.id || newItem.id
         setProducts((prev) => [newItem, ...prev])
@@ -576,6 +574,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
           price: resource.price,
           category: resource.category || "General",
           duration: resource.duration,
+          providerId: activeBusinessId,
         })
         newItem.id = created.id || newItem.id
         setServices((prev) => [newItem, ...prev])
@@ -589,7 +588,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
     setActiveTab(resource.resourceType)
   }
 
-  const handleSaveResource = async (updated: Record<string, unknown>) => {
+  const handleSaveResource = async (updated: EditableResource) => {
     const resType = activeTab
     const id = updated.id as string
 

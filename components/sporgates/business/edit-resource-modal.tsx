@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 type ResourceType = "facility" | "product" | "service"
 
-interface EditableResource {
+export interface EditableResource {
   id: string
   name: string
   type: string

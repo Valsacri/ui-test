@@ -31,7 +31,9 @@ import {
   Eye,
   BadgeCheck,
   Check,
+  Trophy,
 } from "lucide-react"
+import { toast } from "sonner"
 import { sports, activities, businessResources, businessPartners, athletes, businessDashboardData, experienceLevels } from "@/lib/mock-data"
 import { QRScanner } from "@/components/sporgates/attendance/qr-scanner"
 import { DateTimePicker } from "@/components/sporgates/date-time-picker"
@@ -44,6 +46,9 @@ import { cn } from "@/lib/utils"
 import { activitiesService } from "@/lib/services/activities"
 import { businessesService } from "@/lib/services/businesses"
 import { facilitiesService } from "@/lib/services/facilities"
+import { marketplaceService } from "@/lib/services/marketplace"
+import { servicesService } from "@/lib/services/services"
+import { useBusinessContext } from "@/lib/business-context"
 import {
   Select,
   SelectContent,
@@ -58,6 +63,7 @@ interface BusinessFormPageProps {
 
 // ==================== CreateActivity ====================
 export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
+  const { activeBusinessId } = useBusinessContext()
   const [formData, setFormData] = useState({
     title: "",
     sport: "",
@@ -94,6 +100,7 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
         location: formData.location,
         maxParticipants: formData.capacity,
         pricePerPerson: formData.price,
+        organizerId: activeBusinessId,
       })
       onNavigate("business-activities")
     } catch (err) {
@@ -173,8 +180,10 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
                     <SelectContent>
                       <SelectItem value="EVENT">Event</SelectItem>
                       <SelectItem value="SESSION">Session</SelectItem>
-                      <SelectItem value="PROGRAM">Program</SelectItem>
-                      <SelectItem value="LEAGUE">League</SelectItem>
+                      <SelectItem value="TOURNAMENT">Tournament</SelectItem>
+                      <SelectItem value="COMPETITION">Competition</SelectItem>
+                      <SelectItem value="EXPERIENCE">Experience</SelectItem>
+                      <SelectItem value="ADVENTURE">Adventure</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -361,6 +370,13 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
 }
 
 // ==================== CreateActivitySteps ====================
+const currencySymbols: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  MAD: "MAD",
+}
+
 export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
   const steps = [
     { id: 1, label: "Basic Info", icon: ImageIcon },
@@ -371,6 +387,7 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
     { id: 6, label: "Review", icon: CheckCircle },
   ]
 
+  const { activeBusinessId, businesses } = useBusinessContext()
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     title: "",
@@ -390,29 +407,46 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
     duration: 90,
     maxParticipants: 10,
     price: 0,
+    currency: "USD",
+    tags: "" as string,
     selectedResources: [] as string[],
     customTiers: [] as SponsorshipTier[],
     eventPoster: "",
   })
 
-  const cities = [
-    { id: "nyc", label: "New York City" },
-    { id: "manhattan", label: "Manhattan" },
-    { id: "brooklyn", label: "Brooklyn" },
-    { id: "queens", label: "Queens" },
-    { id: "bronx", label: "Bronx" },
-  ]
+  // Fetch real resources
+  const [availableResources, setAvailableResources] = useState<any[]>([])
+  const [loadingResources, setLoadingResources] = useState(false)
+  const [resourceCategory, setResourceCategory] = useState<"all" | "facility" | "product" | "service">("all")
+  const [resourceSearch, setResourceSearch] = useState("")
 
-  const neighborhoods: Record<string, string[]> = {
-    manhattan: ["Upper East Side", "Upper West Side", "Midtown", "Greenwich Village", "SoHo", "Tribeca"],
-    brooklyn: ["Williamsburg", "Park Slope", "DUMBO", "Brooklyn Heights", "Bushwick"],
-    queens: ["Astoria", "Long Island City", "Flushing", "Forest Hills"],
-    bronx: ["Riverdale", "Fordham", "Pelham Bay", "Concourse"],
-  }
+  useEffect(() => {
+    const loadResources = async () => {
+      if (!activeBusinessId) return
+      setLoadingResources(true)
+      try {
+        const [facilities, products, services] = await Promise.all([
+          facilitiesService.getAll({ businessId: activeBusinessId }),
+          marketplaceService.getAll({ sellerId: activeBusinessId }),
+          servicesService.getAll({ providerId: activeBusinessId })
+        ])
 
-  const availableNeighborhoods = formData.location.city
-    ? neighborhoods[formData.location.city] || []
-    : []
+        const combined = [
+          ...(Array.isArray(facilities) ? facilities.map((f: any) => ({ ...f, resourceType: "facility", type: "Facility" })) : []),
+          ...(Array.isArray(products) ? products.map((p: any) => ({ ...p, resourceType: "product", type: "Product" })) : []),
+          ...(Array.isArray(services) ? services.map((s: any) => ({ ...s, resourceType: "service", type: "Service" })) : [])
+        ]
+        setAvailableResources(combined)
+      } catch (e) {
+        console.error("Failed to load resources", e)
+      } finally {
+        setLoadingResources(false)
+      }
+    }
+    loadResources()
+  }, [activeBusinessId])
+
+
 
   const toggleResource = (id: string) => {
     setFormData((prev) => ({
@@ -451,6 +485,29 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCoverFile(file)
+    const objectUrl = URL.createObjectURL(file)
+    setCoverPreview(objectUrl)
+  }
+
+  const estimatedReach = useMemo(() => {
+    // Base reach from participants + multiplier for social sharing
+    return formData.maxParticipants * 15
+  }, [formData.maxParticipants])
+
+  const estimatedRevenue = useMemo(() => {
+    const ticketRevenue = formData.maxParticipants * formData.price
+    const sponsorshipRevenue = formData.customTiers.reduce((acc, tier) => acc + (tier.price || 0), 0)
+    return ticketRevenue + sponsorshipRevenue
+  }, [formData.maxParticipants, formData.price, formData.customTiers])
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -466,6 +523,24 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
         endDateTime = endDate.toISOString().slice(0, 19) // Format as YYYY-MM-DDTHH:mm:ss
       }
 
+      // Find facilityId from selected resources
+      const selectedFacilities = availableResources.filter(r => r.resourceType === 'facility' && formData.selectedResources.includes(r.id))
+      const facilityId = selectedFacilities.length > 0 ? selectedFacilities[0].id : undefined
+
+      const currentBusiness = businesses.find(b => b.id === activeBusinessId)
+
+      // Upload cover image if selected
+      let coverImageUrl = undefined
+      if (coverFile) {
+        setUploadingCover(true)
+        try {
+          const uploadResult = await activitiesService.uploadCover(coverFile)
+          coverImageUrl = uploadResult.url
+        } finally {
+          setUploadingCover(false)
+        }
+      }
+
       await activitiesService.create({
         name: formData.title,
         sportId: formData.sport,
@@ -474,10 +549,20 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
         description: formData.description,
         location: formData.location.address,
         city: formData.location.city,
+        state: "NY", // Defaulting for now as per MVP data
+        country: "US",
+        latitude: formData.location.lat,
+        longitude: formData.location.lng,
         startDateTime: startDateTime,
         endDateTime: endDateTime,
         maxParticipants: formData.maxParticipants,
         pricePerPerson: formData.price,
+        currency: formData.currency,
+        tags: formData.tags ? formData.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+        coverImage: coverImageUrl,
+        organizerId: activeBusinessId,
+        organizerName: currentBusiness?.name || "",
+        facilityId: facilityId,
       })
       onNavigate("business-activities")
     } catch (err: unknown) {
@@ -490,368 +575,724 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="mb-4 flex items-center gap-3">
-          <button type="button" onClick={handleBack} className="rounded-full p-2 hover:bg-muted">
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Create New Activity</h1>
-            <p className="text-xs text-muted-foreground">Follow the steps to publish a new event</p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          {steps.map((step, index) => {
-            const Icon = step.icon
-            const isCompleted = currentStep > step.id
-            const isCurrent = currentStep === step.id
-
-            return (
-              <div key={step.id} className="flex flex-1 items-center">
-                <div className="flex flex-1 flex-col items-center">
-                  <div
-                    className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold",
-                      isCompleted
-                        ? "bg-primary text-white"
-                        : isCurrent
-                          ? "border-2 border-secondary bg-secondary/10 text-secondary"
-                          : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                  </div>
-                  <span className={cn(
-                    "mt-2 hidden text-[10px] font-semibold sm:block",
-                    isCurrent ? "text-secondary" : "text-muted-foreground"
-                  )}>
-                    {step.label}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={cn(
-                    "mx-2 h-0.5 flex-1",
-                    isCompleted ? "bg-primary" : "bg-muted"
-                  )} />
-                )}
-              </div>
-            )
-          })}
+      <div className="flex items-center gap-3 mb-6">
+        <button type="button" onClick={handleBack} className="rounded-full p-2 hover:bg-muted">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Create New Activity</h1>
+          <p className="text-xs text-muted-foreground">Follow the steps to publish a new event</p>
         </div>
       </div>
 
-      {currentStep === 1 && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-bold text-foreground">Basic Information</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Activity Title</label>
-              <input
-                value={formData.title}
-                onChange={(event) => setFormData({ ...formData, title: event.target.value })}
-                placeholder="e.g., City Basketball Championship"
-                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Activity Type</label>
-              <Select
-                value={formData.type}
-                onValueChange={(val) => setFormData({ ...formData, type: val })}
-              >
-                <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EVENT">Event</SelectItem>
-                  <SelectItem value="SESSION">Session</SelectItem>
-                  <SelectItem value="PROGRAM">Program</SelectItem>
-                  <SelectItem value="LEAGUE">League</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
-                <Select
-                  value={formData.sport}
-                  onValueChange={(val) => setFormData({ ...formData, sport: val })}
-                >
-                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
-                    <SelectValue placeholder="Select sport" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sports.map((sport) => (
-                      <SelectItem key={sport.id} value={sport.id}>{sport.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-foreground">Skill Level</label>
-                <Select
-                  value={formData.level}
-                  onValueChange={(val) => setFormData({ ...formData, level: val })}
-                >
-                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {experienceLevels.map((level) => (
-                      <SelectItem key={level.id} value={level.id}>{level.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(event) => setFormData({ ...formData, description: event.target.value })}
-                rows={4}
-                placeholder="Tell participants what to expect."
-                className="w-full rounded-xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Stepper */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm mb-8 relative overflow-hidden">
+            <div className="absolute top-[45px] left-0 w-full h-[2px] bg-border/50 z-0" />
+            <div className="relative z-10 flex justify-between w-full px-4">
+              {steps.map((step, index) => {
+                const Icon = step.icon
+                const isCompleted = currentStep > step.id
+                const isCurrent = currentStep === step.id
 
-      {currentStep === 2 && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-bold text-foreground">Location Details</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
-              <input
-                value={formData.location.address}
-                onChange={(event) =>
-                  setFormData({
-                    ...formData,
-                    location: { ...formData.location, address: event.target.value },
-                  })
-                }
-                placeholder="Venue address"
-                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-              />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
-                <Select
-                  value={formData.location.city}
-                  onValueChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      location: { ...formData.location, city: val, neighborhood: "" },
-                    })
-                  }
-                >
-                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
-                    <SelectValue placeholder="Select city" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cities.map((city) => (
-                      <SelectItem key={city.id} value={city.id}>{city.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-foreground">Neighborhood</label>
-                <Select
-                  value={formData.location.neighborhood}
-                  onValueChange={(val) =>
-                    setFormData({
-                      ...formData,
-                      location: { ...formData.location, neighborhood: val },
-                    })
-                  }
-                >
-                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
-                    <SelectValue placeholder="Select neighborhood" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableNeighborhoods.map((neighborhood) => (
-                      <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <MapView
-              center={[formData.location.lat, formData.location.lng]}
-              markerLabel={formData.location.address || "Select a location"}
-              height="220px"
-            />
-          </div>
-        </div>
-      )}
-
-      {currentStep === 3 && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-bold text-foreground">Schedule</h3>
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <DateTimePicker
-                label="Date"
-                type="date"
-                value={formData.date}
-                onChange={(value) => setFormData({ ...formData, date: value })}
-              />
-              <DateTimePicker
-                label="Start Time"
-                type="time"
-                value={formData.time}
-                onChange={(value) => setFormData({ ...formData, time: value })}
-              />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-foreground">Duration (minutes)</label>
-                <input
-                  type="number"
-                  value={formData.duration}
-                  onChange={(event) => setFormData({ ...formData, duration: Number(event.target.value) || 0 })}
-                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-foreground">Max Participants</label>
-                <input
-                  type="number"
-                  value={formData.maxParticipants}
-                  onChange={(event) => setFormData({ ...formData, maxParticipants: Number(event.target.value) || 0 })}
-                  className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Price per participant ($)</label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(event) => setFormData({ ...formData, price: Number(event.target.value) || 0 })}
-                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {currentStep === 4 && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-bold text-foreground">Select Resources</h3>
-          <div className="grid gap-3 md:grid-cols-2">
-            {businessResources.map((resource) => {
-              const selected = formData.selectedResources.includes(resource.id)
-              return (
-                <button
-                  key={resource.id}
-                  type="button"
-                  onClick={() => toggleResource(resource.id)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all",
-                    selected && "border-secondary bg-secondary/5"
-                  )}
-                >
-                  <img
-                    src={resource.image}
-                    alt={resource.name}
-                    className="h-14 w-14 rounded-xl object-cover"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground">{resource.name}</p>
-                    <p className="text-xs text-muted-foreground">{resource.type}</p>
-                    <p className="text-[10px] text-muted-foreground">Status: {resource.status}</p>
+                return (
+                  <div key={step.id} className="flex flex-col items-center group cursor-pointer lg:w-20" onClick={() => (isCompleted || isCurrent) ? setCurrentStep(step.id) : null}>
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-card z-10",
+                        isCompleted
+                          ? "bg-primary border-primary text-primary-foreground shadow-md scale-105"
+                          : isCurrent
+                            ? "border-primary text-primary shadow-[0_0_0_4px_rgba(59,130,246,0.1)] scale-110"
+                            : "border-border text-muted-foreground group-hover:border-primary/50"
+                      )}
+                    >
+                      {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                    </div>
+                    <span
+                      className={cn(
+                        "mt-3 text-[10px] uppercase font-bold tracking-wider transition-colors duration-300 bg-card px-2 rounded-full text-center whitespace-nowrap",
+                        isCurrent ? "text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                  {selected && <CheckCircle className="h-5 w-5 text-secondary" />}
-                </button>
-              )
-            })}
+                )
+              })}
+            </div>
+          </div>
+
+          {currentStep === 1 && (
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <h3 className="mb-6 text-base font-bold text-foreground">Basic Information</h3>
+              <div className="space-y-6">
+
+                {/* Activity Title */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity Title</label>
+                  <input
+                    value={formData.title}
+                    onChange={(event) => setFormData({ ...formData, title: event.target.value })}
+                    placeholder="e.g., Summer Basketball League 2024"
+                    className="h-12 w-full rounded-xl border border-border bg-muted/50 px-4 text-sm font-medium outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
+
+                {/* Activity Type */}
+                <div>
+                  <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity Type</label>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    {[
+                      { id: "EVENT", label: "Event", icon: Calendar, desc: "One-time" },
+                      { id: "SESSION", label: "Session", icon: Users, desc: "Recurring" },
+                      { id: "COMPETITION", label: "Competition", icon: Target, desc: "Multi-day" },
+                      { id: "TOURNAMENT", label: "Tournament", icon: Trophy, desc: "Competitive" },
+                    ].map((type) => {
+                      const Icon = type.icon
+                      const isSelected = formData.type === type.id
+                      return (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, type: type.id })}
+                          className={cn(
+                            "group flex flex-col items-center justify-center rounded-2xl border p-4 text-center transition-all duration-200 hover:border-primary/50 hover:bg-muted/50",
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
+                              : "border-border bg-card"
+                          )}
+                        >
+                          <div className={cn(
+                            "mb-3 flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+                            isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                          )}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <span className={cn("text-xs font-bold", isSelected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>{type.label}</span>
+                          <span className="mt-1 text-[10px] text-muted-foreground/80">{type.desc}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Sport & Level */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sport</label>
+                    <Select
+                      value={formData.sport}
+                      onValueChange={(val) => setFormData({ ...formData, sport: val })}
+                    >
+                      <SelectTrigger className="h-12 w-full rounded-xl border border-border bg-muted/50 px-4 text-sm font-medium focus:ring-2 focus:ring-primary/10">
+                        <SelectValue placeholder="Select sport" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sports.map((sport) => (
+                          <SelectItem key={sport.id} value={sport.id}>{sport.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Skill Level</label>
+                    <Select
+                      value={formData.level}
+                      onValueChange={(val) => setFormData({ ...formData, level: val })}
+                    >
+                      <SelectTrigger className="h-12 w-full rounded-xl border border-border bg-muted/50 px-4 text-sm font-medium focus:ring-2 focus:ring-primary/10">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {experienceLevels.map((level) => (
+                          <SelectItem key={level.id} value={level.id}>{level.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                    rows={4}
+                    placeholder="Tell participants what to expect regarding the atmosphere, rules, and vibe."
+                    className="w-full rounded-xl border border-border bg-muted/50 p-4 text-sm font-medium outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10 resize-none"
+                  />
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tags</label>
+                  <div className="relative">
+                    <input
+                      value={formData.tags}
+                      onChange={(event) => setFormData({ ...formData, tags: event.target.value })}
+                      placeholder="e.g., outdoor, competitive, beginner-friendly"
+                      className="h-12 w-full rounded-xl border border-border bg-muted/50 pl-10 pr-4 text-sm font-medium outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10"
+                    />
+                    <BadgeCheck className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/50" />
+                  </div>
+                  <p className="mt-1.5 text-[10px] text-muted-foreground">Separate tags with commas</p>
+                </div>
+
+                {/* Cover Image */}
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cover Image</label>
+                  <input
+                    type="file"
+                    ref={coverInputRef}
+                    onChange={handleCoverUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <div className="group relative overflow-hidden rounded-2xl border-2 border-dashed border-border bg-muted/30 transition-all hover:border-primary/50 hover:bg-muted/50">
+                    {coverPreview ? (
+                      <div className="relative h-48 w-full">
+                        <img src={coverPreview} alt="Cover preview" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => coverInputRef.current?.click()}
+                            className="rounded-full bg-white/20 backdrop-blur-md px-4 py-2 text-xs font-bold text-white hover:bg-white/30"
+                          >
+                            Change Image
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => coverInputRef.current?.click()}
+                        className="flex h-48 w-full flex-col items-center justify-center p-6 text-center"
+                      >
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                          <ImageIcon className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">Click to upload cover image</p>
+                        <p className="mt-1 text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+          }
+
+          {
+            currentStep === 2 && (
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-sm font-bold text-foreground">Location Details</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
+                    <input
+                      value={formData.location.address}
+                      onChange={(event) =>
+                        setFormData({
+                          ...formData,
+                          location: { ...formData.location, address: event.target.value },
+                        })
+                      }
+                      placeholder="Venue address"
+                      className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
+                      <input
+                        value={formData.location.city}
+                        onChange={(event) =>
+                          setFormData({
+                            ...formData,
+                            location: { ...formData.location, city: event.target.value },
+                          })
+                        }
+                        placeholder="e.g. New York"
+                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">Neighborhood</label>
+                      <input
+                        value={formData.location.neighborhood}
+                        onChange={(event) =>
+                          setFormData({
+                            ...formData,
+                            location: { ...formData.location, neighborhood: event.target.value },
+                          })
+                        }
+                        placeholder="e.g. Manhattan"
+                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                  <MapView
+                    center={[formData.location.lat, formData.location.lng]}
+                    markerLabel={formData.location.address || "Select a location"}
+                    height="220px"
+                  />
+                </div>
+              </div>
+            )
+          }
+
+          {
+            currentStep === 3 && (
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-sm font-bold text-foreground">Schedule</h3>
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <DateTimePicker
+                      label="Date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(value) => setFormData({ ...formData, date: value })}
+                    />
+                    <DateTimePicker
+                      label="Start Time"
+                      type="time"
+                      value={formData.time}
+                      onChange={(value) => setFormData({ ...formData, time: value })}
+                    />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">Duration (minutes)</label>
+                      <input
+                        type="number"
+                        value={formData.duration}
+                        onChange={(event) => setFormData({ ...formData, duration: Number(event.target.value) || 0 })}
+                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">Max Participants</label>
+                      <input
+                        type="number"
+                        value={formData.maxParticipants}
+                        onChange={(event) => setFormData({ ...formData, maxParticipants: Number(event.target.value) || 0 })}
+                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">Price per participant</label>
+                      <input
+                        type="number"
+                        value={formData.price}
+                        onChange={(event) => setFormData({ ...formData, price: Number(event.target.value) || 0 })}
+                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">Currency</label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(val) => setFormData({ ...formData, currency: val })}
+                      >
+                        <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD ($)</SelectItem>
+                          <SelectItem value="EUR">EUR (€)</SelectItem>
+                          <SelectItem value="GBP">GBP (£)</SelectItem>
+                          <SelectItem value="MAD">MAD (د.م.)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          {
+            currentStep === 4 && (
+              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                <h3 className="mb-4 text-sm font-bold text-foreground">Select Resources</h3>
+
+                {/* Resource Controls */}
+                <div className="mb-4 space-y-3">
+                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {[
+                      { id: "all", label: "All" },
+                      { id: "facility", label: "Facilities" },
+                      { id: "product", label: "Products" },
+                      { id: "service", label: "Services" },
+                    ].map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setResourceCategory(cat.id as any)}
+                        className={cn(
+                          "whitespace-nowrap rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+                          resourceCategory === cat.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={resourceSearch}
+                      onChange={(e) => setResourceSearch(e.target.value)}
+                      placeholder="Search resources..."
+                      className="h-10 w-full rounded-xl border border-border bg-muted pl-9 pr-4 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  {loadingResources ? (
+                    <div className="col-span-2 py-8 text-center text-sm text-muted-foreground">Loading resources...</div>
+                  ) : availableResources.length === 0 ? (
+                    <div className="col-span-2 py-8 text-center text-sm text-muted-foreground">No resources found. Create facilities or products first.</div>
+                  ) : (
+                    availableResources
+                      .filter(r => {
+                        const matchesCategory = resourceCategory === "all" || r.resourceType === resourceCategory
+                        const matchesSearch = r.name.toLowerCase().includes(resourceSearch.toLowerCase())
+                        return matchesCategory && matchesSearch
+                      })
+                      .map((resource) => {
+                        const selected = formData.selectedResources.includes(resource.id)
+                        return (
+                          <button
+                            key={resource.id}
+                            type="button"
+                            onClick={() => toggleResource(resource.id)}
+                            className={cn(
+                              "flex items-center gap-3 rounded-2xl border border-border bg-card p-3 text-left transition-all hover:border-primary/50",
+                              selected && "border-secondary bg-secondary/5 ring-1 ring-secondary"
+                            )}
+                          >
+                            <img
+                              src={resource.image || resource.coverImage || "/placeholder.svg"}
+                              alt={resource.name}
+                              className="h-12 w-12 rounded-xl object-cover bg-muted"
+                              crossOrigin="anonymous"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <p className="text-sm font-semibold text-foreground truncate max-w-[120px]">{resource.name}</p>
+                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground capitalize">{resource.resourceType}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">{resource.description}</p>
+                              <p className="mt-1 text-xs font-medium text-primary">
+                                {resource.resourceType === 'facility' && resource.pricePerHour ? `$${resource.pricePerHour}/hr` :
+                                  resource.price ? `$${resource.price}` : 'Free'}
+                              </p>
+                            </div>
+                            {selected && <CheckCircle className="h-5 w-5 text-secondary flex-shrink-0" />}
+                          </button>
+                        )
+                      })
+                  )}
+                </div>
+              </div>
+            )
+          }
+
+          {
+            currentStep === 5 && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <h3 className="mb-2 text-sm font-bold text-foreground">Sponsorship Packages</h3>
+                  <p className="text-xs text-muted-foreground">Create tiered packages for event sponsors.</p>
+                </div>
+                <SponsorshipTierBuilder
+                  tiers={formData.customTiers}
+                  onChange={(tiers) => setFormData({ ...formData, customTiers: tiers })}
+                  eventPoster={formData.eventPoster}
+                  onPosterUpload={async (fileOrUrl) => {
+                    if (typeof fileOrUrl === 'string') {
+                      setFormData(prev => ({ ...prev, eventPoster: fileOrUrl }))
+                      return
+                    }
+
+                    try {
+                      const response = await activitiesService.uploadCover(fileOrUrl)
+                      setFormData(prev => ({ ...prev, eventPoster: response.url }))
+                      toast.success("Poster uploaded successfully")
+                    } catch (error) {
+                      console.error("Failed to upload poster:", error)
+                      toast.error("Failed to upload poster. Please try again.")
+                    }
+                  }}
+                />
+              </div>
+            )
+          }
+
+          {
+            currentStep === 6 && (
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                  {/* Hero Section */}
+                  <div className="h-48 bg-gradient-to-r from-primary/10 to-secondary/10 relative">
+                    {/* Background Image: Priorities Cover -> Poster */}
+                    {coverPreview ? (
+                      <img src={coverPreview} className="absolute inset-0 w-full h-full object-cover opacity-80 z-0" alt="Cover" />
+                    ) : formData.eventPoster ? (
+                      <img src={formData.eventPoster} className="absolute inset-0 w-full h-full object-cover opacity-60 z-0 blur-sm" alt="Background" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/10">
+                        <ImageIcon className="w-32 h-32" />
+                      </div>
+                    )}
+
+                    {/* Overlay for text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent z-0" />
+
+                    {/* Event Poster Inset */}
+                    {formData.eventPoster && (
+                      <div className="absolute top-6 right-6 z-10 w-24 aspect-[2/3] rounded-lg overflow-hidden shadow-xl border-2 border-white/20">
+                        <img src={formData.eventPoster} className="w-full h-full object-cover" alt="Poster" />
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-6 left-6 z-10 max-w-[70%]">
+                      <div className="flex gap-2 mb-2">
+                        <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur text-[10px] uppercase font-bold border border-border">{formData.type}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-primary/20 backdrop-blur text-[10px] uppercase font-bold text-primary border border-primary/20">{sports.find(s => s.id === formData.sport)?.name || "Unspecified Sport"}</span>
+                      </div>
+                      <h3 className="text-3xl font-bold text-foreground drop-shadow-md leading-tight">{formData.title || "Untitled Activity"}</h3>
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="p-6 grid gap-8 md:grid-cols-2">
+                    {/* Schedule & Location */}
+                    <div className="space-y-4">
+                      <h4 className="flex items-center gap-2 text-sm font-bold text-foreground border-b border-border pb-2">
+                        <Calendar className="w-4 h-4 text-primary" /> Schedule & Location
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <Calendar className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Date & Time</p>
+                            <p className="text-sm font-bold text-foreground">{formData.date || "Not set"} <span className="text-muted-foreground font-normal">at</span> {formData.time || "Not set"}</p>
+                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md w-fit">
+                              <Clock className="w-3 h-3" /> {formData.duration} mins
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
+                            <MapPin className="w-5 h-5 text-secondary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Location</p>
+                            <p className="text-sm font-bold text-foreground line-clamp-1">{formData.location.address || "Not set"}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{formData.location.city || "City not set"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pricing & Capacity */}
+                    <div className="space-y-4">
+                      <h4 className="flex items-center gap-2 text-sm font-bold text-foreground border-b border-border pb-2">
+                        <DollarSign className="w-4 h-4 text-primary" /> Pricing & Capacity
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
+                            <DollarSign className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Pricing</p>
+                            <p className="text-sm font-bold text-foreground">{formData.price > 0 ? `${formData.price} ${formData.currency}` : "Free"}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Est. Revenue: <span className="text-green-600 font-medium">{currencySymbols[formData.currency] || formData.currency}{estimatedRevenue.toLocaleString()}</span></p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                            <Users className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Capacity</p>
+                            <p className="text-sm font-bold text-foreground">{formData.maxParticipants} <span className="text-muted-foreground font-normal">Participants Max</span></p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Est. Reach: {estimatedReach.toLocaleString()} people</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="md:col-span-2 space-y-2 pt-2">
+                      <h4 className="flex items-center gap-2 text-sm font-bold text-foreground pb-1">
+                        <Edit3 className="w-4 h-4 text-primary" /> About this activity
+                      </h4>
+                      <div className="bg-muted/30 p-5 rounded-xl text-sm leading-relaxed text-muted-foreground border border-border/50">
+                        {formData.description || "No description provided."}
+                        {formData.tags && (
+                          <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-border/50">
+                            {formData.tags.split(",").map((tag) => (
+                              <span key={tag} className="text-[10px] px-2.5 py-1 rounded-md bg-background border border-border text-foreground font-medium shadow-sm">
+                                #{tag.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Resource & Sponsorship Summary */}
+                    <div className="md:col-span-2 grid gap-4 sm:grid-cols-2">
+                      <div className="bg-muted/20 p-5 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="font-bold text-sm flex items-center gap-2 text-foreground">
+                            <Package className="w-4 h-4 text-primary" /> Resources
+                          </span>
+                          <span className="text-[10px] font-bold bg-background px-2.5 py-1 rounded-full border border-border shadow-sm">{formData.selectedResources.length} Selected</span>
+                        </div>
+                        {formData.selectedResources.length > 0 ? (
+                          <div className="space-y-2">
+                            {availableResources
+                              .filter(r => formData.selectedResources.includes(r.id))
+                              .slice(0, 3)
+                              .map(r => (
+                                <div key={r.id} className="text-xs flex items-center gap-2.5 text-muted-foreground bg-background/50 p-2 rounded-lg border border-border/50">
+                                  <div className="w-2 h-2 rounded-full bg-primary" /> <span className="truncate flex-1">{r.name}</span>
+                                </div>
+                              ))
+                            }
+                            {formData.selectedResources.length > 3 && (
+                              <p className="text-[10px] font-medium text-muted-foreground pl-1">+ {formData.selectedResources.length - 3} more resources</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 bg-background/30 rounded-lg border border-dashed border-border/50">
+                            <p className="text-xs text-muted-foreground italic">No resources added.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-muted/20 p-5 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="font-bold text-sm flex items-center gap-2 text-foreground">
+                            <Target className="w-4 h-4 text-primary" /> Sponsorship
+                          </span>
+                          <span className="text-[10px] font-bold bg-background px-2.5 py-1 rounded-full border border-border shadow-sm">{formData.customTiers.length} Tiers</span>
+                        </div>
+                        {formData.customTiers.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {formData.customTiers.map(t => (
+                              <div key={t.id} className="text-xs px-3 py-1.5 rounded-lg bg-background border border-border flex items-center gap-2 shadow-sm">
+                                <span className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_5px_rgba(234,179,8,0.5)]" /> {t.name}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 bg-background/30 rounded-lg border border-dashed border-border/50">
+                            <p className="text-xs text-muted-foreground italic">No sponsorship tiers.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="rounded-full border border-border px-5 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                Back
+              </button>
+            )}
+            {currentStep < steps.length ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="gradient-primary rounded-full px-8 py-2.5 text-xs font-semibold text-white shadow-md transition-all hover:opacity-90 disabled:opacity-50 disabled:shadow-none"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="gradient-primary rounded-full px-8 py-2.5 text-xs font-semibold text-white shadow-md transition-all hover:opacity-90 disabled:opacity-50"
+              >
+                {submitting ? "Publishing..." : "Publish Activity"}
+              </button>
+            )}
           </div>
         </div>
-      )}
 
-      {currentStep === 5 && (
+        {/* Sidebar */}
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <h3 className="mb-2 text-sm font-bold text-foreground">Sponsorship Packages</h3>
-            <p className="text-xs text-muted-foreground">Create tiered packages for event sponsors.</p>
-          </div>
-          <SponsorshipTierBuilder
-            tiers={formData.customTiers}
-            onChange={(tiers) => setFormData({ ...formData, customTiers: tiers })}
-            eventPoster={formData.eventPoster}
-            onPosterUpload={(url) => setFormData({ ...formData, eventPoster: url })}
-          />
-        </div>
-      )}
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sticky top-24">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Live Impact Preview</h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-foreground">{estimatedReach.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground">Estimated Reach</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10">
+                  <DollarSign className="h-5 w-5 text-secondary" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-foreground">{currencySymbols[formData.currency] || formData.currency}{estimatedRevenue.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground">Estimated Revenue</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-foreground">{formData.maxParticipants}</p>
+                  <p className="text-[10px] text-muted-foreground">Max Participants</p>
+                </div>
+              </div>
+            </div>
 
-      {currentStep === 6 && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-bold text-foreground">Review & Publish</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Title</span>
-              <span className="font-semibold text-foreground">{formData.title || "Untitled"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Sport</span>
-              <span className="font-semibold text-foreground">{formData.sport || "Not set"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Schedule</span>
-              <span className="font-semibold text-foreground">
-                {formData.date && formData.time ? `${formData.date} · ${formData.time}` : "Not set"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Location</span>
-              <span className="font-semibold text-foreground">{formData.location.address || "Not set"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Resources</span>
-              <span className="font-semibold text-foreground">{formData.selectedResources.length}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Sponsorship Tiers</span>
-              <span className="font-semibold text-foreground">{formData.customTiers.length}</span>
+            <div className="mt-6 pt-4 border-t border-border">
+              <h3 className="mb-3 text-sm font-bold text-foreground">Tips</h3>
+              <ul className="space-y-2 text-xs text-muted-foreground list-disc pl-4">
+                <li>Add a compelling cover image to attract more participants</li>
+                <li>Set a competitive price based on similar activities in your area</li>
+                <li>Enable sponsorship to boost your reach and visibility</li>
+              </ul>
             </div>
           </div>
         </div>
-      )}
 
-      <div className="flex flex-wrap gap-3">
-        {currentStep > 1 && (
-          <button
-            type="button"
-            onClick={handleBack}
-            className="rounded-full border border-border px-5 py-2 text-xs font-semibold text-foreground hover:bg-muted"
-          >
-            Back
-          </button>
-        )}
-        {currentStep < steps.length ? (
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={!canProceed()}
-            className="gradient-primary rounded-full px-6 py-2 text-xs font-semibold text-white disabled:opacity-50"
-          >
-            Continue
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="gradient-primary rounded-full px-6 py-2 text-xs font-semibold text-white"
-          >
-            Publish Activity
-          </button>
-        )}
       </div>
     </div>
   )
@@ -1083,47 +1524,55 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
     phone: "",
     email: "",
     website: "",
-    avatar: "",
+    avatar: "", // Keep these for existing URLs if handling edits/pre-fills
     cover: "",
   })
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [uploadingCover, setUploadingCover] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const savedType = localStorage.getItem("businessType")
+    if (savedType) {
+      setFormData(prev => ({ ...prev, type: savedType }))
+    }
+  }, [])
 
   const logoInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setUploadingLogo(true)
-    try {
-      const response = await businessesService.uploadAvatar(file)
-      setFormData(prev => ({ ...prev, avatar: response.url }))
-    } catch (err) {
-      console.error("Failed to upload logo", err)
-      setError("Failed to upload logo")
-    } finally {
-      setUploadingLogo(false)
-    }
+  // Helper to get full image URL
+  const getImageUrl = (url: string | null, preview: string | null) => {
+    if (preview) return preview
+    if (!url) return null
+    if (url.startsWith("http")) return url
+    // remove /api from base url if present for static files
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api").replace(/\/api\/?$/, "")
+    return `${baseUrl}${url.startsWith("/") ? "" : "/"}${url}`
   }
 
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setUploadingCover(true)
-    try {
-      const response = await businessesService.uploadCover(file)
-      setFormData(prev => ({ ...prev, cover: response.url }))
-    } catch (err) {
-      console.error("Failed to upload cover", err)
-      setError("Failed to upload cover image")
-    } finally {
-      setUploadingCover(false)
-    }
+    // Show immediate preview
+    const objectUrl = URL.createObjectURL(file)
+    setAvatarPreview(objectUrl)
+    setAvatarFile(file)
+  }
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Show immediate preview
+    const objectUrl = URL.createObjectURL(file)
+    setCoverPreview(objectUrl)
+    setCoverFile(file)
   }
 
   const handleCreateBusiness = async () => {
@@ -1131,6 +1580,7 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
     setError(null)
     try {
       const username = formData.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 30)
+
       await businessesService.create({
         name: formData.name,
         username,
@@ -1139,10 +1589,9 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
         phoneNumber: formData.phone,
         email: formData.email,
         website: formData.website,
-        avatar: formData.avatar,
-        cover: formData.cover,
-        // Note: 'type' is not supported by backend CreateBusinessDto, so it is omitted
-      })
+        type: formData.type,
+      }, avatarFile, coverFile)
+
       onNavigate("business-dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create business")
@@ -1179,13 +1628,13 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
               onClick={() => logoInputRef.current?.click()}
               className={cn(
                 "flex h-24 w-24 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted transition-colors hover:border-primary/40 overflow-hidden relative",
-                formData.avatar && "border-solid border-primary/20"
+                (avatarPreview || formData.avatar) && "border-solid border-primary/20"
               )}
             >
-              {uploadingLogo ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              ) : formData.avatar ? (
-                <img src={formData.avatar} alt="Logo" className="h-full w-full object-cover" />
+              {getImageUrl(formData.avatar, avatarPreview) ? (
+                <>
+                  <img src={getImageUrl(formData.avatar, avatarPreview)!} alt="Logo" className="h-full w-full object-cover" />
+                </>
               ) : (
                 <div className="text-center">
                   <ImageIcon className="mx-auto h-6 w-6 text-muted-foreground" />
@@ -1207,13 +1656,13 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
                 onClick={() => coverInputRef.current?.click()}
                 className={cn(
                   "flex h-24 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted transition-colors hover:border-primary/40 overflow-hidden relative",
-                  formData.cover && "border-solid border-primary/20"
+                  (coverPreview || formData.cover) && "border-solid border-primary/20"
                 )}
               >
-                {uploadingCover ? (
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                ) : formData.cover ? (
-                  <img src={formData.cover} alt="Cover" className="h-full w-full object-cover" />
+                {getImageUrl(formData.cover, coverPreview) ? (
+                  <>
+                    <img src={getImageUrl(formData.cover, coverPreview)!} alt="Cover" className="h-full w-full object-cover" />
+                  </>
                 ) : (
                   <div className="text-center">
                     <Upload className="mx-auto h-6 w-6 text-muted-foreground" />

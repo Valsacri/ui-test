@@ -1,21 +1,45 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Eye, EyeOff, Mail, Phone, Lock } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
-import { userProfile } from "@/lib/mock-data"
+import { authService, userService } from "@/lib/services"
 
 interface SettingsProfilePageProps {
   onNavigate: (page: PageRoute) => void
 }
 
-const defaultEmail = "jordan@example.com"
-const defaultPhone = "+1 (555) 123-4567"
-
 export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [profileData, setProfileData] = useState({
+    name: "", username: "", bio: "", email: "", phone: "",
+  })
+
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      userService.getUserById(user.id).then((data: any) => {
+        if (data) {
+          setProfileData({
+            name: [data.firstName, data.lastName].filter(Boolean).join(" ") || "",
+            username: data.username || "",
+            bio: data.bio || "",
+            email: data.email || user.email || "",
+            phone: data.phone || "",
+          })
+        }
+      }).catch(() => {
+        setProfileData((prev) => ({
+          ...prev,
+          name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "",
+          email: user.email || "",
+          username: user.username || "",
+        }))
+      })
+    }
+  }, [])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -29,7 +53,8 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
           <label className="text-xs font-semibold text-muted-foreground">Full Name</label>
           <input
             type="text"
-            defaultValue={userProfile.name}
+            value={profileData.name}
+            onChange={(e) => setProfileData((prev) => ({ ...prev, name: e.target.value }))}
             className="mt-1 h-11 w-full rounded-full border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
           />
         </div>
@@ -37,7 +62,8 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
           <label className="text-xs font-semibold text-muted-foreground">Username</label>
           <input
             type="text"
-            defaultValue={userProfile.username}
+            value={profileData.username}
+            onChange={(e) => setProfileData((prev) => ({ ...prev, username: e.target.value }))}
             className="mt-1 h-11 w-full rounded-full border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
           />
         </div>
@@ -45,7 +71,8 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
           <label className="text-xs font-semibold text-muted-foreground">Bio</label>
           <textarea
             rows={3}
-            defaultValue={userProfile.bio}
+            value={profileData.bio}
+            onChange={(e) => setProfileData((prev) => ({ ...prev, bio: e.target.value }))}
             className="mt-1 w-full rounded-2xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary"
           />
         </div>
@@ -60,7 +87,7 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
           <label className="text-xs font-semibold text-muted-foreground">Email</label>
           <input
             type="email"
-            defaultValue={defaultEmail}
+            value={profileData.email}
             disabled
             className="mt-1 h-11 w-full rounded-full border border-border bg-muted px-4 text-sm text-muted-foreground outline-none"
           />
@@ -70,7 +97,8 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
           <div className="mt-1 flex gap-2">
             <input
               type="tel"
-              defaultValue={defaultPhone}
+              value={profileData.phone}
+              onChange={(e) => setProfileData((prev) => ({ ...prev, phone: e.target.value }))}
               className="h-11 flex-1 rounded-full border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
             />
             <button

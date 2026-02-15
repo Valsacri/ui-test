@@ -80,8 +80,16 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
         </div>
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="gradient-primary flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white">
-              {activity.organizerAvatar}
+            <div className="relative gradient-primary flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[9px] font-bold text-white">
+              {activity.organizerAvatar && (activity.organizerAvatar.startsWith("/") || activity.organizerAvatar.startsWith("http")) ? (
+                <img
+                  src={activity.organizerAvatar}
+                  alt={activity.organizer}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span>{activity.organizer.slice(0, 2).toUpperCase()}</span>
+              )}
             </div>
             <span className="text-xs text-muted-foreground">{activity.organizer}</span>
           </div>

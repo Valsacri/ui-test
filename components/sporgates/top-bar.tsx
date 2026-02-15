@@ -22,7 +22,16 @@ import { authService } from "@/lib/services/auth"
 import { cn } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
 
-type Business = { id: string; name: string; type: string; emoji: string; location: string; rating: number; followers: number }
+type Business = {
+  id: string;
+  name: string;
+  type: string;
+  emoji?: string;
+  avatar?: string;
+  location: string;
+  rating: number;
+  followers: number
+}
 
 const notifTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   activity: CalendarDays,
@@ -435,8 +444,15 @@ export function TopBar({
                         activeBusinessId === biz.id && "bg-primary/5"
                       )}
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-base">
-                        {biz.emoji}
+                      <div className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-base overflow-hidden",
+                        biz.avatar && "bg-transparent"
+                      )}>
+                        {biz.avatar ? (
+                          <img src={biz.avatar} alt={biz.name} className="h-full w-full object-cover" />
+                        ) : (
+                          biz.emoji || <Building2 className="h-4 w-4" />
+                        )}
                       </div>
                       <div className="flex-1 text-left">
                         <p className="text-sm font-semibold text-foreground">{biz.name}</p>

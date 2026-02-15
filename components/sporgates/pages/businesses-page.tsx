@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-import { Search, SlidersHorizontal, MapPin } from "lucide-react"
-import { businesses as mockBusinesses } from "@/lib/mock-data"
+import { Search, SlidersHorizontal, MapPin, Loader2 } from "lucide-react"
 import { businessesService } from "@/lib/services"
 import { BusinessCard } from "@/components/sporgates/cards/business-card"
 import { SortFilter } from "@/components/sporgates/filters/sort-filter"
@@ -19,12 +18,32 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("rating")
-  const [businesses, setBusinesses] = useState(mockBusinesses)
+  const [businesses, setBusinesses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    businessesService.getAll().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setBusinesses(data)
+    setLoading(true)
+    businessesService.getAll().then((data: any) => {
+      const list = Array.isArray(data) ? data : (data?.content || [])
+      const mapped = list.map((b: any) => ({
+        id: b.id,
+        name: b.name || "Unnamed Business",
+        type: (b.bio && b.bio.length > 60) ? b.bio.slice(0, 60) + "…" : (b.bio || "Business"),
+        location: [b.city, b.state].filter(Boolean).join(", ") || b.address || "—",
+        rating: b.rating || 0,
+        reviews: b.reviews || 0,
+        image: b.cover
+          ? (b.cover.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${b.cover}` : b.cover)
+          : b.avatar
+            ? (b.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${b.avatar}` : b.avatar)
+            : "",
+        followers: b.followers || 0,
+        activities: b.activities || 0,
+        verified: !!b.verifiedAt,
+      }))
+      setBusinesses(mapped)
     }).catch(() => { })
+      .finally(() => setLoading(false))
   }, [])
 
   const filteredBusinesses = useMemo(() => {
@@ -51,7 +70,7 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
     })
 
     return result
-  }, [activeFilter, query, sortBy])
+  }, [activeFilter, query, sortBy, businesses])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -122,15 +141,31 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredBusinesses.map((business) => (
-          <BusinessCard
-            key={business.id}
-            business={business}
-            onClick={() => onNavigate("business-detail", business.id)}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : filteredBusinesses.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="gradient-primary mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white">
+            <Search className="h-7 w-7" />
+          </div>
+          <p className="text-base font-semibold text-foreground">No businesses found</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {query ? "Try adjusting your search or filters" : "Check back later for new businesses"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredBusinesses.map((business) => (
+            <BusinessCard
+              key={business.id}
+              business={business}
+              onClick={() => onNavigate("business-detail", business.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect } from "react"
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
-import { activities as mockActivities } from "@/lib/mock-data"
 import { activitiesService } from "@/lib/services"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ActivitiesFilterSidebar } from "@/components/sporgates/filters/activities-filter-sidebar"
@@ -26,14 +25,48 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
-  const [activities, setActivities] = useState(mockActivities)
+  const [activities, setActivities] = useState<any[]>([])
   const isMobile = useIsMobile()
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     activitiesService.getAll().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setActivities(data)
-    }).catch(() => { }).finally(() => setIsLoading(false))
+      if (Array.isArray(data)) {
+        const mapped = data.map((a: any) => {
+          const parseDate = (d: any) => {
+            if (Array.isArray(d)) {
+              return new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0)
+            }
+            return new Date(d)
+          }
+
+          const startDate = parseDate(a.startDateTime)
+          return {
+            id: a.id,
+            title: a.name,
+            sport: a.sportId || "Sport",
+            date: startDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
+            time: startDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' }),
+            location: a.location || a.city || "TBD",
+            price: a.pricePerPerson || 0,
+            currency: a.currency || "USD",
+            spots: (a.maxParticipants || 0) - (a.currentParticipants || 0),
+            totalSpots: a.maxParticipants || 0,
+            image: a.coverImage || "/images/sports-placeholder.jpg",
+            rating: a.rating || 0,
+            reviews: a.reviewCount || 0,
+            organizer: a.organizerName || "Organizer",
+            organizerAvatar: a.organizerAvatar || "",
+            tags: a.tags || []
+          }
+        })
+        setActivities(mapped)
+      } else {
+        setActivities([])
+      }
+    }).catch(() => {
+      setActivities([])
+    }).finally(() => setIsLoading(false))
   }, [])
 
   const filteredActivities = useMemo(() => {
@@ -103,7 +136,7 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
     }
 
     return result
-  }, [searchQuery, activeFilter, sortBy])
+  }, [activities, searchQuery, activeFilter, sortBy])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

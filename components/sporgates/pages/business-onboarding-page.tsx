@@ -119,7 +119,12 @@ export function BusinessOnboardingPage({ onNavigate }: BusinessOnboardingPagePro
                     </div>
                     <button
                         type="button"
-                        onClick={() => setStep("checklist")}
+                        onClick={() => {
+                            if (selectedType) {
+                                localStorage.setItem("businessType", selectedType)
+                                setStep("checklist")
+                            }
+                        }}
                         disabled={!selectedType}
                         className={cn(
                             "mx-auto flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-bold text-white shadow-lg transition-all",

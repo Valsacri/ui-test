@@ -16,8 +16,21 @@ export const businessesService = {
         return response.data;
     },
 
-    create: async (data: Record<string, unknown>) => {
-        const response = await apiClient.post('/v1/businesses', data);
+    create: async (data: Record<string, unknown>, avatarFile?: File | null, coverFile?: File | null) => {
+        const formData = new FormData();
+        formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+
+        if (avatarFile) {
+            formData.append('avatar', avatarFile);
+        }
+
+        if (coverFile) {
+            formData.append('cover', coverFile);
+        }
+
+        const response = await apiClient.post('/v1/businesses', formData, {
+            headers: { 'Content-Type': null },
+        });
         return response.data;
     },
 
@@ -55,7 +68,7 @@ export const businessesService = {
         const formData = new FormData();
         formData.append('file', file);
         const response = await apiClient.post('/v1/upload/business/avatar', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+            headers: { 'Content-Type': null },
         });
         return response.data;
     },
@@ -64,7 +77,7 @@ export const businessesService = {
         const formData = new FormData();
         formData.append('file', file);
         const response = await apiClient.post('/v1/upload/business/cover', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+            headers: { 'Content-Type': null },
         });
         return response.data;
     },

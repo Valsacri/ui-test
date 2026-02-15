@@ -90,7 +90,7 @@ export function BusinessSwitcher({
                     </div>
                     <div className="flex-1">
                       <p className="text-xs font-semibold text-foreground">{business.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{business.type}</p>
+
                     </div>
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="capitalize">{business.role}</span>

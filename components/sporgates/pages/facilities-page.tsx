@@ -94,7 +94,7 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
     }
 
     return result
-  }, [searchQuery, activeFilter, sortBy])
+  }, [facilities, searchQuery, activeFilter, sortBy])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

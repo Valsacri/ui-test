@@ -1,8 +1,8 @@
 import apiClient from '../api';
 
 export const marketplaceService = {
-    getAll: async (category?: string) => {
-        const response = await apiClient.get('/v1/products', { params: category ? { category } : {} });
+    getAll: async (params?: { category?: string; sellerId?: string }) => {
+        const response = await apiClient.get('/v1/products', { params });
         return response.data;
     },
 

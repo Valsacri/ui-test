@@ -1,7 +1,7 @@
 import apiClient from '../api';
 
 export const activitiesService = {
-    getAll: async (params?: { city?: string; sportId?: string; status?: string }) => {
+    getAll: async (params?: { city?: string; sportId?: string; status?: string; organizerId?: string }) => {
         const response = await apiClient.get('/v1/activities', { params });
         return response.data;
     },
@@ -36,6 +36,15 @@ export const activitiesService = {
     leaveActivity: async (activityId: string, userId: string) => {
         const response = await apiClient.post(`/v1/activities/${activityId}/leave`, null, {
             params: { userId },
+        });
+        return response.data;
+    },
+
+    uploadCover: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/v1/upload/activity/cover', formData, {
+            headers: { 'Content-Type': null },
         });
         return response.data;
     },

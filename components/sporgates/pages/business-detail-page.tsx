@@ -14,12 +14,13 @@ import {
   Phone,
   Mail,
 } from "lucide-react"
-import { businesses, activities, services } from "@/lib/mock-data"
+import { businessesService, activitiesService, servicesService } from "@/lib/services"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Loader2 } from "lucide-react"
 
 interface BusinessDetailPageProps {
   businessId: string
@@ -36,12 +37,105 @@ const reviewsData = [
 ]
 
 export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPageProps) {
-  const business = businesses.find((b) => b.id === businessId) || businesses[0]
+  const [business, setBusiness] = useState<any>(null)
+  const [activities, setActivities] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("Overview")
   const [following, setFollowing] = useState(false)
 
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const [businessData, activitiesData, servicesData] = await Promise.all([
+          businessesService.getById(businessId),
+          activitiesService.getAll({ organizerId: businessId }),
+          servicesService.getAll({ providerId: businessId })
+        ])
+        setBusiness(businessData)
+
+        if (Array.isArray(activitiesData)) {
+          const mappedActivities = activitiesData.map((a: any) => ({
+            id: a.id,
+            title: a.name,
+            sport: a.sportId || "Sport",
+            date: new Date(a.startDateTime).toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
+            time: `${new Date(a.startDateTime).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' })}`,
+            location: a.location || a.city || "TBD",
+            price: a.pricePerPerson || 0,
+            currency: "USD",
+            spots: (a.maxParticipants || 0) - (a.currentParticipants || 0),
+            totalSpots: a.maxParticipants || 0,
+            image: a.image || "/images/sports-placeholder.jpg", // Fallback
+            rating: a.rating || 0,
+            reviews: a.reviewCount || 0,
+            organizer: a.organizerName || "Organizer",
+            organizerAvatar: businessData.avatar || "",
+            tags: a.tags || []
+          }))
+          setActivities(mappedActivities)
+        }
+
+        if (Array.isArray(servicesData)) {
+          const mappedServices = servicesData.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            provider: s.providerName || "Provider",
+            providerAvatar: s.providerAvatar || businessData.avatar,
+            duration: s.duration || "1h",
+            price: s.price || 0,
+            currency: s.currency || "USD",
+            rating: s.rating || 0,
+            reviews: s.reviews || 0,
+            image: s.image,
+            category: s.category || "Service",
+            verified: s.verified || false
+          }))
+          setServices(mappedServices)
+        }
+      } catch (error) {
+        console.error("Failed to fetch business details", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    if (businessId) fetchData()
+  }, [businessId])
+
   const relatedActivities = activities.slice(0, 3)
   const relatedServices = services.slice(0, 2)
+
+  const businessDisplay = business ? {
+    ...business,
+    image: business.cover,
+    location: business.city && business.state ? `${business.city}, ${business.state}` : business.address || "Location unavailable",
+    rating: 5.0,
+    reviews: 0,
+    followers: 0,
+    activities: activities.length,
+    verified: !!business.verifiedAt,
+    type: business.type || "Business"
+  } : null
+
+  if (loading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!businessDisplay) {
+    return (
+      <div className="flex h-[50vh] flex-col items-center justify-center gap-4 text-center">
+        <h2 className="text-xl font-bold">Business not found</h2>
+        <button onClick={() => onNavigate("businesses")} className="text-primary hover:underline">
+          Back to Businesses
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0 animate-fade-in">
@@ -58,8 +152,8 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
       {/* Hero Image */}
       <div className="relative h-56 overflow-hidden rounded-2xl md:h-72">
         <img
-          src={business.image || "/placeholder.svg"}
-          alt={business.name}
+          src={businessDisplay.image || "/placeholder.svg"}
+          alt={businessDisplay.name}
           className="h-full w-full object-cover"
           crossOrigin="anonymous"
         />
@@ -80,10 +174,10 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
         </div>
         <div className="absolute bottom-4 left-4 right-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white">{business.name}</h1>
-            {business.verified && <BadgeCheck className="h-6 w-6 text-white" />}
+            <h1 className="text-2xl font-bold text-white">{businessDisplay.name}</h1>
+            {businessDisplay.verified && <BadgeCheck className="h-6 w-6 text-white" />}
           </div>
-          <p className="text-sm text-white/80">{business.type}</p>
+          <p className="text-sm text-white/80">{businessDisplay.type}</p>
         </div>
       </div>
 
@@ -92,20 +186,20 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-1.5">
             <Star className="h-4 w-4 fill-secondary text-secondary" />
-            <span className="text-sm font-bold text-foreground">{business.rating}</span>
-            <span className="text-xs text-muted-foreground">({business.reviews} reviews)</span>
+            <span className="text-sm font-bold text-foreground">{businessDisplay.rating}</span>
+            <span className="text-xs text-muted-foreground">({businessDisplay.reviews} reviews)</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <MapPin className="h-3.5 w-3.5" />
-            {business.location}
+            {businessDisplay.location}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Users className="h-3.5 w-3.5" />
-            {business.followers.toLocaleString()} followers
+            {businessDisplay.followers.toLocaleString()} followers
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" />
-            {business.activities} activities
+            {businessDisplay.activities} activities
           </div>
         </div>
         <div className="flex gap-2">
@@ -124,6 +218,7 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           <button
             type="button"
             className="rounded-full border border-border px-5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            title="Message"
           >
             <MessageCircle className="h-4 w-4" />
           </button>
@@ -156,7 +251,7 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <h3 className="mb-3 text-sm font-bold text-foreground">About</h3>
             <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-              {business.name} is a premier {business.type.toLowerCase()} located in {business.location}.
+              {businessDisplay.name} is a premier {businessDisplay.type.toLowerCase()} located in {businessDisplay.location}.
               We offer world-class facilities and a vibrant community of sports enthusiasts. Our mission
               is to make sports accessible, fun, and social for everyone in the community.
             </p>
@@ -165,21 +260,27 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
                 <Globe className="h-4 w-4 text-primary" />
                 <div>
                   <p className="text-[10px] text-muted-foreground">Website</p>
-                  <p className="text-xs font-medium text-foreground">www.{business.name.toLowerCase().replace(/\s/g, "")}.com</p>
+                  <p className="text-xs font-medium text-foreground">
+                    {businessDisplay.website || `www.${businessDisplay.name.toLowerCase().replace(/\s/g, "")}.com`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl bg-muted p-3">
                 <Phone className="h-4 w-4 text-primary" />
                 <div>
                   <p className="text-[10px] text-muted-foreground">Phone</p>
-                  <p className="text-xs font-medium text-foreground">(212) 555-0{business.id}42</p>
+                  <p className="text-xs font-medium text-foreground">
+                    {businessDisplay.phone || `(212) 555-0${businessDisplay.id.slice(0, 2)}42`}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl bg-muted p-3">
                 <Mail className="h-4 w-4 text-primary" />
                 <div>
                   <p className="text-[10px] text-muted-foreground">Email</p>
-                  <p className="text-xs font-medium text-foreground">info@{business.name.toLowerCase().replace(/\s/g, "")}.com</p>
+                  <p className="text-xs font-medium text-foreground">
+                    {businessDisplay.email || `info@${businessDisplay.name.toLowerCase().replace(/\s/g, "")}.com`}
+                  </p>
                 </div>
               </div>
             </div>
@@ -188,19 +289,19 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-              <p className="text-2xl font-bold text-primary">{business.activities}</p>
+              <p className="text-2xl font-bold text-primary">{businessDisplay.activities}</p>
               <p className="text-[11px] text-muted-foreground">Active Events</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-              <p className="text-2xl font-bold text-secondary">{business.followers.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-secondary">{businessDisplay.followers.toLocaleString()}</p>
               <p className="text-[11px] text-muted-foreground">Followers</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-              <p className="text-2xl font-bold text-primary">{business.rating}</p>
+              <p className="text-2xl font-bold text-primary">{businessDisplay.rating}</p>
               <p className="text-[11px] text-muted-foreground">Avg Rating</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 shadow-sm text-center">
-              <p className="text-2xl font-bold text-secondary">{business.reviews}</p>
+              <p className="text-2xl font-bold text-secondary">{businessDisplay.reviews}</p>
               <p className="text-[11px] text-muted-foreground">Total Reviews</p>
             </div>
           </div>
@@ -208,15 +309,21 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           {/* Featured Activities */}
           <div>
             <h3 className="mb-3 text-sm font-bold text-foreground">Featured Activities</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {relatedActivities.map((activity) => (
-                <ActivityCard
-                  key={activity.id}
-                  activity={activity}
-                  onClick={() => onNavigate("activity-detail", activity.id)}
-                />
-              ))}
-            </div>
+            {relatedActivities.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {relatedActivities.map((activity) => (
+                  <ActivityCard
+                    key={activity.id}
+                    activity={activity}
+                    onClick={() => onNavigate("activity-detail", activity.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-card p-6 text-center text-muted-foreground">
+                No activities available.
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -238,26 +345,42 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
       )}
 
       {activeTab === "Activities" && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 animate-fade-in">
-          {activities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              onClick={() => onNavigate("activity-detail", activity.id)}
-            />
-          ))}
+        <div className="animate-fade-in">
+          {activities.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activities.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  onClick={() => onNavigate("activity-detail", activity.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+              <p>No activities scheduled.</p>
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === "Services" && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 animate-fade-in">
-          {relatedServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              onClick={() => onNavigate("service-detail", service.id)}
-            />
-          ))}
+        <div className="animate-fade-in">
+          {services.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {services.map((service) => (
+                <ServiceCard
+                  key={service.id}
+                  service={service}
+                  onClick={() => onNavigate("service-detail", service.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+              <p>No services offered.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -266,21 +389,21 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           {/* Rating Summary */}
           <div className="flex items-center gap-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="text-center">
-              <p className="text-4xl font-bold text-primary">{business.rating}</p>
+              <p className="text-4xl font-bold text-primary">{businessDisplay.rating}</p>
               <div className="mt-1 flex items-center gap-0.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
                     className={cn(
                       "h-4 w-4",
-                      star <= Math.round(business.rating)
+                      star <= Math.round(businessDisplay.rating)
                         ? "fill-secondary text-secondary"
                         : "text-border"
                     )}
                   />
                 ))}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">{business.reviews} reviews</p>
+              <p className="mt-1 text-xs text-muted-foreground">{businessDisplay.reviews} reviews</p>
             </div>
             <div className="flex-1 space-y-1.5">
               {[5, 4, 3, 2, 1].map((rating) => {
