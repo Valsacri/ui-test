@@ -14,6 +14,12 @@ import {
   Phone,
   Megaphone,
   BarChart3,
+  X,
+  MapPin,
+  Trash2,
+  Eye,
+  Edit3,
+  Clock,
 } from "lucide-react"
 import {
   activities,
@@ -24,6 +30,7 @@ import {
 } from "@/lib/mock-data"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { AddCampaignModal } from "@/components/sporgates/business/add-campaign-modal"
 import { AddResourceModal } from "@/components/sporgates/business/add-resource-modal"
 import { EditResourceModal } from "@/components/sporgates/business/edit-resource-modal"

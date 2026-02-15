@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useRef } from "react"
 import {
   ArrowLeft,
   Plus,
@@ -61,7 +61,7 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
   const [formData, setFormData] = useState({
     title: "",
     sport: "",
-    type: "event",
+    type: "EVENT",
     date: "",
     startTime: "",
     endTime: "",
@@ -87,11 +87,11 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
       await activitiesService.create({
         name: formData.title,
         description: formData.description,
-        sportName: formData.sport,
-        activityType: formData.type.toUpperCase(),
+        sportId: formData.sport,
+        type: formData.type,
         startDateTime,
         endDateTime,
-        locationName: formData.location,
+        location: formData.location,
         maxParticipants: formData.capacity,
         pricePerPerson: formData.price,
       })
@@ -156,7 +156,7 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {sports.map((s) => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -171,10 +171,10 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="event">Event</SelectItem>
-                      <SelectItem value="session">Session</SelectItem>
-                      <SelectItem value="program">Program</SelectItem>
-                      <SelectItem value="league">League</SelectItem>
+                      <SelectItem value="EVENT">Event</SelectItem>
+                      <SelectItem value="SESSION">Session</SelectItem>
+                      <SelectItem value="PROGRAM">Program</SelectItem>
+                      <SelectItem value="LEAGUE">League</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -375,6 +375,7 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
   const [formData, setFormData] = useState({
     title: "",
     sport: "",
+    type: "EVENT",
     level: "",
     description: "",
     location: {
@@ -456,18 +457,27 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
     setSubmitError("")
     try {
       const startDateTime = formData.date && formData.time ? `${formData.date}T${formData.time}:00` : undefined
+
+      // Calculate endDateTime based on duration
+      let endDateTime = undefined
+      if (startDateTime && formData.duration) {
+        const startDate = new Date(startDateTime)
+        const endDate = new Date(startDate.getTime() + formData.duration * 60000)
+        endDateTime = endDate.toISOString().slice(0, 19) // Format as YYYY-MM-DDTHH:mm:ss
+      }
+
       await activitiesService.create({
-        title: formData.title,
-        sport: formData.sport,
-        level: formData.level,
+        name: formData.title,
+        sportId: formData.sport,
+        type: formData.type,
+        difficultyLevel: formData.level,
         description: formData.description,
         location: formData.location.address,
         city: formData.location.city,
-        date: startDateTime,
-        time: formData.time,
-        duration: formData.duration,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
         maxParticipants: formData.maxParticipants,
-        price: formData.price,
+        pricePerPerson: formData.price,
       })
       onNavigate("business-activities")
     } catch (err: unknown) {
@@ -544,6 +554,23 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
                 className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
               />
             </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Activity Type</label>
+              <Select
+                value={formData.type}
+                onValueChange={(val) => setFormData({ ...formData, type: val })}
+              >
+                <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EVENT">Event</SelectItem>
+                  <SelectItem value="SESSION">Session</SelectItem>
+                  <SelectItem value="PROGRAM">Program</SelectItem>
+                  <SelectItem value="LEAGUE">League</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
@@ -556,7 +583,7 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {sports.map((sport) => (
-                      <SelectItem key={sport.id} value={sport.name}>{sport.name}</SelectItem>
+                      <SelectItem key={sport.id} value={sport.id}>{sport.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1050,15 +1077,54 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
 export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
   const [formData, setFormData] = useState({
     name: "",
-    type: "",
+    type: "gym", // Default value for UI state
     description: "",
     location: "",
     phone: "",
     email: "",
     website: "",
+    avatar: "",
+    cover: "",
   })
   const [submitting, setSubmitting] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const logoInputRef = useRef<HTMLInputElement>(null)
+  const coverInputRef = useRef<HTMLInputElement>(null)
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingLogo(true)
+    try {
+      const response = await businessesService.uploadAvatar(file)
+      setFormData(prev => ({ ...prev, avatar: response.url }))
+    } catch (err) {
+      console.error("Failed to upload logo", err)
+      setError("Failed to upload logo")
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingCover(true)
+    try {
+      const response = await businessesService.uploadCover(file)
+      setFormData(prev => ({ ...prev, cover: response.url }))
+    } catch (err) {
+      console.error("Failed to upload cover", err)
+      setError("Failed to upload cover image")
+    } finally {
+      setUploadingCover(false)
+    }
+  }
 
   const handleCreateBusiness = async () => {
     setSubmitting(true)
@@ -1069,10 +1135,13 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
         name: formData.name,
         username,
         bio: formData.description,
-        address: formData.location,
+        address: formData.location, // Map location to address
         phoneNumber: formData.phone,
         email: formData.email,
         website: formData.website,
+        avatar: formData.avatar,
+        cover: formData.cover,
+        // Note: 'type' is not supported by backend CreateBusinessDto, so it is omitted
       })
       onNavigate("business-dashboard")
     } catch (err) {
@@ -1098,18 +1167,59 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <h3 className="mb-4 text-sm font-bold text-foreground">Branding</h3>
           <div className="flex items-center gap-6">
-            <div className="flex h-24 w-24 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted transition-colors hover:border-primary/40">
-              <div className="text-center">
-                <ImageIcon className="mx-auto h-6 w-6 text-muted-foreground" />
-                <p className="mt-1 text-[10px] text-muted-foreground">Logo</p>
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex h-24 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted transition-colors hover:border-primary/40">
+            {/* Logo Upload */}
+            <input
+              type="file"
+              ref={logoInputRef}
+              onChange={handleLogoUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            <div
+              onClick={() => logoInputRef.current?.click()}
+              className={cn(
+                "flex h-24 w-24 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted transition-colors hover:border-primary/40 overflow-hidden relative",
+                formData.avatar && "border-solid border-primary/20"
+              )}
+            >
+              {uploadingLogo ? (
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              ) : formData.avatar ? (
+                <img src={formData.avatar} alt="Logo" className="h-full w-full object-cover" />
+              ) : (
                 <div className="text-center">
-                  <Upload className="mx-auto h-6 w-6 text-muted-foreground" />
-                  <p className="mt-1 text-[10px] text-muted-foreground">Cover Image</p>
+                  <ImageIcon className="mx-auto h-6 w-6 text-muted-foreground" />
+                  <p className="mt-1 text-[10px] text-muted-foreground">Logo</p>
                 </div>
+              )}
+            </div>
+
+            {/* Cover Upload */}
+            <input
+              type="file"
+              ref={coverInputRef}
+              onChange={handleCoverUpload}
+              accept="image/*"
+              className="hidden"
+            />
+            <div className="flex-1">
+              <div
+                onClick={() => coverInputRef.current?.click()}
+                className={cn(
+                  "flex h-24 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted transition-colors hover:border-primary/40 overflow-hidden relative",
+                  formData.cover && "border-solid border-primary/20"
+                )}
+              >
+                {uploadingCover ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                ) : formData.cover ? (
+                  <img src={formData.cover} alt="Cover" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="text-center">
+                    <Upload className="mx-auto h-6 w-6 text-muted-foreground" />
+                    <p className="mt-1 text-[10px] text-muted-foreground">Cover Image</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

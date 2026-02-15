@@ -50,4 +50,22 @@ export const businessesService = {
         const response = await apiClient.delete(`/v1/businesses/${businessId}/staff/${staffUserId}`);
         return response.data;
     },
+
+    uploadAvatar: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/v1/upload/business/avatar', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    uploadCover: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/v1/upload/business/cover', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
 };

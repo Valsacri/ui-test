@@ -17,7 +17,8 @@ import {
   X,
 } from "lucide-react"
 import React, { useState, useEffect, useRef } from "react"
-import { goals, userProfile, conversations, notifications } from "@/lib/mock-data"
+import { goals, conversations, notifications } from "@/lib/mock-data"
+import { authService } from "@/lib/services/auth"
 import { cn } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
 
@@ -60,7 +61,22 @@ export function TopBar({
   const [showMessages, setShowMessages] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const currentGoal = goals[0]
+
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [user, setUser] = useState<{ firstName: string; lastName: string; email: string } | null>(null)
+
+  useEffect(() => {
+    const currentUser = authService.getCurrentUser()
+    if (currentUser) {
+      setUser(currentUser)
+    }
+  }, [])
+
+  const handleLogout = () => {
+    authService.logout()
+    // Force full page reload to clear state and trigger AuthGuard
+    window.location.href = "/signin"
+  }
 
   const closeAll = () => {
     setShowProfileMenu(false)
@@ -164,12 +180,12 @@ export function TopBar({
             className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted/80"
           >
             <Wallet className="h-3.5 w-3.5 text-primary" />
-            <span>${userProfile.walletBalance.toFixed(2)}</span>
+            <span>$0.00</span>
           </button>
           {showWallet && (
             <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-card p-4 shadow-lg">
               <h4 className="mb-2 text-sm font-semibold text-foreground">Wallet</h4>
-              <p className="mb-3 text-2xl font-bold text-primary">${userProfile.walletBalance.toFixed(2)}</p>
+              <p className="mb-3 text-2xl font-bold text-primary">$0.00</p>
               <button
                 type="button"
                 className="gradient-primary w-full rounded-lg py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
@@ -366,7 +382,7 @@ export function TopBar({
             className="flex items-center gap-1.5 rounded-full p-1 transition-colors hover:bg-muted"
           >
             <div className="gradient-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white">
-              {userProfile.avatar}
+              {(user?.firstName?.[0] || "U").toUpperCase()}
             </div>
             <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground md:block" />
           </button>
@@ -389,10 +405,10 @@ export function TopBar({
                 )}
               >
                 <div className="gradient-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
-                  {userProfile.avatar}
+                  {(user?.firstName?.[0] || "U").toUpperCase()}
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-semibold text-foreground">{userProfile.name}</p>
+                  <p className="text-sm font-semibold text-foreground">{user ? `${user.firstName} ${user.lastName}` : "User"}</p>
                   <p className="text-[11px] text-muted-foreground">Personal Account</p>
                 </div>
                 {!isBusinessMode && (
@@ -467,7 +483,7 @@ export function TopBar({
                 <button
                   type="button"
                   onClick={() => {
-                    onNavigate("signin")
+                    handleLogout()
                     setShowProfileMenu(false)
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2 text-sm text-destructive transition-colors hover:bg-muted"

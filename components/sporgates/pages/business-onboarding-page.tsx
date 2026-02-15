@@ -10,6 +10,11 @@ import {
     BarChart3,
     CheckCircle2,
     Sparkles,
+    Dumbbell,
+    GraduationCap,
+    HeartPulse,
+    ShoppingBag,
+    Medal,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -19,12 +24,12 @@ interface BusinessOnboardingPageProps {
 }
 
 const businessTypes = [
-    { id: "gym", label: "Gym & Training", emoji: "🏋️" },
-    { id: "sports-complex", label: "Sports Complex", emoji: "🏟️" },
-    { id: "academy", label: "Academy", emoji: "🎓" },
-    { id: "wellness", label: "Wellness Center", emoji: "🧘" },
-    { id: "retail", label: "Sports Retail", emoji: "🛍️" },
-    { id: "coaching", label: "Coaching", emoji: "🏅" },
+    { id: "gym", label: "Gym & Training", icon: Dumbbell },
+    { id: "sports-complex", label: "Sports Complex", icon: Building2 },
+    { id: "academy", label: "Academy", icon: GraduationCap },
+    { id: "wellness", label: "Wellness Center", icon: HeartPulse },
+    { id: "retail", label: "Sports Retail", icon: ShoppingBag },
+    { id: "coaching", label: "Coaching", icon: Medal },
 ]
 
 const setupChecklist = [
@@ -107,7 +112,7 @@ export function BusinessOnboardingPage({ onNavigate }: BusinessOnboardingPagePro
                                         : "border-border hover:bg-muted"
                                 )}
                             >
-                                <span className="text-3xl">{type.emoji}</span>
+                                <type.icon className="h-8 w-8 mb-1 text-primary transition-colors" />
                                 <p className="text-xs font-semibold text-foreground">{type.label}</p>
                             </button>
                         ))}
