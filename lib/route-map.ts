@@ -69,6 +69,7 @@ const routeMap: Record<PageRoute, string> = {
     "business-onboarding": "/business/onboarding",
     "create-activity": "/business/create-activity",
     "create-activity-steps": "/business/create-activity-steps",
+    "edit-activity": "/business/activities/[id]/edit",
     "create-campaign": "/business/create-campaign",
     "create-business": "/business/create",
     "add-resource": "/business/add-resource",

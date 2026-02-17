@@ -29,8 +29,22 @@ const BusinessContext = createContext<BusinessContextType | null>(null)
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const [businesses, setBusinesses] = useState<BusinessItem[]>([])
+    // Initialize from localStorage if available, otherwise null. 
+    // We start with null to prevent hydration mismatch, then sync in useEffect.
     const [activeBusinessId, setActiveBusinessId] = useState<string | null>(null)
-    const isBusinessMode = activeBusinessId !== null
+    const [isInitialized, setIsInitialized] = useState(false)
+
+    // Derived state - only valid after initialization
+    const isBusinessMode = !!activeBusinessId
+
+    // Hydrate state from localStorage on mount
+    useEffect(() => {
+        const storedId = localStorage.getItem("activeBusinessId")
+        if (storedId) {
+            setActiveBusinessId(storedId)
+        }
+        setIsInitialized(true)
+    }, [])
 
     useEffect(() => {
         businessesService.getMyBusinesses().then((data: any) => {
@@ -54,6 +68,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     const switchBusiness = useCallback(
         (bizId: string) => {
             setActiveBusinessId(bizId)
+            localStorage.setItem("activeBusinessId", bizId)
             router.push("/business/dashboard")
         },
         [router]
@@ -61,6 +76,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
 
     const switchToUser = useCallback(() => {
         setActiveBusinessId(null)
+        localStorage.removeItem("activeBusinessId")
         router.push("/")
     }, [router])
 

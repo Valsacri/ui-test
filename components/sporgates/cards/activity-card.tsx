@@ -39,9 +39,9 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
           crossOrigin="anonymous"
         />
         <div className="absolute left-3 top-3 flex gap-1.5">
-          {activity.tags.map((tag) => (
+          {activity.tags.map((tag, index) => (
             <span
-              key={tag}
+              key={`${tag}-${index}`}
               className="rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm"
             >
               {tag}

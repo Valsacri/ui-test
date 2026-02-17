@@ -377,7 +377,11 @@ const currencySymbols: Record<string, string> = {
   MAD: "MAD",
 }
 
-export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
+interface CreateActivityStepsPageProps extends BusinessFormPageProps {
+  activityId?: string
+}
+
+export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivityStepsPageProps) {
   const steps = [
     { id: 1, label: "Basic Info", icon: ImageIcon },
     { id: 2, label: "Location", icon: MapPin },
@@ -399,6 +403,8 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
       address: "",
       city: "",
       neighborhood: "",
+      state: "",
+      country: "",
       lat: 40.758,
       lng: -73.9855,
     },
@@ -412,7 +418,86 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
     selectedResources: [] as string[],
     customTiers: [] as SponsorshipTier[],
     eventPoster: "",
+    coverImage: "",
+    visibility: "public",
   })
+  const [skipMapGeocode, setSkipMapGeocode] = useState(false)
+
+  // Fetch activity if in Edit mode
+  useEffect(() => {
+    if (!activityId) return
+    if (formData.title) return // Already loaded or edited
+    const parseActivityDate = (dtValue: unknown): Date | null => {
+      if (!dtValue) return null;
+      // Handle array format [year, month, day, hour, minute] from Jackson
+      if (Array.isArray(dtValue)) {
+        const [y, m, d, h = 0, min = 0] = dtValue;
+        const date = new Date(y, m - 1, d, h, min);
+        return isNaN(date.getTime()) ? null : date;
+      }
+      // Handle ISO string
+      const date = new Date(dtValue as string);
+      return isNaN(date.getTime()) ? null : date;
+    };
+
+    const loadActivity = async () => {
+      try {
+        const activity = await activitiesService.getById(activityId)
+        const startDate = parseActivityDate(activity.startDateTime);
+
+        // Map backend sponsorship tiers to frontend SponsorshipTier shape
+        const mappedTiers: SponsorshipTier[] = (activity.sponsorshipTiers || []).map(
+          (t: { id?: string; name?: string; price?: number; description?: string }) => ({
+            id: t.id || crypto.randomUUID(),
+            name: t.name || "",
+            price: t.price || 0,
+            benefits: t.description ? t.description.split(",").map((s: string) => s.trim()) : [],
+            logoPositions: [] as string[],
+          })
+        );
+
+        // Set coverPreview if the activity already has a cover image
+        if (activity.coverImage) {
+          setCoverPreview(activity.coverImage);
+        }
+
+        setFormData({
+          title: activity.name || "",
+          sport: activity.sportId || "",
+          type: activity.type || "EVENT",
+          level: activity.difficultyLevel || "",
+          description: activity.description || "",
+          location: {
+            address: activity.address || activity.location || "",
+            city: activity.city || "",
+            neighborhood: activity.neighborhood || activity.state || "",
+            state: activity.state || "",
+            country: activity.country || "",
+            lat: activity.latitude || 40.758,
+            lng: activity.longitude || -73.9855,
+          },
+          date: startDate ? startDate.toISOString().split('T')[0] : "",
+          time: startDate
+            ? startDate.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+            : "",
+          duration: activity.duration || 90,
+          maxParticipants: activity.maxParticipants || 20,
+          price: activity.pricePerPerson || 0,
+          currency: activity.currency || "USD",
+          tags: Array.isArray(activity.tags) ? activity.tags.join(", ") : (activity.tags || ""),
+          selectedResources: activity.resourceIds || [],
+          customTiers: mappedTiers,
+          eventPoster: activity.eventPoster || "",
+          coverImage: activity.coverImage || "",
+          visibility: "public",
+        })
+      } catch (err) {
+        console.error("Failed to load activity", err)
+        toast.error("Could not load activity details")
+      }
+    }
+    loadActivity()
+  }, [activityId])
 
   // Fetch real resources
   const [availableResources, setAvailableResources] = useState<any[]>([])
@@ -472,6 +557,29 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
 
   const handleNext = () => {
     if (!canProceed()) return
+
+    if (currentStep === 3) {
+      if (!formData.date || !formData.time) return
+      const startDateTime = new Date(`${formData.date}T${formData.time}`)
+      const now = new Date()
+      if (startDateTime < now) {
+        toast.error("Activity start time must be in the future")
+        return
+      }
+      if (formData.duration <= 0) {
+        toast.error("Duration must be greater than 0")
+        return
+      }
+      if (formData.maxParticipants <= 0) {
+        toast.error("Max participants must be greater than 0")
+        return
+      }
+      if (formData.price < 0) {
+        toast.error("Price cannot be negative")
+        return
+      }
+    }
+
     setCurrentStep((prev) => Math.min(prev + 1, steps.length))
   }
 
@@ -541,16 +649,18 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
         }
       }
 
-      await activitiesService.create({
+      const payload = {
         name: formData.title,
         sportId: formData.sport,
         type: formData.type,
         difficultyLevel: formData.level,
         description: formData.description,
         location: formData.location.address,
+        address: formData.location.address,
         city: formData.location.city,
-        state: "NY", // Defaulting for now as per MVP data
-        country: "US",
+        neighborhood: formData.location.neighborhood,
+        state: formData.location.state || "NY",
+        country: formData.location.country || "US",
         latitude: formData.location.lat,
         longitude: formData.location.lng,
         startDateTime: startDateTime,
@@ -559,15 +669,34 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
         pricePerPerson: formData.price,
         currency: formData.currency,
         tags: formData.tags ? formData.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
-        coverImage: coverImageUrl,
+        coverImage: coverImageUrl || formData.coverImage,
         organizerId: activeBusinessId,
         organizerName: currentBusiness?.name || "",
         facilityId: facilityId,
-      })
+        resourceIds: formData.selectedResources,
+        sponsorshipTiers: formData.customTiers.map(t => ({
+          id: t.id,
+          name: t.name,
+          price: t.price,
+          description: (t.benefits || []).join(", "),
+          includedVisibility: (t.logoPositions || []).length > 0,
+        })),
+        eventPoster: formData.eventPoster,
+        visibility: formData.visibility.toUpperCase(),
+      }
+
+      if (activityId) {
+        await activitiesService.update(activityId, payload)
+        toast.success("Activity updated successfully!")
+      } else {
+        await activitiesService.create(payload)
+        toast.success("Activity published successfully!")
+      }
       onNavigate("business-activities")
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to create activity"
+      const message = err instanceof Error ? err.message : "Failed to save activity"
       setSubmitError(message)
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -794,11 +923,13 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
                     <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
                     <input
                       value={formData.location.address}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        setSkipMapGeocode(false)
                         setFormData({
                           ...formData,
                           location: { ...formData.location, address: event.target.value },
                         })
+                      }
                       }
                       placeholder="Venue address"
                       className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
@@ -809,11 +940,13 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
                       <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
                       <input
                         value={formData.location.city}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          setSkipMapGeocode(false)
                           setFormData({
                             ...formData,
                             location: { ...formData.location, city: event.target.value },
                           })
+                        }
                         }
                         placeholder="e.g. New York"
                         className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
@@ -823,21 +956,54 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
                       <label className="mb-1.5 block text-xs font-medium text-foreground">Neighborhood</label>
                       <input
                         value={formData.location.neighborhood}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          setSkipMapGeocode(false)
                           setFormData({
                             ...formData,
                             location: { ...formData.location, neighborhood: event.target.value },
                           })
+                        }
                         }
                         placeholder="e.g. Manhattan"
                         className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
                       />
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 rounded-lg bg-blue-50/50 px-3 py-2 text-xs text-blue-600/80 border border-blue-100">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <p>You can drag the map marker to pinpoint the exact location.</p>
+                  </div>
                   <MapView
                     center={[formData.location.lat, formData.location.lng]}
                     markerLabel={formData.location.address || "Select a location"}
                     height="220px"
+                    addressQuery={[formData.location.address, formData.location.city].filter(Boolean).join(", ")}
+                    onLocationSelect={(lat, lng) =>
+                      setFormData({
+                        ...formData,
+                        location: { ...formData.location, lat, lng }
+                      })
+                    }
+                    skipGeocode={skipMapGeocode}
+                    onAddressFound={(address, source) => {
+                      if (!address) return
+                      setSkipMapGeocode(true)
+                      setFormData(prev => ({
+                        ...prev,
+                        location: {
+                          ...prev.location,
+                          // Only update address text if the update comes from map interaction (drag/click)
+                          // If it comes from search/typing, keep the user's input
+                          address: source === 'map'
+                            ? [address.house_number, address.road].filter(Boolean).join(" ")
+                            : prev.location.address,
+                          city: address.city || address.town || address.village || address.county || prev.location.city,
+                          neighborhood: address.suburb || address.neighbourhood || prev.location.neighborhood,
+                          state: address.state || prev.location.state,
+                          country: address.country_code?.toUpperCase() || prev.location.country,
+                        }
+                      }))
+                    }}
                   />
                 </div>
               </div>
@@ -855,6 +1021,7 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
                       type="date"
                       value={formData.date}
                       onChange={(value) => setFormData({ ...formData, date: value })}
+                      minDate={new Date().toISOString().split('T')[0]}
                     />
                     <DateTimePicker
                       label="Start Time"
@@ -1041,175 +1208,233 @@ export function CreateActivityStepsPage({ onNavigate }: BusinessFormPageProps) {
 
           {
             currentStep === 6 && (
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-                  {/* Hero Section */}
-                  <div className="h-48 bg-gradient-to-r from-primary/10 to-secondary/10 relative">
-                    {/* Background Image: Priorities Cover -> Poster */}
+              <div className="space-y-5 animate-fade-in">
+                {/* Hero Banner */}
+                <div className="rounded-2xl overflow-hidden shadow-lg border border-border">
+                  <div className="h-56 relative">
+                    {/* Background */}
                     {coverPreview ? (
-                      <img src={coverPreview} className="absolute inset-0 w-full h-full object-cover opacity-80 z-0" alt="Cover" />
+                      <img src={coverPreview} className="absolute inset-0 w-full h-full object-cover" alt="Cover" />
                     ) : formData.eventPoster ? (
-                      <img src={formData.eventPoster} className="absolute inset-0 w-full h-full object-cover opacity-60 z-0 blur-sm" alt="Background" />
+                      <img src={formData.eventPoster} className="absolute inset-0 w-full h-full object-cover blur-sm scale-105" alt="Background" />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/10">
-                        <ImageIcon className="w-32 h-32" />
-                      </div>
+                      <div className="absolute inset-0 gradient-hero" />
                     )}
-
-                    {/* Overlay for text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent z-0" />
+                    {/* Navy gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#003C66] via-[#003C66]/60 to-[#003C66]/20" />
 
                     {/* Event Poster Inset */}
                     {formData.eventPoster && (
-                      <div className="absolute top-6 right-6 z-10 w-24 aspect-[2/3] rounded-lg overflow-hidden shadow-xl border-2 border-white/20">
+                      <div className="absolute top-4 right-4 z-10 w-20 aspect-[2/3] rounded-xl overflow-hidden shadow-2xl border-2 border-white/20 ring-1 ring-white/10">
                         <img src={formData.eventPoster} className="w-full h-full object-cover" alt="Poster" />
                       </div>
                     )}
 
-                    <div className="absolute bottom-6 left-6 z-10 max-w-[70%]">
-                      <div className="flex gap-2 mb-2">
-                        <span className="px-2 py-0.5 rounded-full bg-background/80 backdrop-blur text-[10px] uppercase font-bold border border-border">{formData.type}</span>
-                        <span className="px-2 py-0.5 rounded-full bg-primary/20 backdrop-blur text-[10px] uppercase font-bold text-primary border border-primary/20">{sports.find(s => s.id === formData.sport)?.name || "Unspecified Sport"}</span>
+                    {/* Content */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
+                      <div className="flex gap-2 mb-3">
+                        {formData.type && (
+                          <span className="px-2.5 py-1 rounded-lg bg-white/15 backdrop-blur-sm text-[10px] uppercase font-bold text-white/90 border border-white/10 tracking-wider">
+                            {formData.type}
+                          </span>
+                        )}
+                        <span className="px-2.5 py-1 rounded-lg bg-[#FC8936]/25 backdrop-blur-sm text-[10px] uppercase font-bold text-orange-100 border border-[#FC8936]/20 tracking-wider">
+                          {sports.find(s => s.id === formData.sport)?.name || "Unspecified Sport"}
+                        </span>
+                        {formData.visibility && (
+                          <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 backdrop-blur-sm text-[10px] uppercase font-bold text-emerald-100 border border-emerald-400/20 tracking-wider">
+                            {formData.visibility}
+                          </span>
+                        )}
                       </div>
-                      <h3 className="text-3xl font-bold text-foreground drop-shadow-md leading-tight">{formData.title || "Untitled Activity"}</h3>
+                      <h3 className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg leading-tight">{formData.title || "Untitled Activity"}</h3>
                     </div>
                   </div>
+                </div>
 
-                  {/* Details Grid */}
-                  <div className="p-6 grid gap-8 md:grid-cols-2">
-                    {/* Schedule & Location */}
-                    <div className="space-y-4">
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-foreground border-b border-border pb-2">
-                        <Calendar className="w-4 h-4 text-primary" /> Schedule & Location
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="rounded-xl border border-border bg-card p-4 text-center hover:shadow-md transition-shadow">
+                    <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center mx-auto mb-2">
+                      <Calendar className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-sm font-bold text-foreground">{formData.date || "Not set"}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">at {formData.time || "—"}</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-4 text-center hover:shadow-md transition-shadow">
+                    <div className="w-9 h-9 rounded-xl gradient-secondary flex items-center justify-center mx-auto mb-2">
+                      <Clock className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-sm font-bold text-foreground">{formData.duration} min</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Duration</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-4 text-center hover:shadow-md transition-shadow">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center mx-auto mb-2">
+                      <DollarSign className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-sm font-bold text-foreground">{formData.price > 0 ? `${formData.price} ${formData.currency}` : "Free"}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Per person</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-card p-4 text-center hover:shadow-md transition-shadow">
+                    <div className="w-9 h-9 rounded-xl bg-[#005A99] flex items-center justify-center mx-auto mb-2">
+                      <Users className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-sm font-bold text-foreground">{formData.maxParticipants}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Max Participants</p>
+                  </div>
+                </div>
+
+                {/* Location Card */}
+                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
+                    <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
+                      <MapPin className="w-3.5 h-3.5 text-secondary" />
+                    </div>
+                    Location
+                  </h4>
+                  <div className="flex items-start gap-3 bg-muted/30 p-4 rounded-xl border border-border/50">
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-foreground">{formData.location.address || "Not set"}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{[formData.location.city, formData.neighborhood].filter(Boolean).join(", ") || "City not specified"}</p>
+                    </div>
+                    {formData.location.lat && formData.location.lng && (
+                      <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-1 rounded-lg shrink-0">
+                        📍 GPS Set
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Financial Summary */}
+                <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                  <div className="gradient-primary px-5 py-3">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-white">
+                      <TrendingUp className="w-4 h-4" />
+                      Financial Projection
+                    </h4>
+                  </div>
+                  <div className="p-5 grid gap-4 sm:grid-cols-2">
+                    <div className="flex items-center gap-3 bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/10">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                        <DollarSign className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-foreground">{currencySymbols[formData.currency] || formData.currency}{estimatedRevenue.toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground">Estimated Revenue</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-primary/5 p-4 rounded-xl border border-primary/10">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <Users className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-bold text-foreground">{estimatedReach.toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground">Estimated Reach</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* About */}
+                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-3">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Edit3 className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    About This Activity
+                  </h4>
+                  <p className="text-sm leading-relaxed text-muted-foreground bg-muted/20 p-4 rounded-xl border border-border/50">
+                    {formData.description || "No description provided."}
+                  </p>
+                  {formData.tags && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {formData.tags.split(",").filter(Boolean).map((tag, index) => (
+                        <span key={`${tag}-${index}`} className="text-[10px] px-2.5 py-1 rounded-lg bg-primary/8 border border-primary/15 text-primary font-semibold">
+                          #{tag.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Resources & Sponsorship */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Resources */}
+                  <div className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-bold text-sm flex items-center gap-2 text-foreground">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Package className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        Resources
                       </h4>
-                      <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                            <Calendar className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Date & Time</p>
-                            <p className="text-sm font-bold text-foreground">{formData.date || "Not set"} <span className="text-muted-foreground font-normal">at</span> {formData.time || "Not set"}</p>
-                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-md w-fit">
-                              <Clock className="w-3 h-3" /> {formData.duration} mins
+                      <span className="text-[10px] font-bold gradient-primary text-white px-2.5 py-1 rounded-full">{formData.selectedResources.length} Selected</span>
+                    </div>
+                    {formData.selectedResources.length > 0 ? (
+                      <div className="space-y-2">
+                        {availableResources
+                          .filter(r => formData.selectedResources.includes(r.id))
+                          .slice(0, 3)
+                          .map(r => (
+                            <div key={r.id} className="text-xs flex items-center gap-2.5 text-foreground bg-muted/30 p-2.5 rounded-xl border border-border/50">
+                              <div className="w-2 h-2 rounded-full gradient-primary shrink-0" />
+                              <span className="truncate flex-1 font-medium">{r.name}</span>
                             </div>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center shrink-0">
-                            <MapPin className="w-5 h-5 text-secondary" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Location</p>
-                            <p className="text-sm font-bold text-foreground line-clamp-1">{formData.location.address || "Not set"}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{formData.location.city || "City not set"}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pricing & Capacity */}
-                    <div className="space-y-4">
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-foreground border-b border-border pb-2">
-                        <DollarSign className="w-4 h-4 text-primary" /> Pricing & Capacity
-                      </h4>
-                      <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0">
-                            <DollarSign className="w-5 h-5 text-green-600" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Pricing</p>
-                            <p className="text-sm font-bold text-foreground">{formData.price > 0 ? `${formData.price} ${formData.currency}` : "Free"}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Est. Revenue: <span className="text-green-600 font-medium">{currencySymbols[formData.currency] || formData.currency}{estimatedRevenue.toLocaleString()}</span></p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                            <Users className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Capacity</p>
-                            <p className="text-sm font-bold text-foreground">{formData.maxParticipants} <span className="text-muted-foreground font-normal">Participants Max</span></p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Est. Reach: {estimatedReach.toLocaleString()} people</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="md:col-span-2 space-y-2 pt-2">
-                      <h4 className="flex items-center gap-2 text-sm font-bold text-foreground pb-1">
-                        <Edit3 className="w-4 h-4 text-primary" /> About this activity
-                      </h4>
-                      <div className="bg-muted/30 p-5 rounded-xl text-sm leading-relaxed text-muted-foreground border border-border/50">
-                        {formData.description || "No description provided."}
-                        {formData.tags && (
-                          <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-border/50">
-                            {formData.tags.split(",").map((tag) => (
-                              <span key={tag} className="text-[10px] px-2.5 py-1 rounded-md bg-background border border-border text-foreground font-medium shadow-sm">
-                                #{tag.trim()}
-                              </span>
-                            ))}
-                          </div>
+                          ))
+                        }
+                        {formData.selectedResources.length > 3 && (
+                          <p className="text-[10px] font-medium text-muted-foreground pl-1">+ {formData.selectedResources.length - 3} more resources</p>
                         )}
                       </div>
-                    </div>
-
-                    {/* Resource & Sponsorship Summary */}
-                    <div className="md:col-span-2 grid gap-4 sm:grid-cols-2">
-                      <div className="bg-muted/20 p-5 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="font-bold text-sm flex items-center gap-2 text-foreground">
-                            <Package className="w-4 h-4 text-primary" /> Resources
-                          </span>
-                          <span className="text-[10px] font-bold bg-background px-2.5 py-1 rounded-full border border-border shadow-sm">{formData.selectedResources.length} Selected</span>
-                        </div>
-                        {formData.selectedResources.length > 0 ? (
-                          <div className="space-y-2">
-                            {availableResources
-                              .filter(r => formData.selectedResources.includes(r.id))
-                              .slice(0, 3)
-                              .map(r => (
-                                <div key={r.id} className="text-xs flex items-center gap-2.5 text-muted-foreground bg-background/50 p-2 rounded-lg border border-border/50">
-                                  <div className="w-2 h-2 rounded-full bg-primary" /> <span className="truncate flex-1">{r.name}</span>
-                                </div>
-                              ))
-                            }
-                            {formData.selectedResources.length > 3 && (
-                              <p className="text-[10px] font-medium text-muted-foreground pl-1">+ {formData.selectedResources.length - 3} more resources</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 bg-background/30 rounded-lg border border-dashed border-border/50">
-                            <p className="text-xs text-muted-foreground italic">No resources added.</p>
-                          </div>
-                        )}
+                    ) : (
+                      <div className="text-center py-6 bg-muted/20 rounded-xl border border-dashed border-border">
+                        <Package className="w-6 h-6 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">No resources added</p>
                       </div>
+                    )}
+                  </div>
 
-                      <div className="bg-muted/20 p-5 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="font-bold text-sm flex items-center gap-2 text-foreground">
-                            <Target className="w-4 h-4 text-primary" /> Sponsorship
-                          </span>
-                          <span className="text-[10px] font-bold bg-background px-2.5 py-1 rounded-full border border-border shadow-sm">{formData.customTiers.length} Tiers</span>
+                  {/* Sponsorship */}
+                  <div className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-bold text-sm flex items-center gap-2 text-foreground">
+                        <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
+                          <Target className="w-3.5 h-3.5 text-secondary" />
                         </div>
-                        {formData.customTiers.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {formData.customTiers.map(t => (
-                              <div key={t.id} className="text-xs px-3 py-1.5 rounded-lg bg-background border border-border flex items-center gap-2 shadow-sm">
-                                <span className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_5px_rgba(234,179,8,0.5)]" /> {t.name}
+                        Sponsorship
+                      </h4>
+                      <span className="text-[10px] font-bold gradient-secondary text-white px-2.5 py-1 rounded-full">{formData.customTiers.length} Tiers</span>
+                    </div>
+                    {formData.customTiers.length > 0 ? (
+                      <div className="space-y-2">
+                        {formData.customTiers.map(t => {
+                          const tierColor = t.name.toLowerCase().includes('gold')
+                            ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700'
+                            : t.name.toLowerCase().includes('silver')
+                              ? 'bg-slate-200/50 border-slate-300/50 text-slate-600'
+                              : t.name.toLowerCase().includes('bronze')
+                                ? 'bg-orange-500/10 border-orange-500/20 text-orange-700'
+                                : 'bg-primary/5 border-primary/15 text-primary';
+                          return (
+                            <div key={t.id} className={`text-xs px-3 py-2.5 rounded-xl border flex items-center justify-between ${tierColor}`}>
+                              <div className="flex items-center gap-2 font-semibold">
+                                <span className={`w-2 h-2 rounded-full ${t.name.toLowerCase().includes('gold') ? 'bg-yellow-500' :
+                                  t.name.toLowerCase().includes('silver') ? 'bg-slate-400' :
+                                    t.name.toLowerCase().includes('bronze') ? 'bg-orange-500' : 'bg-primary'
+                                  }`} />
+                                {t.name}
                               </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 bg-background/30 rounded-lg border border-dashed border-border/50">
-                            <p className="text-xs text-muted-foreground italic">No sponsorship tiers.</p>
-                          </div>
-                        )}
+                              <span className="font-bold">${t.price}</span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-6 bg-muted/20 rounded-xl border border-dashed border-border">
+                        <Target className="w-6 h-6 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">No sponsorship tiers</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1758,12 +1983,14 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
 
 // ==================== AddResource ====================
 export function AddResourcePage({ onNavigate }: BusinessFormPageProps) {
+  const { activeBusinessId } = useBusinessContext()
   const [formData, setFormData] = useState({ name: "", type: "court", pricePerHour: 0, capacity: 0, description: "" })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
 
   const handleAddResource = async () => {
     if (!formData.name.trim()) { setError("Name is required"); return }
+    if (!activeBusinessId) { setError("No active business selected"); return }
     setSubmitting(true)
     setError("")
     try {
@@ -1773,6 +2000,7 @@ export function AddResourcePage({ onNavigate }: BusinessFormPageProps) {
         pricePerHour: formData.pricePerHour,
         capacity: formData.capacity,
         type: formData.type,
+        businessId: activeBusinessId,
       })
       onNavigate("business-resources")
     } catch (err: unknown) {

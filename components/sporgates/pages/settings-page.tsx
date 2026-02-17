@@ -16,7 +16,7 @@ import type { PageRoute } from "@/lib/navigation"
 import { authService, userService, businessesService } from "@/lib/services"
 
 interface SettingsPageProps {
-  onNavigate: (page: PageRoute) => void
+  onNavigate: (page: PageRoute, id?: string) => void
 }
 
 const settingsGroups = [
@@ -63,9 +63,9 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [userProfile, setUserProfile] = useState<{
     name: string; username: string; email: string; avatar: string; profilePicture?: string
   }>({ name: "", username: "", email: "", avatar: "" })
-  const [firstBusiness, setFirstBusiness] = useState<{
-    name: string; bio?: string; email?: string; avatar?: string
-  } | null>(null)
+  const [businesses, setBusinesses] = useState<{
+    id: string; name: string; bio?: string; email?: string; avatar?: string
+  }[]>([])
 
   useEffect(() => {
     const user = authService.getCurrentUser()
@@ -94,15 +94,14 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
 
       businessesService.getMyBusinesses().then((data: any) => {
         const list = Array.isArray(data) ? data : (data?.content || [])
-        if (list.length > 0) {
-          const b = list[0]
-          setFirstBusiness({
-            name: b.name,
-            bio: b.bio || "",
-            email: b.email || "",
-            avatar: b.avatar || undefined,
-          })
-        }
+        const mapped = list.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          bio: b.bio || "",
+          email: b.email || "",
+          avatar: b.avatar || undefined,
+        }))
+        setBusinesses(mapped)
       }).catch(() => { })
     }
   }, [])
@@ -149,40 +148,45 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
         </button>
       </div>
 
-      {/* Business Profile */}
-      {firstBusiness && (
-        <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
-          {firstBusiness.avatar ? (
-            <img
-              src={firstBusiness.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${firstBusiness.avatar}` : firstBusiness.avatar}
-              alt={firstBusiness.name}
-              className="h-14 w-14 rounded-xl object-cover"
-              crossOrigin="anonymous"
-            />
-          ) : (
-            <div className="gradient-secondary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
-              <Building2 className="h-6 w-6" />
+      {/* Businesses List */}
+      <div className="space-y-4">
+        {businesses.map((business) => (
+          <div key={business.id} className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+            {business.avatar ? (
+              <img
+                src={business.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${business.avatar}` : business.avatar}
+                alt={business.name}
+                className="h-14 w-14 rounded-xl object-cover"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <div className="gradient-secondary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
+                <Building2 className="h-6 w-6" />
+              </div>
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-base font-bold text-foreground">{business.name}</p>
+                <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
+                  Business
+                </span>
+              </div>
+              {business.bio && <p className="text-sm text-muted-foreground truncate max-w-[250px]">{business.bio}</p>}
+              {business.email && <p className="text-xs text-muted-foreground">{business.email}</p>}
             </div>
-          )}
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="text-base font-bold text-foreground">{firstBusiness.name}</p>
-              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
-                Business
-              </span>
-            </div>
-            {firstBusiness.bio && <p className="text-sm text-muted-foreground truncate max-w-[250px]">{firstBusiness.bio}</p>}
-            {firstBusiness.email && <p className="text-xs text-muted-foreground">{firstBusiness.email}</p>}
+            <button
+              type="button"
+              onClick={() => {
+                // Navigate to public profile with ID
+                onNavigate("business-detail", business.id)
+              }}
+              className="rounded-full bg-secondary/10 px-4 py-2 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/20"
+            >
+              View Profile
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => onNavigate("business-profile")}
-            className="rounded-full bg-secondary/10 px-4 py-2 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/20"
-          >
-            View Profile
-          </button>
-        </div>
-      )}
+        ))}
+      </div>
 
       {/* Start a Business CTA */}
       <button

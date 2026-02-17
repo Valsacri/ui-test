@@ -112,25 +112,31 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
                 { name: "Gold", price: 5000, color: "bg-yellow-500/10 text-yellow-600 border-yellow-200" },
                 { name: "Silver", price: 2500, color: "bg-slate-200 text-slate-600 border-slate-200" },
                 { name: "Bronze", price: 1000, color: "bg-orange-500/10 text-orange-600 border-orange-200" }
-              ].map(preset => (
-                <button
-                  key={preset.name}
-                  type="button"
-                  onClick={() => {
-                    const newTier = {
-                      id: `tier-${Date.now()}-${preset.name}`,
-                      name: `${preset.name} Sponsor`,
-                      price: preset.price,
-                      benefits: [`${preset.name} Tier Benefits`],
-                      logoPositions: []
-                    }
-                    onChange([...tiers, newTier])
-                  }}
-                  className={cn("text-[10px] px-2 py-1 rounded-full border font-medium transition-colors hover:opacity-80", preset.color)}
-                >
-                  +{preset.name}
-                </button>
-              ))}
+              ].map(preset => {
+                const alreadyExists = tiers.some(t => t.name.toLowerCase().includes(preset.name.toLowerCase()))
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    disabled={alreadyExists}
+                    onClick={() => {
+                      const newTier = {
+                        id: `tier-${Date.now()}-${preset.name}`,
+                        name: `${preset.name} Sponsor`,
+                        price: preset.price,
+                        benefits: [`${preset.name} Tier Benefits`],
+                        logoPositions: []
+                      }
+                      onChange([...tiers, newTier])
+                    }}
+                    className={cn("text-[10px] px-2 py-1 rounded-full border font-medium transition-colors",
+                      alreadyExists ? "opacity-40 cursor-not-allowed" : "hover:opacity-80",
+                      preset.color)}
+                  >
+                    +{preset.name}
+                  </button>
+                )
+              })}
             </div>
             <button
               type="button"
@@ -151,13 +157,23 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
                   <p className="text-sm font-semibold text-foreground">{tier.name}</p>
                   <p className="text-xs text-muted-foreground">${tier.price}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditingTier(tier)}
-                  className="text-xs font-semibold text-primary"
-                >
-                  Edit
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTier(tier)}
+                    className="text-xs font-semibold text-primary"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteTier(tier.id)}
+                    className="rounded-full p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    title="Remove tier"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {tier.logoPositions.map((pos) => (

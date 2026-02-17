@@ -43,19 +43,35 @@ import { servicesService } from "@/lib/services/services"
 import { activitiesService } from "@/lib/services/activities"
 import { businessesService } from "@/lib/services/businesses"
 import { useBusinessContext } from "@/lib/business-context"
+import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
+
 
 interface BusinessSubPageProps {
-  onNavigate: (page: PageRoute) => void
+  onNavigate: (page: PageRoute, detailId?: string) => void
 }
 
 export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
   const { activeBusinessId } = useBusinessContext()
   const [activityList, setActivityList] = useState<Array<{
     id: string; name: string; sportName?: string; startDateTime?: string; pricePerPerson?: number;
-    currentParticipants?: number; maxParticipants?: number; coverImage?: string; status?: string
+    currentParticipants?: number; maxParticipants?: number; coverImage?: string; status?: string;
+    location?: string; currency?: string;
   }>>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [activityToDelete, setActivityToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -85,6 +101,29 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
     }
     fetchActivities()
   }, [activeBusinessId])
+
+  const handleDeleteClick = (id: string) => {
+    setActivityToDelete(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!activityToDelete) return
+    try {
+      await activitiesService.delete(activityToDelete)
+      toast.success("Activity deleted successfully")
+      // Refresh list
+      const data = await activitiesService.getAll({ organizerId: activeBusinessId })
+      const list = Array.isArray(data) ? data : []
+      setActivityList(list)
+    } catch (error) {
+      console.error("Failed to delete activity", error)
+      toast.error("Failed to delete activity")
+    } finally {
+      setDeleteDialogOpen(false)
+      setActivityToDelete(null)
+    }
+  }
 
   const filteredActivities = searchQuery
     ? activityList.filter((a) => a.name?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -130,43 +169,152 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
         </div>
       )}
 
+
       {!loading && filteredActivities.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Activity</th>
-                <th className="hidden px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">Sport</th>
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Date</th>
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Price</th>
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Spots</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {filteredActivities.map((activity) => (
-                <tr key={activity.id} className="border-b border-border last:border-0 hover:bg-muted/50">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <img src={activity.coverImage || "/placeholder.svg"} alt="" className="h-10 w-10 rounded-lg object-cover" crossOrigin="anonymous" />
-                      <span className="text-xs font-semibold text-foreground">{activity.name}</span>
-                    </div>
-                  </td>
-                  <td className="hidden px-5 py-3 text-xs text-muted-foreground md:table-cell">{activity.sportName || "â€”"}</td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">{activity.startDateTime ? new Date(activity.startDateTime).toLocaleDateString() : "â€”"}</td>
-                  <td className="px-5 py-3 text-xs font-semibold text-foreground">${activity.pricePerPerson ?? 0}</td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">{activity.currentParticipants ?? 0}/{activity.maxParticipants ?? 0}</td>
-                  <td className="px-5 py-3">
-                    <button type="button" className="rounded-full p-1 hover:bg-muted">
-                      <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredActivities.map((activity) => {
+            // ... date parsing ...
+            // Safe date parsing code remains same
+            let parsedDate: Date | null = null;
+            if (activity.startDateTime) {
+              if (Array.isArray(activity.startDateTime)) {
+                const [y, m, day, h = 0, min = 0] = activity.startDateTime;
+                const d = new Date(y, m - 1, day, h, min);
+                if (!isNaN(d.getTime())) parsedDate = d;
+              } else {
+                const d = new Date(activity.startDateTime);
+                if (!isNaN(d.getTime())) parsedDate = d;
+              }
+            }
+
+            return (
+              <div
+                key={activity.id}
+                className="group relative overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5"
+                style={{ WebkitMaskImage: "radial-gradient(white 100%, black 100%)" }} // Fixes radius overflow on scale
+              >
+                {/* Cover Image */}
+                <div className="relative aspect-video w-full overflow-hidden">
+                  <img
+                    src={activity.coverImage || "/placeholder.svg"}
+                    alt={activity.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    crossOrigin="anonymous"
+                  />
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#003C66]/90 via-[#003C66]/20 to-transparent" />
+
+                  {/* Status badge - top left */}
+                  <div className="absolute top-3 left-3">
+                    <Badge
+                      className={`backdrop-blur-md shadow-sm border-none ${activity.status === 'PUBLISHED'
+                          ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                          : activity.status === 'DRAFT'
+                            ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                            : 'bg-white/20 hover:bg-white/30 text-white'
+                        }`}
+                    >
+                      {activity.status || "Active"}
+                    </Badge>
+                  </div>
+
+                  {/* Action buttons - top right */}
+                  <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 transition-all duration-200 group-hover:opacity-100">
+                    <button
+                      onClick={() => onNavigate("edit-activity", activity.id)}
+                      className="rounded-full bg-white/20 backdrop-blur-md p-2 text-white hover:bg-white/40 transition-colors shadow-sm"
+                      title="Edit"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <button
+                      onClick={() => handleDeleteClick(activity.id)}
+                      className="rounded-full bg-red-500/80 backdrop-blur-md p-2 text-white hover:bg-red-600 transition-colors shadow-sm"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Activity info - bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="font-bold text-white text-sm line-clamp-1 drop-shadow-sm mb-2">{activity.name}</h3>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {activity.sportName && (
+                        <Badge variant="secondary" className="text-[10px] h-5 px-2 bg-[#003C66] text-white hover:bg-[#003C66]/90 border-none shadow-sm">
+                          {activity.sportName}
+                        </Badge>
+                      )}
+                      {activity.type && (
+                        <Badge variant="secondary" className="text-[10px] h-5 px-2 bg-[#FC8936] text-white hover:bg-[#FC8936]/90 border-none shadow-sm">
+                          {activity.type}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card body */}
+                <div className="p-3 space-y-2.5">
+                  {/* Date & Location row */}
+                  <div className="flex items-center gap-3 text-xs">
+                    {parsedDate && (
+                      <div className="flex items-center gap-1.5 text-foreground font-medium shrink-0">
+                        <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                        <span>{parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 text-muted-foreground flex-1 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 text-secondary shrink-0" />
+                      <span className="truncate">{activity.location || "No location"}</span>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-border" />
+
+                  {/* Price & Participants row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-bold text-foreground">
+                        {activity.pricePerPerson
+                          ? `${activity.currency === 'MAD' ? '' : '$'}${activity.pricePerPerson}${activity.currency === 'MAD' ? ' MAD' : ''}`
+                          : "Free"}
+                      </span>
+                      {activity.pricePerPerson > 0 && (
+                        <span className="text-[10px] text-muted-foreground font-medium">/person</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Users className="h-3.5 w-3.5" />
+                      <span className="font-medium">
+                        <span className="text-foreground">{activity.currentParticipants || 0}</span>
+                        <span className="mx-0.5">/</span>
+                        <span>{activity.maxParticipants || "∞"}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the activity and remove it from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

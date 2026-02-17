@@ -51,6 +51,7 @@ export type PageRoute =
   | "business-profile"
   | "create-activity"
   | "create-activity-steps"
+  | "edit-activity"
   | "create-campaign"
   | "create-business"
   | "add-resource"

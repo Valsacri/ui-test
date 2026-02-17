@@ -53,11 +53,18 @@ export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps
   const data = {
     ...businessDashboardData,
     activeActivities: activities.length,
-    topActivities: activities.slice(0, 5).map(a => ({
-      name: a.name || "Untitled Activity",
-      bookings: a.currentParticipants || 0,
-      revenue: (a.pricePerPerson || 0) * (a.currentParticipants || 0)
-    })),
+    topActivities: activities
+      .map(a => ({
+        ...a,
+        calculatedRevenue: (a.pricePerPerson || 0) * (a.currentParticipants || 0)
+      }))
+      .sort((a, b) => b.calculatedRevenue - a.calculatedRevenue || (b.currentParticipants || 0) - (a.currentParticipants || 0))
+      .slice(0, 5)
+      .map(a => ({
+        name: a.name || "Untitled Activity",
+        bookings: a.currentParticipants || 0,
+        revenue: a.calculatedRevenue
+      })),
     // Map team members if we have any, otherwise fall back or show empty
     teamMembers: teamMembers.length > 0 ? teamMembers.map(m => ({
       name: `${m.firstName || ''} ${m.lastName || ''}`.trim() || m.username || 'Unknown',

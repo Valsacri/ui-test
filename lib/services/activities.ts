@@ -48,4 +48,9 @@ export const activitiesService = {
         });
         return response.data;
     },
+
+    delete: async (id: string) => {
+        const response = await apiClient.delete(`/v1/activities/${id}`);
+        return response.data;
+    },
 };
