@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useRef } from "react"
+import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import {
   ArrowLeft,
   Plus,
@@ -32,6 +32,10 @@ import {
   BadgeCheck,
   Check,
   Trophy,
+  Wrench,
+  X,
+  Loader2,
+  ChevronsUpDown,
 } from "lucide-react"
 import { toast } from "sonner"
 import { sports, activities, businessResources, businessPartners, athletes, businessDashboardData, experienceLevels } from "@/lib/mock-data"
@@ -56,9 +60,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
 interface BusinessFormPageProps {
-  onNavigate: (page: PageRoute) => void
+  onNavigate: (page: PageRoute, detailId?: string) => void
 }
 
 // ==================== CreateActivity ====================
@@ -1982,102 +1988,1110 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
 }
 
 // ==================== AddResource ====================
-export function AddResourcePage({ onNavigate }: BusinessFormPageProps) {
-  const { activeBusinessId } = useBusinessContext()
-  const [formData, setFormData] = useState({ name: "", type: "court", pricePerHour: 0, capacity: 0, description: "" })
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState("")
 
-  const handleAddResource = async () => {
-    if (!formData.name.trim()) { setError("Name is required"); return }
+const addResourceTypes = [
+  { key: "facility" as const, label: "Facility", sub: "Gyms, courts, studios", icon: Building2 },
+  { key: "product" as const, label: "Product", sub: "Equipment, gear, apparel", icon: Package },
+  { key: "service" as const, label: "Service", sub: "Training, coaching, therapy", icon: Wrench },
+]
+const addResourceSportOptions = ["Football", "Basketball", "Tennis", "Swimming", "Boxing", "Yoga", "Cricket", "Badminton", "Volleyball", "Other"]
+const addResourceProductCategories = [
+  "Equipment", "Apparel", "Footwear", "Accessories", "Nutrition", "Recovery",
+  "Hydration", "Technology", "Safety", "Awards & Trophies", "Other",
+]
+const addResourceProductSubcategories: Record<string, string[]> = {
+  Equipment: ["Fitness", "Training", "Sports Gear", "Mats", "Weights", "Balls", "Rackets", "Nets"],
+  Apparel: ["Jerseys", "Jackets", "Shorts", "Trousers", "Compression Wear", "Swimwear"],
+  Footwear: ["Running Shoes", "Training Shoes", "Cleats", "Indoor Court", "Sandals"],
+  Accessories: ["Bags", "Watches", "Towels", "Bands", "Gloves", "Headbands", "Knee Pads"],
+  Nutrition: ["Protein", "Supplements", "Energy Bars", "Drinks", "Snacks"],
+  Recovery: ["Foam Rollers", "Massage Guns", "Ice Packs", "Compression Sleeves"],
+  Hydration: ["Water Bottles", "Shakers", "Hydration Packs"],
+  Technology: ["Fitness Trackers", "Heart Rate Monitors", "GPS Watches", "Smart Scales"],
+  Safety: ["First Aid Kits", "Protective Gear", "Helmets", "Mouthguards"],
+}
+const addResourceBrandPresets = [
+  "Nike", "Adidas", "Under Armour", "Puma", "Reebok", "Decathlon",
+  "New Balance", "Lululemon", "Garmin", "Hydro Flask", "Wilson", "Spalding",
+  "Everlast", "Yonex", "Head", "Speedo", "Asics", "Mizuno",
+]
+const addResourceProductFeaturePresets = [
+  "Lightweight", "Breathable", "Waterproof", "Durable", "Anti-Slip",
+  "Quick-Dry", "UV Protection", "Adjustable", "Ergonomic", "Eco-Friendly",
+  "Machine Washable", "Padded", "Reflective", "Sweat-Wicking",
+  "Shock Absorbing", "Foldable", "Portable", "Rechargeable",
+  "Bluetooth Enabled", "App Connected",
+]
+const addResourceServiceCategories = [
+  "Training", "Coaching", "Therapy", "Fitness Classes", "Nutrition",
+  "Rehabilitation", "Recovery", "Media & Photography", "Event Services",
+  "Wellness", "Safety & Medical", "Marketing", "Other",
+]
+const addResourceServiceOfferingPresets = [
+  "One-on-One Sessions", "Group Sessions", "Online / Virtual", "On-Site",
+  "Personalized Plan", "Progress Tracking", "Video Analysis",
+  "Certified Professional", "Flexible Scheduling", "Free Consultation",
+  "Equipment Provided", "Home Visits", "Weekend Availability",
+  "Monthly Subscription", "Package Deals", "Corporate Plans",
+  "Beginner Friendly", "Advanced Level", "Competition Prep",
+  "Injury Prevention", "Post-Surgery Rehab", "Diet Plan Included",
+]
+const addResourceDurationOptions = ["15 min", "30 min", "45 min", "1 hour", "1.5 hours", "2 hours", "3 hours", "Half Day", "Full Day", "Monthly"]
+const timeSlotOptions = (() => {
+  const slots: string[] = []
+  for (let h = 0; h < 24; h++) {
+    for (const m of ["00", "30"]) {
+      slots.push(`${String(h).padStart(2, "0")}:${m}`)
+    }
+  }
+  return slots
+})()
+const addResourceCurrencyOptions = [
+  { value: "$", label: "USD ($)" },
+  { value: "€", label: "EUR (€)" },
+  { value: "£", label: "GBP (£)" },
+  { value: "د.م.", label: "MAD (د.م.)" },
+]
+
+const facilityFloorPresets = [
+  "Indoor Court", "Outdoor Court", "Artificial Turf", "Natural Grass",
+  "Rubber Flooring", "Wooden Flooring", "Clay Surface", "Hardcourt",
+  "Synthetic Surface", "Concrete", "Sand", "Tartan Track",
+  "Sprung Floor", "Tatami Mat", "Boxing Canvas", "Ice Rink",
+  "Covered / Roofed", "Open Air",
+]
+
+const facilityAmenityPresets = [
+  "Parking", "Free WiFi", "Locker Rooms", "Showers", "Towel Service",
+  "Air Conditioning", "Heating", "Lighting (Floodlights)", "Scoreboard",
+  "Sound System", "First Aid Kit", "Defibrillator (AED)", "Water Fountain",
+  "Vending Machines", "Cafeteria / Snack Bar", "Pro Shop", "Equipment Rental",
+  "Seating / Bleachers", "VIP Lounge", "Wheelchair Accessible", "Restrooms",
+  "CCTV / Security", "24/7 Access", "Reception / Front Desk", "Sauna",
+  "Steam Room", "Jacuzzi / Hot Tub", "Swimming Pool", "Ice Bath",
+  "Massage Room", "Physiotherapy Room", "Stretching Area", "Warm-Up Zone",
+  "Changing Rooms", "Personal Lockers", "Shoe Rental", "Ball Rental",
+  "Racket Rental", "Coaching Available", "Kids Area", "Spectator Gallery",
+  "Live Streaming", "Instant Replay Screen", "Online Booking", "Mobile App",
+  "Event Hosting", "Birthday Packages", "Corporate Packages", "Night Lighting",
+  "Barrier-Free Entry", "EV Charging Station", "Bike Rack",
+  "Pet Friendly", "Family Friendly", "Women Only Hours", "Prayer Room",
+]
+
+async function uploadResourceImage(file: File): Promise<string> {
+  const apiClient = (await import("@/lib/api")).default
+  const formData = new FormData()
+  formData.append("file", file)
+  const res = await apiClient.post<{ url: string }>("/v1/upload/resource/image", formData, {
+    headers: { "Content-Type": null as unknown as string },
+  })
+  return res.data.url
+}
+
+type AddResourceType = "facility" | "product" | "service"
+
+interface AddResourcePageProps extends BusinessFormPageProps {
+  resourceId?: string
+  editResourceType?: AddResourceType
+}
+
+export function AddResourcePage({ onNavigate, resourceId, editResourceType }: AddResourcePageProps) {
+  const { activeBusinessId } = useBusinessContext()
+  const isEditMode = !!resourceId
+  const [resourceType, setResourceType] = useState<AddResourceType>(editResourceType || "facility")
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [imageFiles, setImageFiles] = useState<{ file: File; preview: string }[]>([])
+  const [existingImages, setExistingImages] = useState<string[]>([])
+  const [features, setFeatures] = useState<string[]>([])
+  const [currentFeature, setCurrentFeature] = useState("")
+  // Facility
+  const [pricePerHour, setPricePerHour] = useState(0)
+  const [capacity, setCapacity] = useState(0)
+  const [address, setAddress] = useState("")
+  const [city, setCity] = useState("")
+  const [facilityState, setFacilityState] = useState("")
+  const [postalCode, setPostalCode] = useState("")
+  const [country, setCountry] = useState("")
+  const [phoneNumber, setPhoneNumber] = useState("")
+  const [email, setEmail] = useState("")
+  const [website, setWebsite] = useState("")
+  const [minReservationMinutes, setMinReservationMinutes] = useState(0)
+  const [selectedSports, setSelectedSports] = useState<string[]>([])
+  const [isSportsPopoverOpen, setIsSportsPopoverOpen] = useState(false)
+  const [grounds, setGrounds] = useState<string[]>([])
+  const [groundsSearch, setGroundsSearch] = useState("")
+  const [amenitiesSearch, setAmenitiesSearch] = useState("")
+  const [openingHours, setOpeningHours] = useState<Record<string, { enabled: boolean; open: string; close: string }>>({
+    Monday:    { enabled: false, open: "09:00", close: "18:00" },
+    Tuesday:   { enabled: false, open: "09:00", close: "18:00" },
+    Wednesday: { enabled: false, open: "09:00", close: "18:00" },
+    Thursday:  { enabled: false, open: "09:00", close: "18:00" },
+    Friday:    { enabled: false, open: "09:00", close: "18:00" },
+    Saturday:  { enabled: false, open: "10:00", close: "16:00" },
+    Sunday:    { enabled: false, open: "10:00", close: "16:00" },
+  })
+  // Product
+  const [price, setPrice] = useState(0)
+  const [brand, setBrand] = useState("")
+  const [category, setCategory] = useState("")
+  const [subcategory, setSubcategory] = useState("")
+  const [originalPrice, setOriginalPrice] = useState(0)
+  const [inStock, setInStock] = useState(true)
+  const [currency, setCurrency] = useState("$")
+  // Service
+  const [servicePrice, setServicePrice] = useState(0)
+  const [serviceCategory, setServiceCategory] = useState("")
+  const [duration, setDuration] = useState("")
+  const [serviceCurrency, setServiceCurrency] = useState("$")
+
+  const [submitting, setSubmitting] = useState(false)
+  const [loadingResource, setLoadingResource] = useState(!!resourceId)
+  const [error, setError] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dragOver, setDragOver] = useState(false)
+
+  useEffect(() => {
+    if (!resourceId || !editResourceType) return
+    let cancelled = false
+    const load = async () => {
+      setLoadingResource(true)
+      try {
+        let data: any
+        if (editResourceType === "facility") {
+          data = await facilitiesService.getById(resourceId)
+          if (cancelled) return
+          setName(data.name || "")
+          setDescription(data.description || "")
+          setPricePerHour(data.pricePerHour || 0)
+          setCapacity(data.capacity || 0)
+          setAddress(data.address || "")
+          setCity(data.city || "")
+          setFacilityState(data.state || "")
+          setPostalCode(data.postalCode || "")
+          setCountry(data.country || "")
+          setPhoneNumber(data.phoneNumber || "")
+          setEmail(data.email || "")
+          setWebsite(data.website || "")
+          setMinReservationMinutes(data.minReservationMinutes || 0)
+          setSelectedSports(Array.isArray(data.sports) ? data.sports : [])
+          setGrounds(Array.isArray(data.grounds) ? data.grounds : [])
+          setFeatures(Array.isArray(data.amenities) ? data.amenities : [])
+          const imgs: string[] = []
+          if (data.coverImage) imgs.push(data.coverImage)
+          if (Array.isArray(data.imageUrls)) {
+            data.imageUrls.forEach((u: string) => { if (!imgs.includes(u)) imgs.push(u) })
+          }
+          setExistingImages(imgs)
+          if (data.openingHours && typeof data.openingHours === "object") {
+            setOpeningHours(prev => {
+              const updated = { ...prev }
+              for (const [day, val] of Object.entries(data.openingHours as Record<string, string>)) {
+                if (updated[day] && typeof val === "string" && val.includes("-")) {
+                  const [open, close] = val.split("-")
+                  updated[day] = { enabled: true, open, close }
+                }
+              }
+              return updated
+            })
+          }
+        } else if (editResourceType === "product") {
+          data = await marketplaceService.getById(resourceId)
+          if (cancelled) return
+          setName(data.name || "")
+          setDescription(data.description || "")
+          setPrice(data.price || 0)
+          setOriginalPrice(data.originalPrice || 0)
+          setBrand(data.brand || "")
+          setCategory(data.category || "")
+          setSubcategory(data.subcategory || "")
+          setCurrency(data.currency || "$")
+          setInStock(data.inStock !== false)
+          setFeatures(Array.isArray(data.features) ? data.features : [])
+          const imgs: string[] = []
+          if (data.image) imgs.push(data.image)
+          if (Array.isArray(data.imageUrls)) {
+            data.imageUrls.forEach((u: string) => { if (!imgs.includes(u)) imgs.push(u) })
+          }
+          setExistingImages(imgs)
+        } else {
+          data = await servicesService.getById(resourceId)
+          if (cancelled) return
+          setName(data.name || "")
+          setDescription(data.description || "")
+          setServicePrice(data.price || 0)
+          setServiceCategory(data.category || "")
+          setDuration(data.duration || "")
+          setServiceCurrency(data.currency || "$")
+          setFeatures(Array.isArray(data.offerings) ? data.offerings : [])
+          const imgs: string[] = []
+          if (data.image) imgs.push(data.image)
+          if (Array.isArray(data.imageUrls)) {
+            data.imageUrls.forEach((u: string) => { if (!imgs.includes(u)) imgs.push(u) })
+          }
+          setExistingImages(imgs)
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          const msg = err?.response?.data?.message || err?.message || "Unknown error"
+          console.error("Failed to load resource:", err)
+          setError(`Failed to load resource: ${msg}`)
+        }
+      } finally {
+        if (!cancelled) setLoadingResource(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [resourceId, editResourceType])
+
+  const handleFilesSelect = useCallback((files: FileList | File[]) => {
+    const newEntries: { file: File; preview: string }[] = []
+    const toProcess = Array.from(files).filter((f) => f.type.startsWith("image/"))
+    let processed = 0
+    if (toProcess.length === 0) return
+    toProcess.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        newEntries.push({ file, preview: e.target?.result as string })
+        processed++
+        if (processed === toProcess.length) {
+          setImageFiles((prev) => [...prev, ...newEntries])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (e.dataTransfer.files.length > 0) handleFilesSelect(e.dataTransfer.files)
+  }, [handleFilesSelect])
+
+  const removeImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const addFeature = () => {
+    const val = currentFeature.trim()
+    if (val && !features.includes(val)) {
+      setFeatures((prev) => [...prev, val])
+      setCurrentFeature("")
+    }
+  }
+
+  const removeFeature = (index: number) => {
+    setFeatures((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSubmit = async () => {
+    if (!name.trim()) { setError("Name is required"); return }
     if (!activeBusinessId) { setError("No active business selected"); return }
     setSubmitting(true)
     setError("")
+
+    const uploadedUrls: string[] = []
+    if (imageFiles.length > 0) {
+      try {
+        for (const entry of imageFiles) {
+          const url = await uploadResourceImage(entry.file)
+          uploadedUrls.push(url)
+        }
+      } catch {
+        setError("Failed to upload one or more images")
+        setSubmitting(false)
+        return
+      }
+    }
+
+    const allImages = [...existingImages, ...uploadedUrls]
+
     try {
-      await facilitiesService.create({
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        pricePerHour: formData.pricePerHour,
-        capacity: formData.capacity,
-        type: formData.type,
-        businessId: activeBusinessId,
-      })
-      onNavigate("business-resources")
+      if (resourceType === "facility") {
+        const payload = {
+          name: name.trim(),
+          description: description.trim(),
+          coverImage: allImages[0] || undefined,
+          imageUrls: allImages.length > 0 ? allImages : undefined,
+          pricePerHour: pricePerHour || undefined,
+          capacity: capacity || undefined,
+          address: address.trim() || undefined,
+          city: city.trim() || undefined,
+          state: facilityState.trim() || undefined,
+          postalCode: postalCode.trim() || undefined,
+          country: country.trim() || undefined,
+          phoneNumber: phoneNumber.trim() || undefined,
+          email: email.trim() || undefined,
+          website: website.trim() || undefined,
+          minReservationMinutes: minReservationMinutes || undefined,
+          sports: selectedSports,
+          grounds: grounds.length > 0 ? grounds : undefined,
+          amenities: features,
+          openingHours: (() => {
+            const mapped: Record<string, string> = {}
+            for (const [day, val] of Object.entries(openingHours)) {
+              if (val.enabled) mapped[day] = `${val.open}-${val.close}`
+            }
+            return Object.keys(mapped).length > 0 ? mapped : undefined
+          })(),
+          businessId: activeBusinessId,
+        }
+        if (isEditMode) await facilitiesService.update(resourceId, payload)
+        else await facilitiesService.create(payload)
+      } else if (resourceType === "product") {
+        const payload = {
+          name: name.trim(),
+          description: description.trim(),
+          image: allImages[0] || undefined,
+          imageUrls: allImages.length > 0 ? allImages : undefined,
+          price,
+          currency,
+          brand: brand.trim() || undefined,
+          category: category || "General",
+          subcategory: subcategory || undefined,
+          originalPrice: originalPrice || undefined,
+          inStock,
+          features: features.length > 0 ? features : undefined,
+          sellerId: activeBusinessId,
+        }
+        if (isEditMode) await marketplaceService.update(resourceId, payload)
+        else await marketplaceService.create(payload)
+      } else {
+        const payload = {
+          name: name.trim(),
+          description: description.trim(),
+          image: allImages[0] || undefined,
+          imageUrls: allImages.length > 0 ? allImages : undefined,
+          price: servicePrice,
+          currency: serviceCurrency,
+          category: serviceCategory || "General",
+          duration: duration || undefined,
+          offerings: features.length > 0 ? features : undefined,
+          providerId: activeBusinessId,
+        }
+        if (isEditMode) await servicesService.update(resourceId, payload)
+        else await servicesService.create(payload)
+      }
+      onNavigate("business-resources", resourceType)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to add resource"
+      const message = err instanceof Error ? err.message : `Failed to ${isEditMode ? "update" : "create"} resource`
       setError(message)
     } finally {
       setSubmitting(false)
     }
   }
 
+  const inputClass = "h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary transition-colors"
+  const featuresLabel = resourceType === "facility" ? "Amenities" : resourceType === "product" ? "Features" : "Offerings"
+
+  if (loadingResource) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (isEditMode && error && !name) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => onNavigate("business-resources", resourceType)} className="rounded-full p-2 hover:bg-muted">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <h1 className="text-2xl font-bold text-foreground">Edit Resource</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-base font-semibold text-foreground">Could not load resource</p>
+          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+          <button
+            type="button"
+            onClick={() => onNavigate("business-resources", resourceType)}
+            className="mt-6 rounded-xl border border-border px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-muted"
+          >
+            Back to Resources
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => onNavigate("business-resources")} className="rounded-full p-2 hover:bg-muted">
+        <button type="button" onClick={() => onNavigate("business-resources", resourceType)} className="rounded-full p-2 hover:bg-muted">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Add Resource</h1>
-          <p className="text-sm text-muted-foreground">Add a new facility resource</p>
+          <h1 className="text-2xl font-bold text-foreground">{isEditMode ? "Edit Resource" : "Add New Resource"}</h1>
+          <p className="text-sm text-muted-foreground">
+            {isEditMode
+              ? `Update your ${resourceType === "facility" ? "facility" : resourceType === "product" ? "product" : "service"} details`
+              : "Create a new facility, product, or service"}
+          </p>
         </div>
       </div>
 
+      {/* Resource Type Selection — locked in edit mode */}
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <h3 className="mb-4 text-sm font-bold text-foreground">Resource Type</h3>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {["Court", "Pool", "Studio", "Ring", "Field", "Track", "Gym", "Room"].map((type) => (
-            <button
-              type="button"
-              key={type}
-              onClick={() => setFormData({ ...formData, type: type.toLowerCase() })}
-              className={cn(
-                "rounded-xl border-2 px-4 py-3 text-xs font-semibold transition-all",
-                formData.type === type.toLowerCase() ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:border-primary/40"
-              )}
-            >
-              {type}
-            </button>
-          ))}
+        <div className="grid grid-cols-3 gap-3">
+          {addResourceTypes.map((rt) => {
+            const active = resourceType === rt.key
+            return (
+              <button
+                key={rt.key}
+                type="button"
+                onClick={() => { if (!isEditMode) setResourceType(rt.key) }}
+                disabled={isEditMode && rt.key !== resourceType}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-xl border-2 p-5 transition-all",
+                  active ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+                  isEditMode && rt.key !== resourceType && "opacity-40 cursor-not-allowed"
+                )}
+              >
+                <rt.icon className={cn("h-7 w-7", active ? "text-primary" : "text-muted-foreground")} />
+                <p className={cn("text-xs font-semibold", active ? "text-primary" : "text-foreground")}>{rt.label}</p>
+                <p className="text-[10px] text-muted-foreground">{rt.sub}</p>
+              </button>
+            )
+          })}
         </div>
       </div>
 
+      {/* Basic Information */}
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <h3 className="mb-4 text-sm font-bold text-foreground">Details</h3>
+        <h3 className="mb-4 text-sm font-bold text-foreground">Basic Information</h3>
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-foreground">Resource Name</label>
-            <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Basketball Court A" className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Price per Hour ($)</label>
-              <input type="number" value={formData.pricePerHour} onChange={(e) => setFormData({ ...formData, pricePerHour: parseInt(e.target.value) || 0 })} className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary" />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-foreground">Capacity</label>
-              <input type="number" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 0 })} className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary" />
-            </div>
+            <label className="mb-1.5 block text-xs font-medium text-foreground">
+              {resourceType === "facility" ? "Facility" : resourceType === "product" ? "Product" : "Service"} Name *
+            </label>
+            <input
+              type="text"
+              placeholder={`e.g., ${resourceType === "facility" ? "Basketball Court A" : resourceType === "product" ? "Professional Tennis Racket" : "Personal Training Session"}`}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+            />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-foreground">Description</label>
-            <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Describe the resource..." rows={3} className="w-full rounded-xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary resize-none" />
+            <label className="mb-1.5 block text-xs font-medium text-foreground">Description *</label>
+            <textarea
+              rows={3}
+              placeholder="Provide a detailed description..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full rounded-xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary resize-none transition-colors"
+            />
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-foreground">Photo</label>
-            <div className="flex h-28 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted hover:border-primary/40">
-              <div className="text-center">
-                <Upload className="mx-auto h-5 w-5 text-muted-foreground" />
-                <p className="mt-1 text-xs text-muted-foreground">Upload photo</p>
+          {resourceType === "facility" && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Price per Hour ($) *</label>
+                <input type="number" min={0} step={0.01} placeholder="0.00" value={pricePerHour || ""} onChange={(e) => setPricePerHour(Number(e.target.value) || 0)} className={inputClass} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Sports</label>
+                <Popover open={isSportsPopoverOpen} onOpenChange={setIsSportsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex h-11 w-full items-center justify-between rounded-xl border bg-muted px-4 text-sm outline-none transition-colors",
+                        isSportsPopoverOpen ? "border-primary" : "border-border"
+                      )}
+                    >
+                      <span className={cn("truncate", selectedSports.length === 0 ? "text-muted-foreground" : "text-foreground")}>
+                        {selectedSports.length > 0 ? `${selectedSports.length} sport${selectedSports.length > 1 ? "s" : ""} selected` : "Select one or more sports..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-xl border border-border bg-card p-0 shadow-lg" align="start" sideOffset={6}>
+                    <Command className="rounded-xl">
+                      <CommandInput placeholder="Search sports..." className="text-sm" />
+                      <CommandList className="max-h-56">
+                        <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">No sport found.</CommandEmpty>
+                        <CommandGroup className="p-1.5">
+                          {addResourceSportOptions.map((sportOption) => {
+                            const selected = selectedSports.includes(sportOption)
+                            return (
+                              <CommandItem
+                                key={sportOption}
+                                value={sportOption}
+                                onSelect={() => {
+                                  setSelectedSports((prev) =>
+                                    prev.includes(sportOption)
+                                      ? prev.filter((item) => item !== sportOption)
+                                      : [...prev, sportOption]
+                                  )
+                                }}
+                                className={cn(
+                                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors",
+                                  "data-[selected='true']:bg-primary/10 data-[selected=true]:text-foreground",
+                                  selected ? "bg-primary/5 text-primary font-medium" : "text-foreground"
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                                    selected ? "border-primary bg-primary" : "border-border"
+                                  )}
+                                >
+                                  {selected && <Check className="h-3 w-3 text-white" />}
+                                </span>
+                                {sportOption}
+                              </CommandItem>
+                            )
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {selectedSports.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {selectedSports.map((selectedSport) => (
+                      <span
+                        key={selectedSport}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-[11px] font-medium text-primary"
+                      >
+                        {selectedSport}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSports((prev) => prev.filter((item) => item !== selectedSport))}
+                          className="text-primary/70 transition-colors hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {resourceType === "product" && (
+            <>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Price *</label>
+                  <input type="number" min={0} step={0.01} placeholder="0.00" value={price || ""} onChange={(e) => setPrice(Number(e.target.value) || 0)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Original Price</label>
+                  <input type="number" min={0} step={0.01} placeholder="Strikethrough" value={originalPrice || ""} onChange={(e) => setOriginalPrice(Number(e.target.value) || 0)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Currency</label>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {addResourceCurrencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Category *</label>
+                  <Select value={category} onValueChange={(val) => { setCategory(val); setSubcategory("") }}>
+                    <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                      <SelectValue placeholder="Select category..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {addResourceProductCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {category && addResourceProductSubcategories[category] && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground">Subcategory</label>
+                    <Select value={subcategory} onValueChange={setSubcategory}>
+                      <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                        <SelectValue placeholder="Select subcategory..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {addResourceProductSubcategories[category].map((sc) => <SelectItem key={sc} value={sc}>{sc}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {resourceType === "service" && (
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Price *</label>
+                <input type="number" min={0} step={0.01} placeholder="0.00" value={servicePrice || ""} onChange={(e) => setServicePrice(Number(e.target.value) || 0)} className={inputClass} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Currency</label>
+                <Select value={serviceCurrency} onValueChange={setServiceCurrency}>
+                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {addResourceCurrencyOptions.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Category *</label>
+                <Select value={serviceCategory} onValueChange={setServiceCategory}>
+                  <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                    <SelectValue placeholder="Select category..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {addResourceServiceCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Image Upload (multi) */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-foreground">Images</h3>
+          {(existingImages.length + imageFiles.length) > 0 && (
+            <span className="text-[11px] text-muted-foreground">{existingImages.length + imageFiles.length} image{(existingImages.length + imageFiles.length) !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+        {(existingImages.length + imageFiles.length) > 0 && (
+          <div className="mb-4 grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
+            {existingImages.map((url, idx) => (
+              <div key={`existing-${idx}`} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                <img src={url} alt={`Existing ${idx + 1}`} className="h-full w-full object-cover" crossOrigin="anonymous" />
+                {idx === 0 && imageFiles.length === 0 && (
+                  <span className="absolute left-1 top-1 rounded bg-primary/80 px-1 py-0.5 text-[8px] font-bold leading-none text-white">Cover</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setExistingImages((prev) => prev.filter((_, i) => i !== idx))}
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+            {imageFiles.map((entry, idx) => (
+              <div key={`new-${idx}`} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                <img src={entry.preview} alt={`Preview ${idx + 1}`} className="h-full w-full object-cover" />
+                {idx === 0 && existingImages.length === 0 && (
+                  <span className="absolute left-1 top-1 rounded bg-primary/80 px-1 py-0.5 text-[8px] font-bold leading-none text-white">Cover</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeImage(idx)}
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div
+          role="button"
+          tabIndex={0}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === "Enter") fileInputRef.current?.click() }}
+          className={cn(
+            "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors cursor-pointer",
+            imageFiles.length > 0 ? "p-5" : "p-10",
+            dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+          )}
+        >
+          <div className={cn("flex items-center justify-center rounded-full bg-muted", imageFiles.length > 0 ? "h-10 w-10" : "h-14 w-14")}>
+            <Upload className={cn("text-muted-foreground", imageFiles.length > 0 ? "h-4 w-4" : "h-6 w-6")} />
+          </div>
+          <p className="text-xs font-medium text-foreground">{imageFiles.length > 0 ? "Add more images" : "Click to upload or drag and drop"}</p>
+          <p className="text-[10px] text-muted-foreground">PNG, JPG, WEBP up to 10MB each</p>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) handleFilesSelect(e.target.files)
+            e.target.value = ""
+          }}
+        />
+      </div>
+
+      {/* Type-specific Details */}
+      {resourceType === "facility" && (
+        <>
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Location</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
+                <input type="text" placeholder="123 Main St" value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
+                  <input type="text" placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">State / Province</label>
+                  <input type="text" placeholder="State" value={facilityState} onChange={(e) => setFacilityState(e.target.value)} className={inputClass} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Postal Code</label>
+                  <input type="text" placeholder="e.g., 10001" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Country</label>
+                  <input type="text" placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} className={inputClass} />
+                </div>
               </div>
             </div>
           </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Facility Details</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Capacity</label>
+                  <input type="number" min={0} placeholder="Max number of people" value={capacity || ""} onChange={(e) => setCapacity(Number(e.target.value) || 0)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Min Reservation (minutes)</label>
+                  <input type="number" min={0} step={15} placeholder="e.g., 60" value={minReservationMinutes || ""} onChange={(e) => setMinReservationMinutes(Number(e.target.value) || 0)} className={inputClass} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Opening Hours</h3>
+            <div className="space-y-2">
+              {Object.entries(openingHours).map(([day, val]) => (
+                <div key={day} className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={val.enabled}
+                    onClick={() => setOpeningHours((prev) => ({ ...prev, [day]: { ...prev[day], enabled: !prev[day].enabled } }))}
+                    className={cn(
+                      "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+                      val.enabled ? "bg-primary" : "bg-muted-foreground/30"
+                    )}
+                  >
+                    <span className={cn("inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform", val.enabled ? "translate-x-[18px]" : "translate-x-[3px]")} />
+                  </button>
+                  <span className={cn("w-24 text-xs font-medium", val.enabled ? "text-foreground" : "text-muted-foreground")}>{day}</span>
+                  {val.enabled ? (
+                    <div className="flex items-center gap-2">
+                      <Select value={val.open} onValueChange={(v) => setOpeningHours((prev) => ({ ...prev, [day]: { ...prev[day], open: v } }))}>
+                        <SelectTrigger className="h-9 w-[100px] rounded-lg border border-border bg-muted px-2.5 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-52">
+                          {timeSlotOptions.map((t) => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-xs text-muted-foreground">to</span>
+                      <Select value={val.close} onValueChange={(v) => setOpeningHours((prev) => ({ ...prev, [day]: { ...prev[day], close: v } }))}>
+                        <SelectTrigger className="h-9 w-[100px] rounded-lg border border-border bg-muted px-2.5 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-52">
+                          {timeSlotOptions.map((t) => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Closed</span>
+                  )}
+                </div>
+              ))}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOpeningHours((prev) => {
+                    const updated = { ...prev }
+                    for (const day of Object.keys(updated)) updated[day] = { ...updated[day], enabled: true }
+                    return updated
+                  })}
+                  className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                  Enable all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpeningHours((prev) => {
+                    const updated = { ...prev }
+                    for (const day of Object.keys(updated)) updated[day] = { ...updated[day], enabled: false }
+                    return updated
+                  })}
+                  className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                  Disable all
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Contact Information</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Phone</label>
+                  <input type="tel" placeholder="+1 234 567 890" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-foreground">Email</label>
+                  <input type="email" placeholder="facility@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-foreground">Website</label>
+                <input type="url" placeholder="https://..." value={website} onChange={(e) => setWebsite(e.target.value)} className={inputClass} />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Floors / Grounds</h3>
+            {grounds.length > 0 && (
+              <div className="mb-4">
+                <p className="mb-2 text-[11px] font-medium text-muted-foreground">Selected</p>
+                <div className="flex flex-wrap gap-2">
+                  {grounds.map((g, idx) => (
+                    <span key={idx} className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-[11px] font-medium text-primary">
+                      {g}
+                      <button type="button" onClick={() => setGrounds((prev) => prev.filter((_, i) => i !== idx))} className="text-primary/60 hover:text-destructive transition-colors">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search floors / grounds..."
+                value={groundsSearch}
+                onChange={(e) => setGroundsSearch(e.target.value)}
+                className="h-9 w-full rounded-lg border border-border bg-muted pl-8 pr-3 text-xs outline-none focus:border-primary transition-colors"
+              />
+            </div>
+            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto pr-1">
+              {facilityFloorPresets
+                .filter((f) => !grounds.includes(f) && f.toLowerCase().includes(groundsSearch.toLowerCase()))
+                .map((floor) => (
+                  <button
+                    key={floor}
+                    type="button"
+                    onClick={() => setGrounds((prev) => [...prev, floor])}
+                    className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  >
+                    + {floor}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {resourceType === "product" && (
+        <>
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Brand</h3>
+            <div>
+              <input type="text" placeholder="Type or select a brand..." value={brand} onChange={(e) => setBrand(e.target.value)} className={cn(inputClass, "mb-3")} />
+              <div className="flex flex-wrap gap-1.5">
+                {addResourceBrandPresets.filter((b) => b !== brand).map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => setBrand(b)}
+                    className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+              {brand && addResourceBrandPresets.includes(brand) && (
+                <div className="mt-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-[11px] font-medium text-primary">
+                    {brand}
+                    <button type="button" onClick={() => setBrand("")} className="text-primary/60 hover:text-destructive transition-colors">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h3 className="mb-4 text-sm font-bold text-foreground">Availability</h3>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={inStock}
+                onClick={() => setInStock(!inStock)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                  inStock ? "bg-primary" : "bg-muted-foreground/30"
+                )}
+              >
+                <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow transition-transform", inStock ? "translate-x-6" : "translate-x-1")} />
+              </button>
+              <span className="text-xs font-medium text-foreground">In Stock</span>
+            </label>
+          </div>
+        </>
+      )}
+
+      {resourceType === "service" && (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-bold text-foreground">Service Details</h3>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-foreground">Duration</label>
+            <Select value={duration} onValueChange={setDuration}>
+              <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                <SelectValue placeholder="Select duration..." />
+              </SelectTrigger>
+              <SelectContent>
+                {addResourceDurationOptions.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {/* Features / Amenities / Offerings */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <h3 className="mb-4 text-sm font-bold text-foreground">{featuresLabel}</h3>
+
+        {features.length > 0 && (
+          <div className="mb-4">
+            <p className="mb-2 text-[11px] font-medium text-muted-foreground">Selected</p>
+            <div className="flex flex-wrap gap-2">
+              {features.map((feature, index) => (
+                <span
+                  key={index}
+                  className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1.5 text-[11px] font-medium text-primary"
+                >
+                  {feature}
+                  <button type="button" onClick={() => removeFeature(index)} className="text-primary/60 hover:text-destructive transition-colors">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(() => {
+          const presets =
+            resourceType === "facility" ? facilityAmenityPresets :
+            resourceType === "product" ? addResourceProductFeaturePresets :
+            addResourceServiceOfferingPresets
+          const label =
+            resourceType === "facility" ? "Common amenities" :
+            resourceType === "product" ? "Common features" :
+            "Common offerings"
+          const available = presets.filter((p) => !features.includes(p) && p.toLowerCase().includes(amenitiesSearch.toLowerCase()))
+          return (
+            <div className="mb-4">
+              <p className="mb-2 text-[11px] font-medium text-muted-foreground">{label} — click to add</p>
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder={`Search ${featuresLabel.toLowerCase()}...`}
+                  value={amenitiesSearch}
+                  onChange={(e) => setAmenitiesSearch(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-border bg-muted pl-8 pr-3 text-xs outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              {available.length > 0 ? (
+                <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto pr-1">
+                  {available.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setFeatures((prev) => [...prev, item])}
+                      className="rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                    >
+                      + {item}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No matches found</p>
+              )}
+            </div>
+          )
+        })()}
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder={`Add custom ${featuresLabel.toLowerCase().slice(0, -1)}...`}
+            value={currentFeature}
+            onChange={(e) => setCurrentFeature(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addFeature() } }}
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={addFeature}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted transition-colors hover:bg-primary/10 hover:border-primary"
+          >
+            <Plus className="h-4 w-4 text-foreground" />
+          </button>
         </div>
       </div>
 
+      {/* Actions */}
       <div className="flex gap-3">
-        <button type="button" onClick={() => onNavigate("business-resources")} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted">Cancel</button>
-        <button type="button" onClick={handleAddResource} disabled={submitting} className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md hover:opacity-90 disabled:opacity-50">{submitting ? "Adding..." : "Add Resource"}</button>
+        <button type="button" onClick={() => onNavigate("business-resources", resourceType)} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted">
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!name.trim() || submitting}
+          className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+          {submitting
+            ? (isEditMode ? "Saving..." : "Creating...")
+            : (isEditMode
+              ? `Save ${resourceType === "facility" ? "Facility" : resourceType === "product" ? "Product" : "Service"}`
+              : `Create ${resourceType === "facility" ? "Facility" : resourceType === "product" ? "Product" : "Service"}`)
+          }
+        </button>
       </div>
       {error && <p className="text-sm text-red-500 text-center">{error}</p>}
     </div>

@@ -73,6 +73,8 @@ const routeMap: Record<PageRoute, string> = {
     "create-campaign": "/business/create-campaign",
     "create-business": "/business/create",
     "add-resource": "/business/add-resource",
+    "edit-resource": "/business/edit-resource/[id]",
+    "business-resource-detail": "/business/resources/[id]",
     "add-team-member": "/business/add-team-member",
     "add-collaboration": "/business/add-collaboration",
     "manage-resources": "/business/manage-resources",
@@ -101,7 +103,11 @@ export function getPath(page: PageRoute, detailId?: string): string {
     if (detailId && template.includes("[id]")) {
         return template.replace("[id]", detailId)
     }
-    return template.replace("/[id]", "")
+    const path = template.replace("/[id]", "")
+    if (detailId && !template.includes("[id]")) {
+        return `${path}?tab=${encodeURIComponent(detailId)}`
+    }
+    return path
 }
 
 /**

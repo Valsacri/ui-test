@@ -32,40 +32,33 @@ const SelectTrigger = React.forwardRef<
 ))
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
-const SelectScrollUpButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollUpButton
-    ref={ref}
-    className={cn(
-      'flex cursor-default items-center justify-center py-1',
-      className,
-    )}
-    {...props}
-  >
-    <ChevronUp className="h-4 w-4" />
-  </SelectPrimitive.ScrollUpButton>
-))
-SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+function scrollViewport(el: HTMLElement, delta: number) {
+  const content = el.closest('[data-radix-select-content]') ?? el.parentElement
+  const viewport = content?.querySelector('[data-radix-select-viewport]') as HTMLElement | null
+  viewport?.scrollBy({ top: delta, behavior: 'smooth' })
+}
 
-const SelectScrollDownButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
->(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollDownButton
-    ref={ref}
-    className={cn(
-      'flex cursor-default items-center justify-center py-1',
-      className,
-    )}
-    {...props}
-  >
-    <ChevronDown className="h-4 w-4" />
-  </SelectPrimitive.ScrollDownButton>
-))
-SelectScrollDownButton.displayName =
-  SelectPrimitive.ScrollDownButton.displayName
+function SelectScrollUpButton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn('flex cursor-pointer items-center justify-center py-1 hover:bg-muted/50', className)}
+      onPointerDown={(e) => { e.preventDefault(); scrollViewport(e.currentTarget, -120) }}
+    >
+      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+    </div>
+  )
+}
+
+function SelectScrollDownButton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn('flex cursor-pointer items-center justify-center py-1 hover:bg-muted/50', className)}
+      onPointerDown={(e) => { e.preventDefault(); scrollViewport(e.currentTarget, 120) }}
+    >
+      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+    </div>
+  )
+}
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
@@ -86,7 +79,7 @@ const SelectContent = React.forwardRef<
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          'p-1',
+          'p-1 max-h-[inherit] overflow-y-auto',
           position === 'popper' &&
           'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
         )}

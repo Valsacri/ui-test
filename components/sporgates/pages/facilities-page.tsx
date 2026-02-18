@@ -1,11 +1,11 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
-import { facilities as mockFacilities } from "@/lib/mock-data"
 import { facilitiesService } from "@/lib/services"
+import { mapFacility, type FacilityCardData, type FacilityDto } from "@/lib/explore-api"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
-import { FacilitiesFilterSidebar } from "@/components/sporgates/filters/facilities-filter-sidebar"
+import { FacilitiesFilterSidebar, type FacilitiesFilterState } from "@/components/sporgates/filters/facilities-filter-sidebar"
 import { MapFilter } from "@/components/sporgates/map-filter"
 import { MapView } from "@/components/sporgates/map-view"
 import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
@@ -20,38 +20,58 @@ interface FacilitiesPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
 }
 
-const filters = ["All", "Available", "Free", "Indoor", "Outdoor", "Multi-Sport"]
+const pillFilters = ["All", "Available", "Free", "Multi-Sport"]
 
 export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [showMap, setShowMap] = useState(false)
-  const [facilities, setFacilities] = useState(mockFacilities)
-  const mapCenter = facilities[0]?.coordinates || [40.7465, -74.0071]
+  const [facilities, setFacilities] = useState<FacilityCardData[]>([])
   const [sortBy, setSortBy] = useState("relevance")
   const isMobile = useIsMobile()
   const [isLoading, setIsLoading] = useState(true)
+  const [sidebarFilters, setSidebarFilters] = useState<FacilitiesFilterState>({
+    availability: "Any",
+    priceRange: "Any",
+    amenities: [],
+  })
+
+  const loadFacilities = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const data: FacilityDto[] = await facilitiesService.getAll()
+      if (Array.isArray(data)) {
+        setFacilities(data.map(mapFacility))
+      }
+    } catch (err) {
+      console.error("Failed to load facilities:", err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    facilitiesService.getAll().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setFacilities(data)
-    }).catch(() => { }).finally(() => setIsLoading(false))
-  }, [])
+    loadFacilities()
+  }, [loadFacilities])
+
+  const mapCenter: [number, number] = useMemo(() => {
+    const withCoords = facilities.find(f => f.coordinates[0] !== 0)
+    return withCoords?.coordinates || [40.7465, -74.0071]
+  }, [facilities])
 
   const filteredFacilities = useMemo(() => {
     let result = facilities.filter((f) => {
-      // Search filter
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
         const matchesSearch =
           f.name.toLowerCase().includes(q) ||
           f.location.toLowerCase().includes(q) ||
-          f.type.toLowerCase().includes(q)
+          f.type.toLowerCase().includes(q) ||
+          f.sports.some(s => s.toLowerCase().includes(q))
         if (!matchesSearch) return false
       }
 
-      // Pill filter
       if (activeFilter !== "All") {
         switch (activeFilter) {
           case "Available":
@@ -60,22 +80,55 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
           case "Free":
             if (f.pricePerHour !== 0) return false
             break
-          case "Indoor":
-            if (f.type.toLowerCase().includes("outdoor")) return false
-            break
-          case "Outdoor":
-            if (!f.type.toLowerCase().includes("outdoor")) return false
-            break
           case "Multi-Sport":
             if (f.sports.length <= 1) return false
             break
         }
       }
 
+      // Sidebar: availability
+      if (sidebarFilters.availability !== "Any") {
+        switch (sidebarFilters.availability) {
+          case "Available Now":
+            if (!f.available) return false
+            break
+          case "Free":
+            if (f.pricePerHour !== 0) return false
+            break
+          case "Premium":
+            if (f.pricePerHour < 50) return false
+            break
+        }
+      }
+
+      // Sidebar: price range
+      if (sidebarFilters.priceRange !== "Any") {
+        switch (sidebarFilters.priceRange) {
+          case "Free":
+            if (f.pricePerHour !== 0) return false
+            break
+          case "Under $25":
+            if (f.pricePerHour >= 25 || f.pricePerHour === 0) return false
+            break
+          case "$25-$50":
+            if (f.pricePerHour < 25 || f.pricePerHour > 50) return false
+            break
+          case "$50+":
+            if (f.pricePerHour < 50) return false
+            break
+        }
+      }
+
+      // Sidebar: amenities
+      if (sidebarFilters.amenities.length > 0) {
+        const facAmenities = f.amenities.map(a => a.toLowerCase())
+        const allMatch = sidebarFilters.amenities.every(a => facAmenities.includes(a.toLowerCase()))
+        if (!allMatch) return false
+      }
+
       return true
     })
 
-    // Sort
     if (sortBy !== "relevance") {
       result = [...result].sort((a, b) => {
         switch (sortBy) {
@@ -85,8 +138,6 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
             return b.pricePerHour - a.pricePerHour
           case "rating":
             return b.rating - a.rating
-          case "distance":
-            return 0 // Distance would need geolocation — keep original order
           default:
             return 0
         }
@@ -94,7 +145,11 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
     }
 
     return result
-  }, [facilities, searchQuery, activeFilter, sortBy])
+  }, [facilities, searchQuery, activeFilter, sortBy, sidebarFilters])
+
+  const handleApplyFilters = useCallback((filters: FacilitiesFilterState) => {
+    setSidebarFilters(filters)
+  }, [])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -119,9 +174,12 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
         <button
           type="button"
           onClick={() => setShowFilters((prev) => !prev)}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
+          className={cn(
+            "flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted",
+            showFilters && "bg-primary text-primary-foreground border-primary"
+          )}
         >
-          <SlidersHorizontal className="h-4 w-4 text-foreground" />
+          <SlidersHorizontal className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -137,7 +195,7 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {filters.map((filter) => (
+        {pillFilters.map((filter) => (
           <button
             type="button"
             key={filter}
@@ -156,18 +214,26 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
 
       {showFilters && isMobile && (
         <BottomSheet isOpen={showFilters} onClose={() => setShowFilters(false)} title="Filters">
-          <FacilitiesFilterSidebar onClose={() => setShowFilters(false)} />
+          <FacilitiesFilterSidebar
+            onClose={() => setShowFilters(false)}
+            onApply={handleApplyFilters}
+            currentFilters={sidebarFilters}
+          />
         </BottomSheet>
       )}
 
       {showFilters && !isMobile && (
-        <FacilitiesFilterSidebar onClose={() => setShowFilters(false)} />
+        <FacilitiesFilterSidebar
+          onClose={() => setShowFilters(false)}
+          onApply={handleApplyFilters}
+          currentFilters={sidebarFilters}
+        />
       )}
 
       {showMap && (
         <div className="space-y-4">
           <MapFilter />
-          <MapView center={mapCenter as [number, number]} markerLabel="Facility cluster" height="300px" />
+          <MapView center={mapCenter} markerLabel="Facility cluster" height="300px" />
         </div>
       )}
 
@@ -183,7 +249,6 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
             { value: "price-low", label: "Price: Low to High" },
             { value: "price-high", label: "Price: High to Low" },
             { value: "rating", label: "Rating" },
-            { value: "distance", label: "Distance" },
           ]}
         />
       </div>
@@ -196,12 +261,13 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
         <EmptyState
           icon={MapPin}
           title="No facilities found"
-          description="Try adjusting your filters or map radius."
+          description="Try adjusting your filters or search query."
           action={{
             label: "Clear Filters",
             onClick: () => {
               setActiveFilter("All")
               setSearchQuery("")
+              setSidebarFilters({ availability: "Any", priceRange: "Any", amenities: [] })
             },
             variant: "secondary",
           }}

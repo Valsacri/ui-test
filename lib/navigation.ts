@@ -55,6 +55,8 @@ export type PageRoute =
   | "create-campaign"
   | "create-business"
   | "add-resource"
+  | "edit-resource"
+  | "business-resource-detail"
   | "add-team-member"
   | "add-collaboration"
   | "manage-resources"

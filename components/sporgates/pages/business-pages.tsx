@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import {
@@ -14,7 +14,6 @@ import {
   Phone,
   Megaphone,
   BarChart3,
-  X,
   MapPin,
   Trash2,
   Eye,
@@ -32,8 +31,7 @@ import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { AddCampaignModal } from "@/components/sporgates/business/add-campaign-modal"
-import { AddResourceModal } from "@/components/sporgates/business/add-resource-modal"
-import { EditResourceModal, type EditableResource } from "@/components/sporgates/business/edit-resource-modal"
+
 import { AddTeamMemberModal } from "@/components/sporgates/business/add-team-member-modal"
 import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporgates/business/sponsorship-tier-builder"
 import { AthleteCollaborationSelector } from "@/components/sporgates/business/athlete-collaboration-selector"
@@ -513,7 +511,7 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
   )
 }
 
-export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
+export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPageProps & { initialTab?: "facility" | "product" | "service" }) {
   const { activeBusinessId } = useBusinessContext()
   type ResourceType = "facility" | "product" | "service"
   type BusinessResource = {
@@ -538,10 +536,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
     duration?: string
   }
 
-  const [activeTab, setActiveTab] = useState<ResourceType>("facility")
-  const [isAddResourceOpen, setIsAddResourceOpen] = useState(false)
-  const [editingResource, setEditingResource] = useState<BusinessResource | null>(null)
-  const [viewingResource, setViewingResource] = useState<BusinessResource | null>(null)
+  const [activeTab, setActiveTab] = useState<ResourceType>(initialTab || "facility")
   const [dropdownResourceId, setDropdownResourceId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<BusinessResource | null>(null)
   const [facilities, setFacilities] = useState<BusinessResource[]>([])
@@ -565,15 +560,21 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
     return "service"
   }
 
-  // Fetch all resources on mount
+  // Fetch all resources on mount and when returning from edit/create
   useEffect(() => {
+    if (!activeBusinessId) {
+      setLoading(false)
+      return
+    }
+
+    let cancelled = false
     const fetchAll = async () => {
-      if (!activeBusinessId) return
       setLoading(true)
       setError("")
 
       try {
         const data = await facilitiesService.getAll({ businessId: activeBusinessId })
+        if (cancelled) return
         const list = Array.isArray(data) ? data : []
         setFacilities(
           list.map((f: Record<string, unknown>) => ({
@@ -593,10 +594,13 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
             category: ((f.sports as string[]) || [])[0] || undefined,
           }))
         )
-      } catch { /* skip */ }
+      } catch (err) {
+        console.error("Failed to fetch facilities", err)
+      }
 
       try {
         const data = await marketplaceService.getAll({ sellerId: activeBusinessId })
+        if (cancelled) return
         const list = Array.isArray(data) ? data : []
         setProducts(
           list.map((p: Record<string, unknown>) => ({
@@ -614,10 +618,13 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
             originalPrice: p.originalPrice as number | undefined,
           }))
         )
-      } catch { /* skip */ }
+      } catch (err) {
+        console.error("Failed to fetch products", err)
+      }
 
       try {
         const data = await servicesService.getAll({ providerId: activeBusinessId })
+        if (cancelled) return
         const list = Array.isArray(data) ? data : []
         setServices(
           list.map((s: Record<string, unknown>) => ({
@@ -634,11 +641,14 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
             duration: s.duration as string | undefined,
           }))
         )
-      } catch { /* skip */ }
+      } catch (err) {
+        console.error("Failed to fetch services", err)
+      }
 
-      setLoading(false)
+      if (!cancelled) setLoading(false)
     }
     fetchAll()
+    return () => { cancelled = true }
   }, [activeBusinessId])
 
   // Close dropdown on outside click
@@ -649,138 +659,8 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
     return () => document.removeEventListener("click", handler)
   }, [dropdownResourceId])
 
-  const handleCreateResource = async (resource: {
-    name: string
-    resourceType: ResourceType
-    description: string
-    image: string
-    pricePerHour?: number
-    capacity?: number
-    address?: string
-    city?: string
-    sport?: string
-    price?: number
-    brand?: string
-    category?: string
-    originalPrice?: number
-    duration?: string
-  }) => {
-    const newItem: BusinessResource = {
-      id: `resource-${Date.now()}`,
-      name: resource.name,
-      type: resource.resourceType === "facility" ? "Facility" : resource.resourceType === "product" ? "Product" : "Service",
-      resourceType: resource.resourceType,
-      status: "available",
-      bookingsToday: 0, revenue: 0,
-      image: resource.image || "/placeholder.svg",
-      description: resource.description,
-      price: resource.price,
-      pricePerHour: resource.pricePerHour,
-      capacity: resource.capacity,
-      address: resource.address,
-      city: resource.city,
-      sport: resource.sport,
-      brand: resource.brand,
-      category: resource.category,
-      originalPrice: resource.originalPrice,
-      duration: resource.duration,
-    }
-
-    try {
-      if (resource.resourceType === "facility") {
-        const created = await facilitiesService.create({
-          name: resource.name,
-          description: resource.description,
-          coverImage: resource.image,
-          pricePerHour: resource.pricePerHour,
-          capacity: resource.capacity,
-          address: resource.address,
-          city: resource.city,
-          sports: resource.sport ? [resource.sport] : [],
-          businessId: activeBusinessId,
-        })
-        newItem.id = created.id || newItem.id
-        setFacilities((prev) => [newItem, ...prev])
-      } else if (resource.resourceType === "product") {
-        const created = await marketplaceService.create({
-          name: resource.name,
-          description: resource.description,
-          image: resource.image,
-          price: resource.price,
-          brand: resource.brand,
-          category: resource.category || "General",
-          originalPrice: resource.originalPrice,
-          sellerId: activeBusinessId,
-        })
-        newItem.id = created.id || newItem.id
-        setProducts((prev) => [newItem, ...prev])
-      } else {
-        const created = await servicesService.create({
-          name: resource.name,
-          description: resource.description,
-          image: resource.image,
-          price: resource.price,
-          category: resource.category || "General",
-          duration: resource.duration,
-          providerId: activeBusinessId,
-        })
-        newItem.id = created.id || newItem.id
-        setServices((prev) => [newItem, ...prev])
-      }
-    } catch {
-      // Fallback: add locally
-      if (resource.resourceType === "facility") setFacilities((prev) => [newItem, ...prev])
-      else if (resource.resourceType === "product") setProducts((prev) => [newItem, ...prev])
-      else setServices((prev) => [newItem, ...prev])
-    }
-    setActiveTab(resource.resourceType)
-  }
-
-  const handleSaveResource = async (updated: EditableResource) => {
-    const resType = activeTab
-    const id = updated.id as string
-
-    try {
-      if (resType === "facility") {
-        await facilitiesService.update(id, {
-          name: updated.name,
-          description: updated.description,
-          coverImage: updated.image,
-          pricePerHour: updated.pricePerHour,
-          capacity: updated.capacity,
-          address: updated.address,
-          city: updated.city,
-          sports: updated.sport ? [updated.sport] : undefined,
-        })
-      } else if (resType === "product") {
-        await marketplaceService.update(id, {
-          name: updated.name,
-          description: updated.description,
-          image: updated.image,
-          price: updated.price,
-          brand: updated.brand,
-          category: updated.category,
-          originalPrice: updated.originalPrice,
-        })
-      } else {
-        await servicesService.update(id, {
-          name: updated.name,
-          description: updated.description,
-          image: updated.image,
-          price: updated.price,
-          category: updated.category,
-          duration: updated.duration,
-        })
-      }
-    } catch { /* update locally anyway */ }
-
-    const setter = resType === "facility" ? setFacilities : resType === "product" ? setProducts : setServices
-    setter((prev: BusinessResource[]) => prev.map((item) => (item.id === id ? { ...item, ...updated } as BusinessResource : item)))
-    setEditingResource(null)
-  }
-
   const handleDeleteResource = async (resource?: BusinessResource) => {
-    const target = resource || editingResource
+    const target = resource
     if (!target) return
     const resType = target.resourceType
 
@@ -793,7 +673,6 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
     if (resType === "facility") setFacilities((prev) => prev.filter((item) => item.id !== target.id))
     else if (resType === "product") setProducts((prev) => prev.filter((item) => item.id !== target.id))
     else setServices((prev) => prev.filter((item) => item.id !== target.id))
-    setEditingResource(null)
     setDeleteConfirm(null)
   }
 
@@ -808,7 +687,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
         </div>
         <button
           type="button"
-          onClick={() => setIsAddResourceOpen(true)}
+          onClick={() => onNavigate("add-resource", activeTab)}
           className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
@@ -861,12 +740,12 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {!loading && <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {activeResources.map((resource) => (
           <div
             key={resource.id}
             className="rounded-2xl border border-border bg-card p-4 shadow-sm cursor-pointer transition-all hover:shadow-md hover:border-primary/30"
-            onClick={() => setViewingResource(resource)}
+            onClick={() => onNavigate("business-resource-detail", `${resource.resourceType}--${resource.id}`)}
           >
             <div className="flex items-center gap-4">
               <img
@@ -926,7 +805,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
                   <div className="absolute right-0 top-10 z-50 min-w-[140px] rounded-xl border border-border bg-card py-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={() => { setViewingResource(resource); setDropdownResourceId(null) }}
+                      onClick={() => { setDropdownResourceId(null); onNavigate("business-resource-detail", `${resource.resourceType}--${resource.id}`) }}
                       className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-xs font-medium text-foreground hover:bg-muted transition-colors"
                     >
                       <Eye className="h-3.5 w-3.5 text-muted-foreground" />
@@ -934,7 +813,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setEditingResource(resource); setDropdownResourceId(null) }}
+                      onClick={() => { setDropdownResourceId(null); onNavigate("edit-resource", `${resource.resourceType}--${resource.id}`) }}
                       className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-xs font-medium text-foreground hover:bg-muted transition-colors"
                     >
                       <Edit3 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -954,133 +833,7 @@ export function BusinessResourcesPage({ onNavigate }: BusinessSubPageProps) {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Add Resource Modal */}
-      <AddResourceModal
-        isOpen={isAddResourceOpen}
-        onClose={() => setIsAddResourceOpen(false)}
-        onCreate={handleCreateResource}
-        defaultResourceType={activeTab}
-      />
-
-      {/* Edit Resource Modal */}
-      {editingResource && (
-        <EditResourceModal
-          isOpen={!!editingResource}
-          onClose={() => setEditingResource(null)}
-          onDelete={() => handleDeleteResource(editingResource)}
-          onSave={handleSaveResource}
-          resource={editingResource}
-          resourceType={editingResource.resourceType}
-        />
-      )}
-
-      {/* View Resource Detail Modal */}
-      {viewingResource && (
-        <Dialog open={!!viewingResource} onOpenChange={() => setViewingResource(null)}>
-          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
-            <DialogTitle className="sr-only">Resource Details</DialogTitle>
-            {/* Header image */}
-            {viewingResource.image && viewingResource.image !== "/placeholder.svg" && (
-              <div className="relative">
-                <img src={viewingResource.image} alt={viewingResource.name} className="h-48 w-full object-cover" crossOrigin="anonymous" />
-                <button type="button" onClick={() => setViewingResource(null)} className="absolute right-3 top-3 rounded-full bg-black/40 p-1.5 text-white hover:bg-black/60">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-            <div className="space-y-4 px-5 py-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">{viewingResource.name}</h2>
-                  <p className="text-xs text-muted-foreground">{viewingResource.type}{viewingResource.category ? ` • ${viewingResource.category}` : ""}</p>
-                </div>
-                <span className={cn(
-                  "rounded-full px-3 py-1 text-xs font-semibold shrink-0",
-                  viewingResource.status === "available" ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
-                )}>
-                  {viewingResource.status}
-                </span>
-              </div>
-
-              {viewingResource.description && (
-                <p className="text-sm text-muted-foreground leading-relaxed">{viewingResource.description}</p>
-              )}
-
-              {/* Detail rows */}
-              <div className="space-y-2">
-                {viewingResource.pricePerHour != null && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground">Price per Hour</span>
-                    <span className="text-sm font-semibold text-foreground">${viewingResource.pricePerHour}</span>
-                  </div>
-                )}
-                {viewingResource.price != null && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground">Price</span>
-                    <span className="text-sm font-semibold text-foreground">${viewingResource.price}</span>
-                  </div>
-                )}
-                {viewingResource.originalPrice != null && viewingResource.originalPrice > 0 && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground">Original Price</span>
-                    <span className="text-sm font-semibold text-foreground line-through">${viewingResource.originalPrice}</span>
-                  </div>
-                )}
-                {viewingResource.capacity != null && viewingResource.capacity > 0 && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground">Capacity</span>
-                    <span className="text-sm font-semibold text-foreground">{viewingResource.capacity} people</span>
-                  </div>
-                )}
-                {viewingResource.duration && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground">Duration</span>
-                    <span className="text-sm font-semibold text-foreground">{viewingResource.duration}</span>
-                  </div>
-                )}
-                {viewingResource.brand && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground">Brand</span>
-                    <span className="text-sm font-semibold text-foreground">{viewingResource.brand}</span>
-                  </div>
-                )}
-                {viewingResource.sport && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground">Sport</span>
-                    <span className="text-sm font-semibold text-foreground">{viewingResource.sport}</span>
-                  </div>
-                )}
-                {(viewingResource.address || viewingResource.city) && (
-                  <div className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Location</span>
-                    <span className="text-sm font-semibold text-foreground">{[viewingResource.address, viewingResource.city].filter(Boolean).join(", ")}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setViewingResource(null)}
-                  className="flex-1 rounded-xl border border-border py-2.5 text-xs font-semibold text-foreground hover:bg-muted"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditingResource(viewingResource); setViewingResource(null) }}
-                  className="gradient-primary flex-1 rounded-xl py-2.5 text-xs font-semibold text-white"
-                >
-                  Edit Resource
-                </button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      </div>}
 
       {/* Delete Confirmation Dialog */}
       {deleteConfirm && (

@@ -1,13 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-interface FacilitiesFilterSidebarProps {
-  onClose?: () => void
-  onApply?: (filters: FacilitiesFilterState) => void
-}
 
 export interface FacilitiesFilterState {
   availability: string
@@ -15,19 +10,35 @@ export interface FacilitiesFilterState {
   amenities: string[]
 }
 
+interface FacilitiesFilterSidebarProps {
+  onClose?: () => void
+  onApply?: (filters: FacilitiesFilterState) => void
+  currentFilters?: FacilitiesFilterState
+}
+
 const availabilityOptions = ["Any", "Available Now", "Free", "Premium"]
 const priceRanges = ["Any", "Free", "Under $25", "$25-$50", "$50+"]
-const amenities = ["Parking", "Lockers", "Showers", "Pro Shop", "Cafe", "Training"]
+const amenityOptions = ["Parking", "Lockers", "Showers", "Pro Shop", "Cafe", "Training"]
 
-export function FacilitiesFilterSidebar({ onClose, onApply }: FacilitiesFilterSidebarProps) {
-  const [availability, setAvailability] = useState("Any")
-  const [priceRange, setPriceRange] = useState("Any")
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
+export function FacilitiesFilterSidebar({ onClose, onApply, currentFilters }: FacilitiesFilterSidebarProps) {
+  const [availability, setAvailability] = useState(currentFilters?.availability ?? "Any")
+  const [priceRange, setPriceRange] = useState(currentFilters?.priceRange ?? "Any")
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>(currentFilters?.amenities ?? [])
+
+  useEffect(() => {
+    if (currentFilters) {
+      setAvailability(currentFilters.availability)
+      setPriceRange(currentFilters.priceRange)
+      setSelectedAmenities(currentFilters.amenities)
+    }
+  }, [currentFilters])
 
   const resetFilters = () => {
     setAvailability("Any")
     setPriceRange("Any")
     setSelectedAmenities([])
+    onApply?.({ availability: "Any", priceRange: "Any", amenities: [] })
+    onClose?.()
   }
 
   const applyFilters = () => {
@@ -99,7 +110,7 @@ export function FacilitiesFilterSidebar({ onClose, onApply }: FacilitiesFilterSi
         <div>
           <p className="mb-2 text-xs font-semibold text-foreground">Amenities</p>
           <div className="flex flex-wrap gap-2">
-            {amenities.map((amenity) => (
+            {amenityOptions.map((amenity) => (
               <button
                 key={amenity}
                 type="button"

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Search, SlidersHorizontal, MapPin, Building2, ArrowRight } from "lucide-react"
-import { activities, facilities, services, businesses, people } from "@/lib/mock-data"
+import { Search, SlidersHorizontal, MapPin, Building2, ArrowRight, Loader2, SearchX } from "lucide-react"
+import { useExplore } from "@/hooks/use-explore"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
@@ -24,20 +24,78 @@ interface ExplorePageProps {
 const tabs = ["All", "Activities", "Facilities", "Services", "Businesses", "People"]
 const sportFilters = ["All Sports", "Basketball", "Soccer", "Tennis", "Swimming", "Running", "Volleyball", "Boxing", "Yoga"]
 
+function CardSkeleton() {
+  return (
+    <div className="animate-pulse rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="h-40 bg-muted" />
+      <div className="p-4 space-y-3">
+        <div className="h-3 w-20 rounded bg-muted" />
+        <div className="h-4 w-3/4 rounded bg-muted" />
+        <div className="h-3 w-1/2 rounded bg-muted" />
+        <div className="h-3 w-2/3 rounded bg-muted" />
+      </div>
+    </div>
+  )
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <SearchX className="mb-3 h-10 w-10 text-muted-foreground/40" />
+      <p className="text-sm font-medium text-muted-foreground">No {label} found</p>
+      <p className="mt-1 text-xs text-muted-foreground/70">Try adjusting your search or filters</p>
+    </div>
+  )
+}
+
+function LoadingGrid({ count = 3 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <CardSkeleton key={i} />
+      ))}
+    </div>
+  )
+}
+
 export function ExplorePage({ onNavigate }: ExplorePageProps) {
-  const [activeTab, setActiveTab] = useState("All")
-  const [activeSport, setActiveSport] = useState("All Sports")
+  const {
+    activities,
+    facilities,
+    services,
+    businesses,
+    people,
+    loading,
+    searchQuery,
+    setSearchQuery,
+    activeTab,
+    setActiveTab,
+    activeSport,
+    setActiveSport,
+    sidebarFilters,
+    applyFilters,
+    totalResults,
+  } = useExplore()
+
   const [showFilters, setShowFilters] = useState(false)
   const [showMap, setShowMap] = useState(false)
   const [joinedRecommendations, setJoinedRecommendations] = useState<string[]>([])
-  const mapCenter = facilities[0]?.coordinates || [40.7465, -74.0071]
   const isMobile = useIsMobile()
+
+  const mapCenter: [number, number] = facilities.find(f => f.coordinates[0] !== 0)?.coordinates || [40.7465, -74.0071]
   const recommendations = activities.slice(0, 3)
   const reasons = [
     "Matches your favorite sports",
     "Trending near your area",
     "Similar to recent bookings",
   ]
+
+  const showSection = (section: string) => {
+    if (sidebarFilters.contentTypes.length > 0 && !sidebarFilters.contentTypes.includes(section)) {
+      return false
+    }
+    return activeTab === "All" || activeTab === section
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -49,15 +107,23 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
             <input
               type="text"
               placeholder="Search everything..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
+            {loading && searchQuery && (
+              <Loader2 className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            )}
           </div>
           <button
             type="button"
             onClick={() => setShowFilters((prev) => !prev)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted"
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted",
+              showFilters && "bg-primary text-primary-foreground border-primary"
+            )}
           >
-            <SlidersHorizontal className="h-4 w-4 text-foreground" />
+            <SlidersHorizontal className="h-4 w-4" />
           </button>
           <button
             type="button"
@@ -67,7 +133,7 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
               showMap && "bg-primary text-primary-foreground border-primary"
             )}
           >
-            <MapPin className="h-4 w-4 text-foreground" />
+            <MapPin className="h-4 w-4" />
           </button>
         </div>
 
@@ -111,139 +177,209 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
 
         {showFilters && isMobile && (
           <BottomSheet isOpen={showFilters} onClose={() => setShowFilters(false)} title="Filters">
-            <ExploreFilterSidebar onClose={() => setShowFilters(false)} />
+            <ExploreFilterSidebar
+              onClose={() => setShowFilters(false)}
+              onApply={applyFilters}
+              currentFilters={sidebarFilters}
+            />
           </BottomSheet>
         )}
 
         {showFilters && !isMobile && (
-          <ExploreFilterSidebar onClose={() => setShowFilters(false)} />
+          <ExploreFilterSidebar
+            onClose={() => setShowFilters(false)}
+            onApply={applyFilters}
+            currentFilters={sidebarFilters}
+          />
         )}
 
         {showMap && (
           <div className="space-y-4">
             <MapFilter />
-            <MapView center={mapCenter as [number, number]} markerLabel="Nearby locations" height="300px" />
+            <MapView center={mapCenter} markerLabel="Nearby locations" height="300px" />
           </div>
         )}
       </div>
 
+      {/* Loading state */}
+      {loading && (
+        <div className="space-y-6">
+          {showSection("Activities") && (
+            <div>
+              <div className="mb-4 h-5 w-24 animate-pulse rounded bg-muted" />
+              <LoadingGrid count={3} />
+            </div>
+          )}
+          {showSection("Facilities") && (
+            <div>
+              <div className="mb-4 h-5 w-24 animate-pulse rounded bg-muted" />
+              <LoadingGrid count={2} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* No results state */}
+      {!loading && totalResults === 0 && (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <SearchX className="mb-4 h-14 w-14 text-muted-foreground/30" />
+          <h3 className="text-base font-semibold text-foreground">No results found</h3>
+          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+            {searchQuery
+              ? `No results for "${searchQuery}". Try a different search term or adjust your filters.`
+              : "No data available. Try adjusting your sport or filter selections."}
+          </p>
+        </div>
+      )}
+
       {/* Results */}
-      {activeTab === "All" && (
-        <div>
-          <h2 className="mb-4 text-base font-bold text-foreground">Recommended for you</h2>
-          <div className="space-y-3">
-            {recommendations.map((activity, index) => (
-              <RecommendationActivityCard
-                key={activity.id}
-                id={activity.id}
-                title={activity.title}
-                sport={activity.sport}
-                location={activity.location}
-                date={activity.date}
-                time={activity.time}
-                participants={activity.spots}
-                maxParticipants={activity.totalSpots}
-                level="Intermediate"
-                image={activity.image}
-                reason={reasons[index % reasons.length]}
-                isJoined={joinedRecommendations.includes(activity.id)}
-                onJoin={(id) => setJoinedRecommendations((prev) => [...prev, id])}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(activeTab === "All" || activeTab === "Activities") && (
-        <div>
-          <h2 className="mb-4 text-base font-bold text-foreground">Activities</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activities.map((activity) => (
-              <ActivityCard
-                key={activity.id}
-                activity={activity}
-                onClick={() => onNavigate("activity-detail", activity.id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(activeTab === "All" || activeTab === "Facilities") && (
-        <div>
-          <h2 className="mb-4 text-base font-bold text-foreground">Facilities</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {facilities.map((facility) => (
-              <FacilityCard
-                key={facility.id}
-                facility={facility}
-                onClick={() => onNavigate("facility-detail", facility.id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(activeTab === "All" || activeTab === "Services") && (
-        <div>
-          <h2 className="mb-4 text-base font-bold text-foreground">Services</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {services.map((service) => (
-              <ServiceCard
-                key={service.id}
-                service={service}
-                onClick={() => onNavigate("service-detail", service.id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(activeTab === "All" || activeTab === "Businesses") && (
-        <div>
-          <h2 className="mb-4 text-base font-bold text-foreground">Businesses</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {businesses.map((business) => (
-              <BusinessCard
-                key={business.id}
-                business={business}
-                onClick={() => onNavigate("business-detail", business.id)}
-              />
-            ))}
-          </div>
-          {/* Start Your Business CTA */}
-          <button
-            type="button"
-            onClick={() => onNavigate("create-business")}
-            className="mt-4 flex w-full items-center gap-4 rounded-2xl border border-dashed border-primary/30 bg-gradient-to-r from-primary/5 to-secondary/5 p-5 transition-all hover:border-primary/60 hover:shadow-md"
-          >
-            <div className="gradient-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white shadow-md">
-              <Building2 className="h-6 w-6" />
+      {!loading && totalResults > 0 && (
+        <>
+          {/* Recommended for you */}
+          {activeTab === "All" && recommendations.length > 0 && (
+            <div>
+              <h2 className="mb-4 text-base font-bold text-foreground">Recommended for you</h2>
+              <div className="space-y-3">
+                {recommendations.map((activity, index) => (
+                  <RecommendationActivityCard
+                    key={activity.id}
+                    id={activity.id}
+                    title={activity.title}
+                    sport={activity.sport}
+                    location={activity.location}
+                    date={activity.date}
+                    time={activity.time}
+                    participants={activity.spots}
+                    maxParticipants={activity.totalSpots}
+                    level="Intermediate"
+                    image={activity.image}
+                    reason={reasons[index % reasons.length]}
+                    isJoined={joinedRecommendations.includes(activity.id)}
+                    onJoin={(id) => setJoinedRecommendations((prev) => [...prev, id])}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-bold text-foreground">Own a sports business?</p>
-              <p className="text-xs text-muted-foreground">
-                List your facility on Sporgates and reach thousands of athletes
-              </p>
-            </div>
-            <ArrowRight className="h-5 w-5 text-primary" />
-          </button>
-        </div>
-      )}
+          )}
 
-      {(activeTab === "All" || activeTab === "People") && (
-        <div>
-          <h2 className="mb-4 text-base font-bold text-foreground">People</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {people.map((person) => (
-              <PersonCard
-                key={person.id}
-                person={person}
-                onClick={() => onNavigate("person-detail", person.id)}
-              />
-            ))}
-          </div>
-        </div>
+          {/* Activities */}
+          {showSection("Activities") && (
+            <div>
+              <h2 className="mb-4 text-base font-bold text-foreground">Activities</h2>
+              {activities.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {activities.map((activity) => (
+                    <ActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      onClick={() => onNavigate("activity-detail", activity.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="activities" />
+              )}
+            </div>
+          )}
+
+          {/* Facilities */}
+          {showSection("Facilities") && (
+            <div>
+              <h2 className="mb-4 text-base font-bold text-foreground">Facilities</h2>
+              {facilities.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {facilities.map((facility) => (
+                    <FacilityCard
+                      key={facility.id}
+                      facility={facility}
+                      onClick={() => onNavigate("facility-detail", facility.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="facilities" />
+              )}
+            </div>
+          )}
+
+          {/* Services */}
+          {showSection("Services") && (
+            <div>
+              <h2 className="mb-4 text-base font-bold text-foreground">Services</h2>
+              {services.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {services.map((service) => (
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
+                      onClick={() => onNavigate("service-detail", service.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="services" />
+              )}
+            </div>
+          )}
+
+          {/* Businesses */}
+          {showSection("Businesses") && (
+            <div>
+              <h2 className="mb-4 text-base font-bold text-foreground">Businesses</h2>
+              {businesses.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {businesses.map((business) => (
+                    <BusinessCard
+                      key={business.id}
+                      business={business}
+                      onClick={() => onNavigate("business-detail", business.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="businesses" />
+              )}
+
+              {/* Start Your Business CTA */}
+              <button
+                type="button"
+                onClick={() => onNavigate("create-business")}
+                className="mt-4 flex w-full items-center gap-4 rounded-2xl border border-dashed border-primary/30 bg-gradient-to-r from-primary/5 to-secondary/5 p-5 transition-all hover:border-primary/60 hover:shadow-md"
+              >
+                <div className="gradient-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white shadow-md">
+                  <Building2 className="h-6 w-6" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-bold text-foreground">Own a sports business?</p>
+                  <p className="text-xs text-muted-foreground">
+                    List your facility on Sporgates and reach thousands of athletes
+                  </p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-primary" />
+              </button>
+            </div>
+          )}
+
+          {/* People */}
+          {showSection("People") && (
+            <div>
+              <h2 className="mb-4 text-base font-bold text-foreground">People</h2>
+              {people.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {people.map((person) => (
+                    <PersonCard
+                      key={person.id}
+                      person={person}
+                      onClick={() => onNavigate("person-detail", person.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState label="people" />
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

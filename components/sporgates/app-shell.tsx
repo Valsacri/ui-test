@@ -39,6 +39,7 @@ import { SettingsHelpPage } from "@/components/sporgates/pages/settings-help-pag
 import { AuthPages } from "@/components/sporgates/pages/auth-pages"
 import { BusinessDashboardPage } from "@/components/sporgates/pages/business-dashboard-page"
 import { FacilityDetailPage } from "@/components/sporgates/pages/facility-detail-page"
+import { BusinessResourceDetailPage } from "@/components/sporgates/pages/business-resource-detail-page"
 import { ProductDetailPage } from "@/components/sporgates/pages/product-detail-page"
 import { ServiceDetailPage } from "@/components/sporgates/pages/service-detail-page"
 import { BusinessDetailPage } from "@/components/sporgates/pages/business-detail-page"
@@ -158,6 +159,7 @@ export function AppShell() {
     "organizer-portfolio",
     "person-detail",
     "squad-profile",
+    "business-resource-detail",
   ]
   const showRightSidebar = showSidebars && !isBusinessMode && !hideRightSidebarPages.includes(currentPage)
 
@@ -243,6 +245,12 @@ export function AppShell() {
         return <BusinessCampaignsPage onNavigate={navigate} />
       case "business-resources":
         return <BusinessResourcesPage onNavigate={navigate} />
+      case "business-resource-detail": {
+        const sep = (detailId || "").indexOf("--")
+        const resType = sep > 0 ? (detailId || "").slice(0, sep) : "facility"
+        const resId = sep > 0 ? (detailId || "").slice(sep + 2) : detailId || ""
+        return <BusinessResourceDetailPage resourceId={resId} resourceType={resType as "facility" | "product" | "service"} onNavigate={navigate} />
+      }
       case "business-partners":
         return <BusinessPartnersPage onNavigate={navigate} />
       case "community":
@@ -273,6 +281,12 @@ export function AppShell() {
         return <CreateBusinessPage onNavigate={navigate} />
       case "add-resource":
         return <AddResourcePage onNavigate={navigate} />
+      case "edit-resource": {
+        const sepIdx = (detailId || "").indexOf("--")
+        const editResType = sepIdx > 0 ? (detailId || "").slice(0, sepIdx) : "facility"
+        const editResId = sepIdx > 0 ? (detailId || "").slice(sepIdx + 2) : detailId || ""
+        return <AddResourcePage onNavigate={navigate} resourceId={editResId || undefined} editResourceType={editResType as "facility" | "product" | "service" || undefined} />
+      }
       case "add-team-member":
         return <AddTeamMemberPage onNavigate={navigate} />
       case "add-collaboration":

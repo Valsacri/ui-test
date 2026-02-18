@@ -34,6 +34,9 @@ export const authService = {
         const d = response.data;
         if (d.accessToken) {
             localStorage.setItem('auth_token', d.accessToken);
+            if (d.refreshToken) {
+                localStorage.setItem('refresh_token', d.refreshToken);
+            }
             localStorage.setItem('user', JSON.stringify({
                 id: d.userId, email: d.email,
                 firstName: d.firstName, lastName: d.lastName,
@@ -48,6 +51,9 @@ export const authService = {
         const d = response.data;
         if (d.accessToken) {
             localStorage.setItem('auth_token', d.accessToken);
+            if (d.refreshToken) {
+                localStorage.setItem('refresh_token', d.refreshToken);
+            }
             localStorage.setItem('user', JSON.stringify({
                 id: d.userId, email: d.email,
                 firstName: d.firstName, lastName: d.lastName,
@@ -59,6 +65,7 @@ export const authService = {
 
     logout: () => {
         localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
     },
 
@@ -73,6 +80,13 @@ export const authService = {
     getToken: () => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('auth_token');
+        }
+        return null;
+    },
+
+    getRefreshToken: () => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('refresh_token');
         }
         return null;
     },
@@ -105,6 +119,9 @@ export const authService = {
         const response = await apiClient.post('/auth/refresh', { refreshToken });
         if (response.data.accessToken) {
             localStorage.setItem('auth_token', response.data.accessToken);
+            if (response.data.refreshToken) {
+                localStorage.setItem('refresh_token', response.data.refreshToken);
+            }
         }
         return response.data;
     },

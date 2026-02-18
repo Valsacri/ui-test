@@ -1,13 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { X, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-interface ExploreFilterSidebarProps {
-  onClose?: () => void
-  onApply?: (filters: ExploreFilterState) => void
-}
 
 export interface ExploreFilterState {
   contentTypes: string[]
@@ -15,18 +10,34 @@ export interface ExploreFilterState {
   rating: string
 }
 
+interface ExploreFilterSidebarProps {
+  onClose?: () => void
+  onApply?: (filters: ExploreFilterState) => void
+  currentFilters?: ExploreFilterState
+}
+
 const contentTypes = ["Activities", "Facilities", "Services", "Businesses", "People"]
 const ratings = ["Any", "4.0+", "4.5+", "5.0"]
 
-export function ExploreFilterSidebar({ onClose, onApply }: ExploreFilterSidebarProps) {
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
-  const [distance, setDistance] = useState(10)
-  const [rating, setRating] = useState("Any")
+export function ExploreFilterSidebar({ onClose, onApply, currentFilters }: ExploreFilterSidebarProps) {
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(currentFilters?.contentTypes ?? [])
+  const [distance, setDistance] = useState(currentFilters?.distance ?? 10)
+  const [rating, setRating] = useState(currentFilters?.rating ?? "Any")
+
+  useEffect(() => {
+    if (currentFilters) {
+      setSelectedTypes(currentFilters.contentTypes)
+      setDistance(currentFilters.distance)
+      setRating(currentFilters.rating)
+    }
+  }, [currentFilters])
 
   const resetFilters = () => {
     setSelectedTypes([])
     setDistance(10)
     setRating("Any")
+    onApply?.({ contentTypes: [], distance: 10, rating: "Any" })
+    onClose?.()
   }
 
   const applyFilters = () => {
