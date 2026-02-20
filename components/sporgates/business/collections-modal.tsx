@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Folder, Plus, Edit, Trash2, Package, X } from "lucide-react"
-import { products } from "@/lib/mock-data"
+import { marketplaceService } from "@/lib/services/marketplace"
 
 interface CollectionsModalProps {
   open: boolean
@@ -25,6 +25,16 @@ interface Collection {
 }
 
 export function CollectionsModal({ open, onClose }: CollectionsModalProps) {
+  const [products, setProducts] = useState<any[]>([])
+
+  useEffect(() => {
+    if (open) {
+      marketplaceService.getAll().then((data: any) => {
+        setProducts(Array.isArray(data) ? data : [])
+      }).catch(() => { })
+    }
+  }, [open])
+
   const [collections, setCollections] = useState<Collection[]>([
     {
       id: "col-1",

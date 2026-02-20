@@ -1,14 +1,33 @@
 "use client"
 
-import { TrendingUp, Calendar, MapPin, Star } from "lucide-react"
-import { activities, facilities } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
+import { TrendingUp, Calendar, MapPin, Star, Loader2 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
+import { activitiesService } from "@/lib/services/activities"
+import { facilitiesService } from "@/lib/services/facilities"
 
 interface FeedSidebarProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
 }
 
 export function FeedSidebar({ onNavigate }: FeedSidebarProps) {
+  const [activities, setActivities] = useState<any[]>([])
+  const [facilities, setFacilities] = useState<any[]>([])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [actData, facData] = await Promise.allSettled([
+          activitiesService.getAll({}),
+          facilitiesService.getAll(),
+        ])
+        if (actData.status === "fulfilled") setActivities(Array.isArray(actData.value) ? actData.value : [])
+        if (facData.status === "fulfilled") setFacilities(Array.isArray(facData.value) ? facData.value : [])
+      } catch { }
+    }
+    load()
+  }, [])
+
   const trendingActivities = activities.slice(0, 3)
   const topFacilities = facilities.slice(0, 2)
 

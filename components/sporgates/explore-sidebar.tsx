@@ -54,11 +54,22 @@ const businessNavItems = [
   { label: "Campaigns", icon: Megaphone, page: "business-campaigns" as PageRoute },
   { label: "Resources", icon: Package, page: "business-resources" as PageRoute },
   { label: "Partners", icon: Users, page: "business-partners" as PageRoute },
+  { label: "Jobs", icon: Briefcase, page: "business-jobs" as PageRoute },
 ]
 
 export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: ExploreSidebarProps) {
   const mainItems = isBusinessMode ? businessNavItems : userNavItems
   const secondaryItems = isBusinessMode ? userSecondaryItems.slice(0, 2) : userSecondaryItems
+
+  // Check if current page matches item page, including detail pages
+  const isActive = (itemPage: PageRoute, current: PageRoute) => {
+    if (itemPage === current) return true
+    // For business jobs, highlight when on list or detail page
+    if (itemPage === "business-jobs" && current === "business-job-detail") return true
+    // For regular jobs, highlight when on list or detail page
+    if (itemPage === "jobs" && current === "job-detail") return true
+    return false
+  }
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:block">
@@ -71,7 +82,7 @@ export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: Expl
               onClick={() => onNavigate(item.page)}
               className={cn(
                 "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                currentPage === item.page
+                isActive(item.page, currentPage)
                   ? "gradient-primary text-white shadow-md"
                   : "text-foreground hover:bg-muted"
               )}

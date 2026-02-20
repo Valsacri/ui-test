@@ -10,11 +10,12 @@ import {
   Share2,
   Heart,
   CheckCircle,
-  Loader2,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { activitiesService } from "@/lib/services/activities"
 import { TicketModal } from "@/components/sporgates/attendance/ticket-modal"
+import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import type { PageRoute } from "@/lib/navigation"
 
 interface ActivityDetailPageProps {
@@ -89,10 +90,16 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
   }, [activityId])
 
   if (loading) {
+    return <DetailPageSkeleton />
+  }
+
+  if (error || !activity) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <ErrorState
+        title="Activity not found"
+        message={error || "The activity you're looking for doesn't exist or has been removed."}
+        onRetry={() => onNavigate("activities")}
+      />
     )
   }
 
@@ -127,7 +134,7 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
   const spotsLeft = Math.max(0, maxParticipants - currentParticipants)
   const rating = activity.rating ?? 0
   const reviewCount = activity.reviewCount ?? 0
-  const tags = activity.tags || []
+  const tags = Array.from(new Set(activity.tags || [])) as string[]
   const image = activity.coverImage || "/placeholder.svg"
   const organizerName = activity.organizerName || "Organizer"
   const organizerAvatar = activity.organizerAvatar

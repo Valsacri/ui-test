@@ -1,12 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Search, Download, Filter } from "lucide-react"
-import { transactionHistory } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
+import { walletService, authService } from "@/lib/services"
+import { DashboardSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 
 interface SettingsTransactionsPageProps {
   onBack: () => void
+}
+
+interface Transaction {
+  id: string
+  description: string
+  type: "payment" | "deposit" | "refund"
+  amount: number
+  date: string
+  status: string
 }
 
 const filters = ["All", "Payments", "Deposits", "Refunds"]
@@ -14,8 +25,42 @@ const filters = ["All", "Payments", "Deposits", "Refunds"]
 export function SettingsTransactionsPage({ onBack }: SettingsTransactionsPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredTransactions = transactionHistory.filter((t) => {
+  const fetchTransactions = async () => {
+    const user = authService.getCurrentUser()
+    if (!user?.id) {
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await walletService.getTransactions(user.id)
+      const list = Array.isArray(data) ? data : (data?.content || [])
+      setTransactions(list.map((t: Record<string, unknown>) => ({
+        id: String(t.id || t.transactionId || ""),
+        description: String(t.description || t.type || "Transaction"),
+        type: inferTransactionType(t),
+        amount: Number(t.amount || 0),
+        date: t.createdAt ? new Date(String(t.createdAt)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
+        status: String(t.status || "completed"),
+      })))
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err)
+      setError("Failed to load transactions")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTransactions()
+  }, [])
+
+  const filteredTransactions = transactions.filter((t) => {
     const matchesFilter =
       activeFilter === "All" ||
       (activeFilter === "Payments" && t.type === "payment") ||
@@ -25,8 +70,29 @@ export function SettingsTransactionsPage({ onBack }: SettingsTransactionsPagePro
     return matchesFilter && matchesSearch
   })
 
-  const totalSpent = transactionHistory.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0)
-  const totalDeposited = transactionHistory.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
+  const totalSpent = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0)
+  const totalDeposited = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onBack} className="rounded-full p-2 hover:bg-muted">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-foreground">Transaction History</h1>
+            <p className="text-sm text-muted-foreground">View all your receipts and payments</p>
+          </div>
+        </div>
+        <DashboardSkeleton />
+      </div>
+    )
+  }
+
+  if (error) {
+    return <ErrorState message={error} onRetry={fetchTransactions} />
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -106,7 +172,9 @@ export function SettingsTransactionsPage({ onBack }: SettingsTransactionsPagePro
           <div className="p-8 text-center">
             <Filter className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
             <p className="text-sm font-semibold text-foreground">No transactions found</p>
-            <p className="text-xs text-muted-foreground">Try adjusting your filters</p>
+            <p className="text-xs text-muted-foreground">
+              {transactions.length === 0 ? "No transactions yet" : "Try adjusting your filters"}
+            </p>
           </div>
         ) : (
           filteredTransactions.map((transaction, index) => (
@@ -134,7 +202,7 @@ export function SettingsTransactionsPage({ onBack }: SettingsTransactionsPagePro
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{transaction.date}</span>
                   <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-                  <span className="capitalize">{transaction.id}</span>
+                  <span className="capitalize">{transaction.id.substring(0, 8)}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -157,4 +225,13 @@ export function SettingsTransactionsPage({ onBack }: SettingsTransactionsPagePro
       </div>
     </div>
   )
+}
+
+function inferTransactionType(t: Record<string, unknown>): "payment" | "deposit" | "refund" {
+  const type = String(t.type || "").toLowerCase()
+  if (type.includes("refund")) return "refund"
+  if (type.includes("deposit") || type.includes("top")) return "deposit"
+  const amount = Number(t.amount || 0)
+  if (amount > 0) return "deposit"
+  return "payment"
 }

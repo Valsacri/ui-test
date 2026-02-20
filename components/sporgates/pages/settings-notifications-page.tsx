@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ArrowLeft, Bell, Mail, Smartphone, MessageCircle } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 interface SettingsNotificationsPageProps {
@@ -78,6 +79,9 @@ export function SettingsNotificationsPage({ onBack }: SettingsNotificationsPageP
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={pushSettings[item.key]}
+                aria-label={item.label}
                 onClick={() => togglePush(item.key)}
                 className={cn(
                   "relative h-6 w-11 shrink-0 rounded-full transition-colors",
@@ -121,6 +125,9 @@ export function SettingsNotificationsPage({ onBack }: SettingsNotificationsPageP
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={emailSettings[item.key]}
+                aria-label={item.label}
                 onClick={() => toggleEmail(item.key)}
                 className={cn(
                   "relative h-6 w-11 shrink-0 rounded-full transition-colors",
@@ -167,6 +174,14 @@ export function SettingsNotificationsPage({ onBack }: SettingsNotificationsPageP
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => toast.success("Notification preferences saved")}
+        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white"
+      >
+        Save Preferences
+      </button>
     </div>
   )
 }

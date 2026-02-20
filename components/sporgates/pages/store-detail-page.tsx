@@ -1,10 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { ArrowLeft, Star, MapPin, Clock, BadgeCheck, ShoppingBag } from "lucide-react"
-import { businesses, products, services } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
+import { ArrowLeft, Star, MapPin, Clock, BadgeCheck, ShoppingBag, Package, Wrench } from "lucide-react"
+import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { businessesService } from "@/lib/services/businesses"
+import { marketplaceService } from "@/lib/services/marketplace"
 
 interface StoreDetailPageProps {
   businessId: string
@@ -12,8 +15,44 @@ interface StoreDetailPageProps {
 }
 
 export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps) {
-  const business = businesses.find((b) => b.id === businessId) || businesses[0]
+  const [business, setBusiness] = useState<any>(null)
+  const [products, setProducts] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState("Products")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      try {
+        const [bizData, prodData] = await Promise.allSettled([
+          businessesService.getById(businessId),
+          marketplaceService.getAll(),
+        ])
+        if (bizData.status === "fulfilled") setBusiness(bizData.value)
+        if (prodData.status === "fulfilled") setProducts(Array.isArray(prodData.value) ? prodData.value : [])
+      } catch (error) {
+        console.error("Failed to load store data", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [businessId])
+
+  if (loading) {
+    return <DetailPageSkeleton />
+  }
+
+  if (!business) {
+    return (
+      <ErrorState
+        title="Business not found"
+        message="The business you're looking for doesn't exist."
+        onRetry={() => onNavigate("businesses")}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -29,8 +68,8 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="relative h-40">
           <img
-            src={business.image}
-            alt={business.name}
+            src={business.coverImage || business.image || "/placeholder.svg"}
+            alt={business.name || "Business"}
             className="h-full w-full object-cover"
             crossOrigin="anonymous"
           />
@@ -46,17 +85,17 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
                 <h1 className="truncate text-xl font-bold text-foreground">{business.name}</h1>
                 {business.verified && <BadgeCheck className="h-5 w-5 shrink-0 text-primary" />}
               </div>
-              <p className="text-sm text-muted-foreground">{business.type}</p>
+              <p className="text-sm text-muted-foreground">{business.type || business.category || "Business"}</p>
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <MapPin className="h-3.5 w-3.5" />
-              {business.location}
+              {business.location || business.address || "Location not set"}
             </span>
             <span className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 fill-secondary text-secondary" />
-              {business.rating} ({business.reviews} reviews)
+              {business.rating || "N/A"} ({business.reviews || 0} reviews)
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
@@ -86,77 +125,93 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
 
       {activeTab === "Products" && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 animate-fade-in">
-          {products.map((product) => (
-            <button
-              type="button"
-              key={product.id}
-              onClick={() => onNavigate("product-detail", product.id)}
-              className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
-            >
-              <div className="relative h-40 overflow-hidden">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  crossOrigin="anonymous"
-                />
-                {product.originalPrice && (
-                  <div className="absolute right-3 top-3 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-white">
-                    Sale
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <p className="text-xs text-muted-foreground">{product.brand}</p>
-                <h3 className="text-sm font-bold text-foreground">{product.name}</h3>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-sm font-bold text-primary">${product.price}</span>
+          {products.length === 0 ? (
+            <div className="col-span-full rounded-2xl border border-border bg-card p-12 text-center">
+              <Package className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+              <p className="text-sm font-semibold text-foreground">No products available</p>
+              <p className="mt-1 text-xs text-muted-foreground">This store hasn&apos;t listed any products yet</p>
+            </div>
+          ) : (
+            products.map((product: any) => (
+              <button
+                type="button"
+                key={product.id}
+                onClick={() => onNavigate("product-detail", product.id)}
+                className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
+              >
+                <div className="relative h-40 overflow-hidden">
+                  <img
+                    src={product.image || product.coverImage || "/placeholder.svg"}
+                    alt={product.name}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    crossOrigin="anonymous"
+                  />
                   {product.originalPrice && (
-                    <span className="text-xs text-muted-foreground line-through">${product.originalPrice}</span>
+                    <div className="absolute right-3 top-3 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-white">
+                      Sale
+                    </div>
                   )}
                 </div>
-                <div className="mt-1 flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-secondary text-secondary" />
-                  <span className="text-xs font-medium">{product.rating}</span>
-                  <span className="text-[10px] text-muted-foreground">({product.reviews})</span>
+                <div className="p-4">
+                  <p className="text-xs text-muted-foreground">{product.brand || product.category || ""}</p>
+                  <h3 className="text-sm font-bold text-foreground">{product.name}</h3>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-sm font-bold text-primary">${product.price}</span>
+                    {product.originalPrice && (
+                      <span className="text-xs text-muted-foreground line-through">${product.originalPrice}</span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-secondary text-secondary" />
+                    <span className="text-xs font-medium">{product.rating || "N/A"}</span>
+                    <span className="text-[10px] text-muted-foreground">({product.reviews || 0})</span>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
       )}
 
       {activeTab === "Services" && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 animate-fade-in">
-          {services.map((service) => (
-            <button
-              type="button"
-              key={service.id}
-              onClick={() => onNavigate("service-detail", service.id)}
-              className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:shadow-lg"
-            >
-              <div className="flex items-center gap-4">
-                <img
-                  src={service.image}
-                  alt={service.name}
-                  className="h-16 w-16 rounded-xl object-cover"
-                  crossOrigin="anonymous"
-                />
-                <div className="flex-1">
-                  <h3 className="text-sm font-bold text-foreground">{service.name}</h3>
-                  <p className="text-xs text-muted-foreground">{service.provider}</p>
-                  <div className="mt-1 flex items-center gap-3 text-xs">
-                    <span className="font-bold text-primary">${service.price}</span>
-                    <span className="text-muted-foreground">{service.duration}</span>
-                    <span className="flex items-center gap-0.5">
-                      <Star className="h-3 w-3 fill-secondary text-secondary" />
-                      {service.rating}
-                    </span>
+          {services.length === 0 ? (
+            <div className="col-span-full rounded-2xl border border-border bg-card p-12 text-center">
+              <Wrench className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+              <p className="text-sm font-semibold text-foreground">No services available</p>
+              <p className="mt-1 text-xs text-muted-foreground">This store hasn&apos;t listed any services yet</p>
+            </div>
+          ) : (
+            services.map((service: any) => (
+              <button
+                type="button"
+                key={service.id}
+                onClick={() => onNavigate("service-detail", service.id)}
+                className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:shadow-lg"
+              >
+                <div className="flex items-center gap-4">
+                  <img
+                    src={service.image || "/placeholder.svg"}
+                    alt={service.name}
+                    className="h-16 w-16 rounded-xl object-cover"
+                    crossOrigin="anonymous"
+                  />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-foreground">{service.name}</h3>
+                    <p className="text-xs text-muted-foreground">{service.provider || ""}</p>
+                    <div className="mt-1 flex items-center gap-3 text-xs">
+                      <span className="font-bold text-primary">${service.price}</span>
+                      <span className="text-muted-foreground">{service.duration || ""}</span>
+                      <span className="flex items-center gap-0.5">
+                        <Star className="h-3 w-3 fill-secondary text-secondary" />
+                        {service.rating || "N/A"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

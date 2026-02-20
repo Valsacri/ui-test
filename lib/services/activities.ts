@@ -21,22 +21,33 @@ export const activitiesService = {
         return response.data;
     },
 
+    updateStatus: async (id: string, status: string) => {
+        const response = await apiClient.put(`/v1/activities/${id}/status`, null, { params: { status } });
+        return response.data;
+    },
+
     search: async (query: string) => {
-        const response = await apiClient.get('/v1/activities/search', { params: { name: query } });
+        const response = await apiClient.get('/v1/activities/search', { params: { query } });
         return response.data;
     },
 
     joinActivity: async (activityId: string, userId: string) => {
-        const response = await apiClient.post(`/v1/activities/${activityId}/join`, null, {
-            params: { userId },
-        });
+        const response = await apiClient.post(`/v1/activities/${activityId}/participants/${userId}`);
         return response.data;
     },
 
     leaveActivity: async (activityId: string, userId: string) => {
-        const response = await apiClient.post(`/v1/activities/${activityId}/leave`, null, {
-            params: { userId },
-        });
+        const response = await apiClient.delete(`/v1/activities/${activityId}/participants/${userId}`);
+        return response.data;
+    },
+
+    getByOrganizer: async (organizerId: string) => {
+        const response = await apiClient.get(`/v1/activities/organizer/${organizerId}`);
+        return response.data;
+    },
+
+    getUserParticipations: async (userId: string) => {
+        const response = await apiClient.get(`/v1/activities/user/${userId}/participations`);
         return response.data;
     },
 

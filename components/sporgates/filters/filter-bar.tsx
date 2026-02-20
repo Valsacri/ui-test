@@ -98,6 +98,78 @@ export function FilterBar({
   )
 
   return (
-    <div className={cn("space-y-4", inline && "space-y-3")}>\n      <div className={cn("flex flex-wrap items-center gap-3", inline && "flex-nowrap")}>\n        {search && (\n          <div className="relative flex-1 min-w-[180px]">\n            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />\n            <Input\n              value={search.value}\n              onChange={(event) => search.onChange(event.target.value)}\n              placeholder={search.placeholder || "Search..."}\n              className="h-10 rounded-full pl-9"\n            />\n            {search.value && (\n              <button\n                type="button"\n                onClick={() => search.onChange("")}\n                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"\n              >\n                <X className="h-4 w-4" />\n              </button>\n            )}\n          </div>\n        )}\n\n        {!inline && <div className="flex-1" />}\n\n        {showToggle && filters.length > 0 && (\n          <Button\n            variant={showFilters ? "default" : "outline"}\n            size="sm"\n            onClick={() => (isMobile ? setShowMobileFilters(true) : handleToggleFilters(!showFilters))}\n            className="gap-2"\n          >\n            <SlidersHorizontal className="h-4 w-4" />\n            Filters\n            {activeFilterCount > 0 && (\n              <Badge className="ml-1 h-5 rounded-full bg-secondary px-2 text-[10px] text-white">\n                {activeFilterCount}\n              </Badge>\n            )}\n          </Button>\n        )}\n\n        {actions}\n      </div>\n\n      {showFilters && !isMobile && filters.length > 0 && (\n        <div className="rounded-2xl border border-border bg-card p-4">\n          {filterControls}\n          {hasActiveFilters && (\n            <div className="mt-4 flex justify-end">\n              <button\n                type="button"\n                onClick={handleClearAll}\n                className="text-xs font-semibold text-primary"\n              >\n                Clear all\n              </button>\n            </div>\n          )}\n        </div>\n      )}\n\n      {isMobile && filters.length > 0 && (\n        <MobileFilterSheet\n          isOpen={showMobileFilters}\n          onClose={() => setShowMobileFilters(false)}\n          onApply={() => undefined}\n          onClear={hasActiveFilters ? handleClearAll : undefined}\n        >\n          {filterControls}\n        </MobileFilterSheet>\n      )}\n    </div>
+    <div className={cn("space-y-4", inline && "space-y-3")}>
+      <div className={cn("flex flex-wrap items-center gap-3", inline && "flex-nowrap")}>
+        {search && (
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search.value}
+              onChange={(event) => search.onChange(event.target.value)}
+              placeholder={search.placeholder || "Search..."}
+              className="h-10 rounded-full pl-9"
+            />
+            {search.value && (
+              <button
+                type="button"
+                onClick={() => search.onChange("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {!inline && <div className="flex-1" />}
+
+        {showToggle && filters.length > 0 && (
+          <Button
+            variant={showFilters ? "default" : "outline"}
+            size="sm"
+            onClick={() => (isMobile ? setShowMobileFilters(true) : handleToggleFilters(!showFilters))}
+            className="gap-2"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge className="ml-1 h-5 rounded-full bg-secondary px-2 text-[10px] text-white">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
+        )}
+
+        {actions}
+      </div>
+
+      {showFilters && !isMobile && filters.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card p-4">
+          {filterControls}
+          {hasActiveFilters && (
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="text-xs font-semibold text-primary"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isMobile && filters.length > 0 && (
+        <MobileFilterSheet
+          isOpen={showMobileFilters}
+          onClose={() => setShowMobileFilters(false)}
+          onApply={() => undefined}
+          onClear={hasActiveFilters ? handleClearAll : undefined}
+        >
+          {filterControls}
+        </MobileFilterSheet>
+      )}
+    </div>
   )
 }

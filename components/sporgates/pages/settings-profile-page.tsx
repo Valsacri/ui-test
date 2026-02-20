@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Eye, EyeOff, Mail, Phone, Lock } from "lucide-react"
+import { Eye, EyeOff, Mail, Phone, Lock, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import type { PageRoute } from "@/lib/navigation"
 import { authService, userService } from "@/lib/services"
 
@@ -16,6 +17,10 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
   const [profileData, setProfileData] = useState({
     name: "", username: "", bio: "", email: "", phone: "",
   })
+  const [passwords, setPasswords] = useState({
+    current: "", newPwd: "", confirm: "",
+  })
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const user = authService.getCurrentUser()
@@ -40,6 +45,33 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
       })
     }
   }, [])
+
+  const handleSave = async () => {
+    const user = authService.getCurrentUser()
+    if (!user?.id) { toast.error("Not authenticated"); return }
+    if (passwords.newPwd && passwords.newPwd.length < 8) {
+      toast.error("New password must be at least 8 characters"); return
+    }
+    if (passwords.newPwd && passwords.newPwd !== passwords.confirm) {
+      toast.error("Passwords do not match"); return
+    }
+    setSaving(true)
+    try {
+      const nameParts = profileData.name.trim().split(/\s+/)
+      await userService.updateProfile(user.id, {
+        firstName: nameParts[0] || "",
+        lastName: nameParts.slice(1).join(" ") || "",
+        username: profileData.username,
+        bio: profileData.bio,
+        phone: profileData.phone,
+      })
+      toast.success("Profile updated successfully")
+    } catch {
+      toast.error("Failed to update profile")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -122,6 +154,8 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
             <input
               type={showCurrentPassword ? "text" : "password"}
               placeholder="Enter current password"
+              value={passwords.current}
+              onChange={(e) => setPasswords((prev) => ({ ...prev, current: e.target.value }))}
               className="h-11 w-full rounded-full border border-border bg-muted px-4 pr-10 text-sm outline-none focus:border-primary"
             />
             <button
@@ -139,6 +173,8 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
             <input
               type={showNewPassword ? "text" : "password"}
               placeholder="Enter new password"
+              value={passwords.newPwd}
+              onChange={(e) => setPasswords((prev) => ({ ...prev, newPwd: e.target.value }))}
               className="h-11 w-full rounded-full border border-border bg-muted px-4 pr-10 text-sm outline-none focus:border-primary"
             />
             <button
@@ -156,6 +192,8 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
             <input
               type={showConfirmPassword ? "text" : "password"}
               placeholder="Confirm new password"
+              value={passwords.confirm}
+              onChange={(e) => setPasswords((prev) => ({ ...prev, confirm: e.target.value }))}
               className="h-11 w-full rounded-full border border-border bg-muted px-4 pr-10 text-sm outline-none focus:border-primary"
             />
             <button
@@ -171,10 +209,11 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
 
       <button
         type="button"
-        onClick={() => onNavigate("settings")}
-        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white"
+        onClick={handleSave}
+        disabled={saving}
+        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60"
       >
-        Save Changes
+        {saving ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Save Changes"}
       </button>
     </div>
   )

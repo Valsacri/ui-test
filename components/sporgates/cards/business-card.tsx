@@ -37,6 +37,7 @@ export function BusinessCard({ business, onClick }: BusinessCardProps) {
             alt={business.name}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             crossOrigin="anonymous"
+            loading="lazy"
           />
         ) : (
           <div className="h-full w-full gradient-primary flex items-center justify-center">

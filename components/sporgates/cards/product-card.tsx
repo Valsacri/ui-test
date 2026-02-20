@@ -32,6 +32,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           alt={product.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           crossOrigin="anonymous"
+          loading="lazy"
         />
         {!product.inStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-foreground/40">

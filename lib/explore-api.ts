@@ -79,9 +79,12 @@ export interface ServiceListingDto {
   rating: number
   reviews: number
   image: string
+  imageUrls?: string[]
   category: string
   verified: boolean
   description: string
+  address?: string
+  offerings?: string[]
 }
 
 export interface BusinessResponseDto {
@@ -148,6 +151,7 @@ export interface FacilityCardData {
   pricePerHour: number
   currency: string
   image: string
+  imageUrls?: string[]
   amenities: string[]
   hours: string
   sports: string[]
@@ -167,9 +171,12 @@ export interface ServiceCardData {
   rating: number
   reviews: number
   image: string
+  imageUrls?: string[]
   category: string
   verified: boolean
   description: string
+  address?: string
+  offerings?: string[]
 }
 
 export interface BusinessCardData {
@@ -283,6 +290,7 @@ export function mapFacility(dto: FacilityDto): FacilityCardData {
     pricePerHour: dto.pricePerHour || 0,
     currency: '$',
     image: dto.coverImage || dto.imageUrls?.[0] || '',
+    imageUrls: dto.imageUrls,
     amenities: dto.amenities || [],
     hours: formatOpeningHours(dto.openingHours),
     sports: dto.sports || [],
@@ -304,9 +312,12 @@ export function mapService(dto: ServiceListingDto): ServiceCardData {
     rating: dto.rating || 0,
     reviews: dto.reviews || 0,
     image: dto.image || '',
+    imageUrls: dto.imageUrls,
     category: dto.category || 'General',
     verified: dto.verified || false,
     description: dto.description || '',
+    address: dto.address,
+    offerings: dto.offerings,
   }
 }
 

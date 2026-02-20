@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   ArrowLeft,
   MapPin,
@@ -19,20 +19,70 @@ import {
   Ruler,
   Weight,
   Edit,
+  Loader2,
 } from "lucide-react"
-import {
-  activities,
-  goals,
-  userProfile,
-  achievements,
-  activityHistory,
-  progressData,
-  personalProfile,
-  recommendedActivities,
-} from "@/lib/mock-data"
+import { toast } from "sonner"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { MemojiFaceAvatar } from "@/components/sporgates/memoji-face-avatar"
+import { activitiesService } from "@/lib/services/activities"
+import { userService } from "@/lib/services/user"
+import { authService } from "@/lib/services/auth"
+
+// Inline defaults — no dedicated BE endpoints exist for these
+const userProfile = {
+  name: "Jordan Rivera",
+  username: "@jordan_sports",
+  bio: "Passionate athlete • Basketball & Tennis enthusiast",
+  location: "New York, NY",
+  memberSince: "2023",
+  stats: { activitiesJoined: 47, goalsCompleted: 12, streak: 15, followers: 234, following: 189, totalActivities: 47, hoursPlayed: 128 },
+  avatar: "",
+}
+
+const goals = [
+  { id: "g1", title: "Weekly Activity", progress: 3, target: 5, unit: "sessions", icon: "Target", sport: "General", deadline: "Feb 28", milestones: [{ id: "m1", label: "First session", title: "First session", completed: true }, { id: "m2", label: "3 sessions", title: "3 sessions", completed: true }, { id: "m3", label: "5 sessions", title: "5 sessions", completed: false }] },
+  { id: "g2", title: "Monthly Distance", progress: 18, target: 30, unit: "km", icon: "Trophy", sport: "Running", deadline: "Mar 15", milestones: [{ id: "m4", label: "5 km", title: "5 km", completed: true }, { id: "m5", label: "15 km", title: "15 km", completed: true }, { id: "m6", label: "30 km", title: "30 km", completed: false }] },
+  { id: "g3", title: "Community Engagement", progress: 8, target: 10, unit: "events", icon: "Users", sport: "Social", deadline: "Apr 1", milestones: [{ id: "m7", label: "Join 1 event", title: "Join 1 event", completed: true }, { id: "m8", label: "Join 5 events", title: "Join 5 events", completed: true }, { id: "m9", label: "Join 10 events", title: "Join 10 events", completed: false }] },
+]
+
+const achievements = [
+  { id: "a1", title: "Early Bird", description: "Joined 5 morning sessions", icon: "Trophy", color: "text-yellow-500", earned: true, date: "Jan 2025" },
+  { id: "a2", title: "Team Player", description: "Joined 10 team activities", icon: "Users", color: "text-blue-500", earned: true, date: "Dec 2024" },
+  { id: "a3", title: "Marathon Runner", description: "Complete 42km total", icon: "Target", color: "text-green-500", earned: false, date: null as string | null },
+  { id: "a4", title: "Social Butterfly", description: "Connect with 50 people", icon: "Award", color: "text-purple-500", earned: false, date: null as string | null },
+]
+
+const activityHistory = [
+  { id: "ah1", name: "Basketball Practice", title: "Basketball Practice", date: "Jan 15", duration: "2h", type: "Team Sport", sport: "Basketball", status: "completed" },
+  { id: "ah2", name: "Morning Run", title: "Morning Run", date: "Jan 14", duration: "45m", type: "Cardio", sport: "Running", status: "completed" },
+  { id: "ah3", name: "Tennis Match", title: "Tennis Match", date: "Jan 12", duration: "1.5h", type: "Racquet Sport", sport: "Tennis", status: "upcoming" },
+  { id: "ah4", name: "Yoga Session", title: "Yoga Session", date: "Jan 11", duration: "1h", type: "Wellness", sport: "Yoga", status: "completed" },
+]
+
+const progressData = [
+  { month: "Sep", date: "Sep 1", value: 175 },
+  { month: "Oct", date: "Oct 1", value: 178 },
+  { month: "Nov", date: "Nov 1", value: 176 },
+  { month: "Dec", date: "Dec 1", value: 180 },
+  { month: "Jan", date: "Jan 1", value: 177 },
+]
+
+const personalProfile = {
+  height: "6'1\"",
+  weight: "185 lbs",
+  currentWeight: "185 lbs",
+  targetWeight: "180 lbs",
+  sports: ["Basketball", "Tennis", "Running"],
+  preferredTimes: ["Morning", "Evening"],
+  skillLevel: "Advanced",
+}
+
+const recommendedActivities = [
+  { id: "ra1", name: "Advanced Basketball Drill", title: "Advanced Basketball Drill", date: "Jan 20", spots: 8, match: 95, sport: "Basketball", time: "6:00 PM" },
+  { id: "ra2", name: "Tennis Tournament", title: "Tennis Tournament", date: "Jan 25", spots: 16, match: 88, sport: "Tennis", time: "10:00 AM" },
+  { id: "ra3", name: "Morning Run Club", title: "Morning Run Club", date: "Jan 18", spots: 20, match: 82, sport: "Running", time: "7:00 AM" },
+]
 
 interface ProfileEnhancedPageProps {
   onNavigate: (page: PageRoute, id?: string) => void
@@ -50,8 +100,15 @@ const iconMap: Record<string, React.ElementType> = {
 export function ProfileEnhancedPage({ onNavigate }: ProfileEnhancedPageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
   const [joinedIds, setJoinedIds] = useState<string[]>([])
+  const [activities, setActivities] = useState<any[]>([])
 
-  const upcomingActivities = useMemo(() => activities.slice(0, 3), [])
+  useEffect(() => {
+    activitiesService.getAll({}).then((data: any) => {
+      setActivities(Array.isArray(data) ? data : [])
+    }).catch(() => { })
+  }, [])
+
+  const upcomingActivities = useMemo(() => activities.slice(0, 3), [activities])
   const completedGoals = goals.filter((goal) => goal.progress >= goal.target).length
   const completedMilestones = goals.reduce(
     (acc, g) => acc + (g.milestones?.filter((m) => m.completed).length ?? 0),
@@ -370,7 +427,16 @@ export function ProfileEnhancedPage({ onNavigate }: ProfileEnhancedPageProps) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setJoinedIds((prev) => [...prev, ra.id])}
+                    onClick={async () => {
+                      setJoinedIds((prev) => [...prev, ra.id])
+                      try {
+                        const user = authService.getCurrentUser()
+                        if (user?.id) await activitiesService.joinActivity(ra.id, user.id)
+                      } catch {
+                        setJoinedIds((prev) => prev.filter((x) => x !== ra.id))
+                        toast.error("Failed to join activity")
+                      }
+                    }}
                     disabled={joinedIds.includes(ra.id)}
                     className={cn(
                       "rounded-full px-3 py-1 text-[10px] font-semibold transition-all",

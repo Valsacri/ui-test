@@ -17,10 +17,26 @@ import {
   X,
 } from "lucide-react"
 import React, { useState, useEffect, useRef } from "react"
-import { goals, conversations, notifications } from "@/lib/mock-data"
 import { authService } from "@/lib/services/auth"
 import { cn } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
+
+// Inline defaults — no BE endpoints for topbar goals/conversations/notifications preview
+const goals = [
+  { id: "g1", title: "Weekly Activity", progress: 3, target: 5, unit: "sessions" },
+  { id: "g2", title: "Monthly Distance", progress: 18, target: 30, unit: "km" },
+]
+const conversations = [
+  { id: "c1", name: "Jordan Rivera", avatar: "JR", lastMessage: "See you at practice!", time: "2m", unread: 2, online: true },
+  { id: "c2", name: "Emily Park", avatar: "EP", lastMessage: "Great game!", time: "1h", unread: 0, online: false },
+  { id: "c3", name: "David Kim", avatar: "DK", lastMessage: "When is the next session?", time: "3h", unread: 1, online: true },
+]
+const notifications = [
+  { id: "n1", type: "activity", title: "New Activity Nearby", message: "Basketball training at City Court", time: "5m ago", read: false },
+  { id: "n2", type: "social", title: "New Follower", message: "Jordan Rivera started following you", time: "1h ago", read: false },
+  { id: "n3", type: "booking", title: "Booking Confirmed", message: "Tennis session on Thursday 6pm", time: "2h ago", read: true },
+  { id: "n4", type: "achievement", title: "New Badge Earned!", message: "5-Day Streak Achievement", time: "1d ago", read: true },
+]
 
 type Business = {
   id: string;
@@ -126,6 +142,7 @@ export function TopBar({
         <input
           type="text"
           placeholder="Search activities, facilities, people..."
+          aria-label="Search activities, facilities, people"
           className="h-10 w-full rounded-full border border-border bg-muted pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>

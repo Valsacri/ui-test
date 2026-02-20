@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import {
   Heart,
   MessageCircle,
@@ -13,8 +13,9 @@ import {
   UserPlus,
   ChevronRight,
   Zap,
+  Loader2,
 } from "lucide-react"
-import { posts, squads, communityPeople, communityGroups } from "@/lib/mock-data"
+import { postsService, squadService } from "@/lib/services"
 import { Stories } from "@/components/sporgates/stories"
 import { PullToRefresh } from "@/components/sporgates/ux/pull-to-refresh"
 import type { PageRoute } from "@/lib/navigation"
@@ -38,14 +39,46 @@ const activityLevelColors: Record<string, string> = {
   Low: "bg-slate-100 text-slate-600",
 }
 
+// No BE endpoints for people/groups browse — inline placeholder data
+const communityPeople: any[] = [
+  { id: "1", name: "Sarah Chen", avatar: "SC", location: "New York, NY", bio: "Basketball enthusiast and coach", sports: ["Basketball", "Tennis"], level: "Expert", activities: 48, mutualConnections: 12, isConnected: true, sport: "Basketball" },
+  { id: "2", name: "Marcus Williams", avatar: "MW", location: "Brooklyn, NY", bio: "Soccer player and fitness trainer", sports: ["Soccer", "Running"], level: "Advanced", activities: 35, mutualConnections: 8, isConnected: false, sport: "Soccer" },
+  { id: "3", name: "Emily Rodriguez", avatar: "ER", location: "Manhattan, NY", bio: "Aspiring swimmer and yoga practitioner", sports: ["Swimming", "Yoga"], level: "Intermediate", activities: 22, mutualConnections: 5, isConnected: false, sport: "Swimming" },
+]
+
+const communityGroups: any[] = [
+  { id: "1", name: "NYC Basketball League", description: "Weekly pickup games across NYC", sport: "Basketball", members: 156, activityLevel: "Very High", isJoined: true },
+  { id: "2", name: "Manhattan Runners", description: "Morning runs through Central Park", sport: "Running", members: 89, activityLevel: "High", isJoined: false },
+  { id: "3", name: "Brooklyn Soccer Club", description: "Competitive and casual soccer matches", sport: "Soccer", members: 112, activityLevel: "Moderate", isJoined: true },
+]
+
 export function CommunityPage({ onNavigate }: CommunityPageProps) {
   const [activeTab, setActiveTab] = useState("Feed")
   const [newPost, setNewPost] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [groupFilter, setGroupFilter] = useState<"all" | "mine">("all")
+  const [posts, setPosts] = useState<any[]>([])
+  const [squads, setSquads] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setIsLoading(true)
+    Promise.allSettled([
+      postsService.getAll(),
+      squadService.search(""),
+    ]).then(([postsResult, squadsResult]) => {
+      if (postsResult.status === "fulfilled" && Array.isArray(postsResult.value)) setPosts(postsResult.value)
+      if (squadsResult.status === "fulfilled" && Array.isArray(squadsResult.value)) setSquads(squadsResult.value)
+    }).finally(() => setIsLoading(false))
+  }, [])
 
   const handleRefresh = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 600))
+    const [postsResult, squadsResult] = await Promise.allSettled([
+      postsService.getAll(),
+      squadService.search(""),
+    ])
+    if (postsResult.status === "fulfilled" && Array.isArray(postsResult.value)) setPosts(postsResult.value)
+    if (squadsResult.status === "fulfilled" && Array.isArray(squadsResult.value)) setSquads(squadsResult.value)
   }
 
   const tabs = ["Feed", "Squads", "People", "Groups", "Discover"]
@@ -54,20 +87,20 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
     if (!searchQuery) return communityPeople
     const q = searchQuery.toLowerCase()
     return communityPeople.filter(
-      (p) =>
+      (p: any) =>
         p.name.toLowerCase().includes(q) ||
         p.location.toLowerCase().includes(q) ||
-        p.sports.some((s) => s.toLowerCase().includes(q))
+        p.sports.some((s: string) => s.toLowerCase().includes(q))
     )
   }, [searchQuery])
 
   const filteredGroups = useMemo(() => {
     let list = communityGroups
-    if (groupFilter === "mine") list = list.filter((g) => g.isJoined)
+    if (groupFilter === "mine") list = list.filter((g: any) => g.isJoined)
     if (!searchQuery) return list
     const q = searchQuery.toLowerCase()
     return list.filter(
-      (g) =>
+      (g: any) =>
         g.name.toLowerCase().includes(q) ||
         g.sport.toLowerCase().includes(q) ||
         g.description.toLowerCase().includes(q)
@@ -311,7 +344,7 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
                           {person.level}
                         </span>
                         <div className="flex flex-wrap justify-center gap-1">
-                          {person.sports.slice(0, 3).map((sport) => (
+                          {person.sports.slice(0, 3).map((sport: string) => (
                             <span
                               key={sport}
                               className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"

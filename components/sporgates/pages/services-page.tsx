@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search } from "lucide-react"
-import { services as mockServices } from "@/lib/mock-data"
+import { useState, useEffect, useMemo } from "react"
+import { Search, Wrench } from "lucide-react"
 import { servicesService } from "@/lib/services"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
+import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { LoadingGrid, LoadingActivityCard } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -16,13 +17,38 @@ const categories = ["All", "Training", "Recovery", "Wellness", "Coaching"]
 
 export function ServicesPage({ onNavigate }: ServicesPageProps) {
   const [activeCategory, setActiveCategory] = useState("All")
-  const [services, setServices] = useState(mockServices)
+  const [services, setServices] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [visibleCount, setVisibleCount] = useState(9)
 
   useEffect(() => {
+    setIsLoading(true)
     servicesService.getAll().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setServices(data)
-    }).catch(() => { })
+      if (Array.isArray(data) && data.length > 0) {
+        setServices(data)
+      }
+      setIsLoading(false)
+    }).catch(() => {
+      setIsLoading(false)
+    })
   }, [])
+
+  const filteredServices = useMemo(() => {
+    let result = services.filter((service) => {
+      if (activeCategory !== "All" && service.category !== activeCategory) return false
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        if (
+          !service.name?.toLowerCase().includes(q) &&
+          !service.category?.toLowerCase().includes(q) &&
+          !service.provider?.toLowerCase().includes(q)
+        ) return false
+      }
+      return true
+    })
+    return result
+  }, [services, activeCategory, searchQuery])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -37,7 +63,10 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search services..."
+          aria-label="Search services"
           className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </div>
@@ -60,15 +89,48 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {services.map((service) => (
-          <ServiceCard
-            key={service.id}
-            service={service}
-            onClick={() => onNavigate("service-detail", service.id)}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <LoadingGrid className="md:grid-cols-2 lg:grid-cols-3">
+          <LoadingActivityCard />
+        </LoadingGrid>
+      ) : filteredServices.length === 0 ? (
+        <EmptyState
+          icon={Wrench}
+          title="No services found"
+          description="Try adjusting your filters or search query"
+          action={{
+            label: "Clear Filters",
+            onClick: () => {
+              setActiveCategory("All")
+              setSearchQuery("")
+            },
+            variant: "secondary",
+          }}
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredServices.slice(0, visibleCount).map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onClick={() => onNavigate("service-detail", service.id)}
+              />
+            ))}
+          </div>
+          {visibleCount < filteredServices.length && (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 9)}
+                className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted hover:shadow-md"
+              >
+                Show More ({filteredServices.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

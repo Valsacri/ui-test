@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
@@ -9,6 +9,8 @@ import { BottomNav } from "@/components/sporgates/bottom-nav"
 import { AuthGuard } from "@/components/sporgates/auth-guard"
 import { useBusinessContext } from "@/lib/business-context"
 import { useAppRouter } from "@/lib/route-map"
+import { notificationsService } from "@/lib/services/notifications"
+import { authService } from "@/lib/services/auth"
 import type { PageRoute } from "@/lib/navigation"
 
 /** Determines the current PageRoute from the URL pathname */
@@ -31,6 +33,7 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     if (p.startsWith("/businesses/") && p.endsWith("/portfolio")) return "organizer-portfolio"
     if (p.startsWith("/businesses/")) return "business-detail"
     if (p === "/jobs") return "jobs"
+    if (p.startsWith("/jobs/")) return "job-detail"
     if (p === "/messages") return "messages"
     if (p.startsWith("/messages/")) return "conversation"
     if (p === "/notifications") return "notifications"
@@ -57,6 +60,8 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     if (p === "/business/resources") return "business-resources"
     if (p === "/business/partners") return "business-partners"
     if (p === "/business/athletes") return "business-athletes"
+    if (p === "/business/jobs") return "business-jobs"
+    if (p.startsWith("/business/jobs/")) return "business-job-detail"
     if (p === "/business/profile") return "business-profile"
     if (p === "/business/onboarding") return "business-onboarding"
     if (p === "/business/create-activity") return "create-activity"
@@ -109,6 +114,20 @@ export default function MainLayout({
     const showRightSidebar =
         showSidebars && !isBusinessMode && !hideRightSidebarPages.includes(currentPage)
 
+    const [unreadNotifications, setUnreadNotifications] = useState(0)
+
+    useEffect(() => {
+        const user = authService.getCurrentUser()
+        if (user?.id) {
+            notificationsService.getUnreadCount(user.id)
+                .then((data) => {
+                    const count = typeof data === 'number' ? data : (data?.count ?? 0)
+                    setUnreadNotifications(count)
+                })
+                .catch(() => { })
+        }
+    }, [])
+
     return (
         <AuthGuard>
             <div className="min-h-screen bg-background">
@@ -120,8 +139,8 @@ export default function MainLayout({
                     onSwitchBusiness={switchBusiness}
                     onSwitchToUser={switchToUser}
                     onCreateNewBusiness={createNewBusiness}
-                    unreadMessages={3}
-                    unreadNotifications={2}
+                    unreadMessages={0}
+                    unreadNotifications={unreadNotifications}
                 />
                 <div className="flex">
                     {showSidebars && (

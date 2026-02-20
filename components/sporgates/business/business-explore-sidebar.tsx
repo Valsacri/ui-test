@@ -87,6 +87,13 @@ const businessItems = [
     description: "Staff & permissions",
     destination: "business-team",
   },
+  {
+    id: "jobs",
+    icon: Briefcase,
+    label: "Jobs",
+    description: "Post & manage job listings",
+    destination: "business-jobs",
+  },
 ]
 
 export function BusinessExploreSidebar({ onNavigate, currentPage }: BusinessExploreSidebarProps) {

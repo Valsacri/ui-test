@@ -14,13 +14,16 @@ import {
   Phone,
   Mail,
 } from "lucide-react"
+import { toast } from "sonner"
 import { businessesService, activitiesService, servicesService } from "@/lib/services"
+import { userService } from "@/lib/services/user"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
-import { Loader2 } from "lucide-react"
+import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 
 interface BusinessDetailPageProps {
   businessId: string
@@ -119,10 +122,16 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
   } : null
 
   if (loading) {
+    return <ProfileSkeleton />
+  }
+
+  if (!businessDisplay) {
     return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <ErrorState
+        title="Business not found"
+        message="The business you're looking for doesn't exist."
+        onRetry={() => onNavigate("businesses")}
+      />
     )
   }
 
@@ -205,7 +214,17 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setFollowing((p) => !p)}
+            onClick={async () => {
+              const prev = following
+              setFollowing(!prev)
+              try {
+                if (prev) await userService.unfollowUser(businessId)
+                else await userService.followUser(businessId)
+              } catch {
+                setFollowing(prev)
+                toast.error(prev ? "Failed to unfollow" : "Failed to follow")
+              }
+            }}
             className={cn(
               "rounded-full px-5 py-2 text-xs font-semibold transition-all",
               following
@@ -320,8 +339,10 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border border-border bg-card p-6 text-center text-muted-foreground">
-                No activities available.
+              <div className="rounded-2xl border border-border bg-card p-12 text-center">
+                <CalendarDays className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+                <p className="text-sm font-semibold text-foreground">No activities available</p>
+                <p className="mt-1 text-xs text-muted-foreground">This business hasn&apos;t created any activities yet</p>
               </div>
             )}
           </div>

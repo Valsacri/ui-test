@@ -13,9 +13,9 @@ import {
   TrendingUp,
   CalendarDays,
   ChevronRight,
+  Loader2,
 } from "lucide-react"
-import { userProfile as mockUserProfile, activities, goals } from "@/lib/mock-data"
-import { userService, authService } from "@/lib/services"
+import { userService, authService, activitiesService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -55,27 +55,78 @@ const weeklyData = [
   { day: "Sun", hours: 1.5 },
 ]
 
+const defaultProfile = {
+  name: "Athlete",
+  username: "@athlete",
+  bio: "Sports enthusiast",
+  location: "Unknown",
+  memberSince: "2025",
+  avatar: "A",
+  followers: 0,
+  following: 0,
+  activitiesJoined: 0,
+  favoriteSports: [] as string[],
+  stats: { totalActivities: 0, hoursPlayed: 0, sportsPlayed: 0, avgRating: 0 },
+}
+
+const goals = [
+  { id: "1", title: "Play 20 games", sport: "Basketball", progress: 12, target: 20, unit: "games", deadline: "Mar 2026" },
+  { id: "2", title: "Swim 50 laps", sport: "Swimming", progress: 35, target: 50, unit: "laps", deadline: "Apr 2026" },
+  { id: "3", title: "Run 100km", sport: "Running", progress: 68, target: 100, unit: "km", deadline: "Jun 2026" },
+]
+
 export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
-  const [userProfile, setUserProfile] = useState(mockUserProfile)
+  const [userProfile, setUserProfile] = useState(defaultProfile)
+  const [activities, setActivities] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const maxHours = Math.max(...weeklyData.map((d) => d.hours))
 
   useEffect(() => {
     const user = authService.getCurrentUser()
-    if (user?.id) {
-      userService.getUserById(user.id).then((data) => {
-        if (data) {
-          setUserProfile((prev) => ({
-            ...prev,
-            name: data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : prev.name,
-            bio: data.bio || prev.bio,
-            location: data.location || prev.location,
-            avatar: prev.avatar,
-            username: data.username ? `@${data.username}` : prev.username,
+    const userId = user?.id
+    setIsLoading(true)
+
+    const fetchAll = async () => {
+      try {
+        if (userId) {
+          const data = await userService.getUserById(userId)
+          if (data) {
+            setUserProfile((prev) => ({
+              ...prev,
+              name: data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : prev.name,
+              bio: data.bio || prev.bio,
+              location: data.location || prev.location,
+              avatar: data.firstName?.charAt(0) || prev.avatar,
+              username: data.username ? `@${data.username}` : prev.username,
+              followers: data.followersCount ?? prev.followers,
+              following: data.followingCount ?? prev.following,
+              favoriteSports: data.sportsPreferences?.map((s: any) => s.sportName) || prev.favoriteSports,
+            }))
+          }
+        }
+
+        const actData = await activitiesService.getAll()
+        if (Array.isArray(actData)) {
+          setActivities(actData.map((a: any) => {
+            const parseDate = (d: any) => Array.isArray(d) ? new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0) : new Date(d)
+            const startDate = parseDate(a.startDateTime)
+            return {
+              id: a.id,
+              title: a.name,
+              sport: a.sportId || "Sport",
+              date: startDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
+              time: startDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' }),
+              image: a.coverImage || "/images/sports-placeholder.jpg",
+            }
           }))
         }
-      }).catch(() => { })
+      } catch { /* non-critical */ } finally {
+        setIsLoading(false)
+      }
     }
+
+    fetchAll()
   }, [])
 
   return (

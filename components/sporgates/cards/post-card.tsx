@@ -74,6 +74,7 @@ export function PostCard({ post }: PostCardProps) {
             alt="Post"
             className="h-64 w-full object-cover md:h-80"
             crossOrigin="anonymous"
+            loading="lazy"
           />
         </div>
       )}

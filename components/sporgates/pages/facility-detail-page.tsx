@@ -1,12 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowLeft, Star, MapPin, Clock, Users, Loader2 } from "lucide-react"
-import { facilitiesService } from "@/lib/services"
+import { useState, useEffect, useMemo } from "react"
+import { ArrowLeft, Star, MapPin, Clock, ChevronLeft, ChevronRight, Calendar, Users, Phone } from "lucide-react"
+import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { facilitiesService, bookingService } from "@/lib/services"
 import { mapFacility, type FacilityCardData, type FacilityDto } from "@/lib/explore-api"
 import type { PageRoute } from "@/lib/navigation"
 import { BookingSidebar } from "@/components/sporgates/booking-sidebar"
 import { MapView } from "@/components/sporgates/map-view"
+import { cn } from "@/lib/utils"
 
 interface FacilityDetailPageProps {
   facilityId: string
@@ -17,6 +19,8 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
   const [facility, setFacility] = useState<FacilityCardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [bookingStatus, setBookingStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
 
   useEffect(() => {
     let cancelled = false
@@ -26,7 +30,10 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
     facilitiesService
       .getById(facilityId)
       .then((data: FacilityDto) => {
-        if (!cancelled) setFacility(mapFacility(data))
+        if (!cancelled) {
+          setFacility(mapFacility(data))
+          setActiveImageIndex(0) // Reset to first image when facility changes
+        }
       })
       .catch(() => {
         if (!cancelled) setError("Failed to load facility details.")
@@ -38,12 +45,29 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
     return () => { cancelled = true }
   }, [facilityId])
 
+  // Combine image and imageUrls into a single array
+  const images = useMemo(() => {
+    if (!facility) return []
+    const allImages: string[] = []
+    if (facility.image) allImages.push(facility.image)
+    if (facility.imageUrls && Array.isArray(facility.imageUrls)) {
+      facility.imageUrls.forEach((url) => {
+        if (url && !allImages.includes(url)) allImages.push(url)
+      })
+    }
+    return allImages
+  }, [facility])
+
+  const nextImage = () => {
+    setActiveImageIndex((prev) => (prev + 1) % images.length)
+  }
+
+  const prevImage = () => {
+    setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length)
+  }
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <DetailPageSkeleton />
   }
 
   if (error || !facility) {
@@ -80,15 +104,76 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
         Back to Facilities
       </button>
 
+      {/* Image Carousel */}
       <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
-        {facility.image ? (
-          <img src={facility.image} alt={facility.name} className="h-full w-full object-cover" crossOrigin="anonymous" />
+        {images.length > 0 ? (
+          <>
+            <img
+              src={images[activeImageIndex]}
+              alt={`${facility.name} ${activeImageIndex + 1}`}
+              className="h-full w-full object-cover transition-opacity duration-300"
+              crossOrigin="anonymous"
+            />
+
+            {/* Navigation Arrows */}
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={prevImage}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm text-foreground shadow-lg transition-all hover:bg-card hover:scale-110"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextImage}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm text-foreground shadow-lg transition-all hover:bg-card hover:scale-110"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+
+                {/* Image Counter */}
+                <div className="absolute bottom-4 right-4 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                  {activeImageIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted">
             <MapPin className="h-16 w-16 text-muted-foreground/30" />
           </div>
         )}
       </div>
+
+      {/* Image Thumbnails */}
+      {images.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {images.map((img, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setActiveImageIndex(idx)}
+              className={cn(
+                "h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
+                activeImageIndex === idx
+                  ? "border-primary ring-2 ring-primary/20"
+                  : "border-border opacity-70 hover:opacity-100"
+              )}
+            >
+              <img
+                src={img}
+                alt={`${facility.name} thumbnail ${idx + 1}`}
+                className="h-full w-full object-cover"
+                crossOrigin="anonymous"
+              />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -177,7 +262,37 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
           pricePerHour={facility.pricePerHour}
           capacity={facility.capacity || 40}
           itemName={facility.name}
+          onBooking={async (date, time, duration, participants) => {
+            setBookingStatus("loading")
+            try {
+              const startTime = time
+              const endHour = parseInt(time) + duration
+              const endTime = `${endHour}:00`
+              await bookingService.createBooking({
+                facilityId: facility.id,
+                date,
+                startTime,
+                endTime,
+                notes: `Duration: ${duration}h, Participants: ${participants}`,
+              })
+              setBookingStatus("success")
+              setTimeout(() => setBookingStatus("idle"), 3000)
+            } catch {
+              setBookingStatus("error")
+              setTimeout(() => setBookingStatus("idle"), 3000)
+            }
+          }}
         />
+        {bookingStatus === "success" && (
+          <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-center text-sm font-medium text-green-700">
+            Booking request submitted successfully!
+          </div>
+        )}
+        {bookingStatus === "error" && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm font-medium text-red-700">
+            Failed to submit booking. Please try again.
+          </div>
+        )}
       </div>
     </div>
   )

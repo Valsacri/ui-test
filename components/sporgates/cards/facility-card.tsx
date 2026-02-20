@@ -34,14 +34,14 @@ export function FacilityCard({ facility, onClick }: FacilityCardProps) {
           alt={facility.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           crossOrigin="anonymous"
+          loading="lazy"
         />
         <div className="absolute right-3 top-3">
           <span
-            className={`rounded-full px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm ${
-              facility.available
+            className={`rounded-full px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm ${facility.available
                 ? "bg-green-500/90 text-white"
                 : "bg-red-500/90 text-white"
-            }`}
+              }`}
           >
             {facility.available ? "Available" : "Fully Booked"}
           </span>

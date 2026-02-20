@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ArrowLeft, Shield, Eye, Lock, UserX, Key } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 interface SettingsPrivacyPageProps {
@@ -107,6 +108,9 @@ export function SettingsPrivacyPage({ onBack }: SettingsPrivacyPageProps) {
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={settings[item.key]}
+                aria-label={item.label}
                 onClick={() => toggle(item.key)}
                 className={cn(
                   "relative h-6 w-11 rounded-full transition-colors",
@@ -194,6 +198,14 @@ export function SettingsPrivacyPage({ onBack }: SettingsPrivacyPageProps) {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => toast.success("Privacy settings saved")}
+        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white"
+      >
+        Save Privacy Settings
+      </button>
+
       {/* Danger Zone */}
       <div className="rounded-2xl border border-destructive/20 bg-card p-5">
         <div className="mb-3 flex items-center gap-2">
@@ -206,12 +218,14 @@ export function SettingsPrivacyPage({ onBack }: SettingsPrivacyPageProps) {
         <div className="flex gap-3">
           <button
             type="button"
+            onClick={() => toast.error("Account deactivation is not available yet. Contact support.")}
             className="rounded-xl border border-destructive/20 px-4 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/5"
           >
             Deactivate Account
           </button>
           <button
             type="button"
+            onClick={() => toast.error("Account deletion is not available yet. Contact support.")}
             className="rounded-xl border border-destructive/20 px-4 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/5"
           >
             Delete Account

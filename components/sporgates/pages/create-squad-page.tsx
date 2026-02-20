@@ -1,6 +1,4 @@
-"use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
     ArrowLeft,
     Users,
@@ -10,11 +8,13 @@ import {
     X,
     Shield,
     Trophy,
+    Loader2,
 } from "lucide-react"
-import { sports, people } from "@/lib/mock-data"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { sportService } from "@/lib/services/sport"
+import { userService } from "@/lib/services/user"
 import {
     Select,
     SelectContent,
@@ -28,6 +28,8 @@ interface CreateSquadPageProps {
 }
 
 export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
+    const [sports, setSports] = useState<any[]>([])
+    const [people, setPeople] = useState<any[]>([])
     const [formData, setFormData] = useState({
         name: "",
         sport: "",
@@ -38,9 +40,25 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
     const [invitedPeople, setInvitedPeople] = useState<string[]>([])
     const [searchQuery, setSearchQuery] = useState("")
 
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const [sportsData, usersData] = await Promise.allSettled([
+                    sportService.getAll(),
+                    userService.browseUsers(),
+                ])
+                if (sportsData.status === "fulfilled") setSports(Array.isArray(sportsData.value) ? sportsData.value : [])
+                if (usersData.status === "fulfilled") setPeople(Array.isArray(usersData.value) ? usersData.value : [])
+            } catch (error) {
+                console.error("Failed to load data", error)
+            }
+        }
+        loadData()
+    }, [])
+
     const filteredPeople = people.filter(
-        (p) =>
-            p.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        (p: any) =>
+            (p.name || `${p.firstName || ''} ${p.lastName || ''}`).toLowerCase().includes(searchQuery.toLowerCase()) &&
             !invitedPeople.includes(p.id)
     )
 

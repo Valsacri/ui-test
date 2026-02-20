@@ -38,7 +38,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react"
 import { toast } from "sonner"
-import { sports, activities, businessResources, businessPartners, athletes, businessDashboardData, experienceLevels } from "@/lib/mock-data"
+
 import { QRScanner } from "@/components/sporgates/attendance/qr-scanner"
 import { DateTimePicker } from "@/components/sporgates/date-time-picker"
 import { CommunicationPhaseContent } from "@/components/sporgates/business/communication-phase-content"
@@ -67,6 +67,24 @@ interface BusinessFormPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
 }
 
+const sports = [
+  { id: "basketball", name: "Basketball" },
+  { id: "football", name: "Football" },
+  { id: "tennis", name: "Tennis" },
+  { id: "swimming", name: "Swimming" },
+  { id: "soccer", name: "Soccer" },
+  { id: "running", name: "Running" },
+  { id: "volleyball", name: "Volleyball" },
+  { id: "yoga", name: "Yoga" },
+]
+
+const experienceLevels = [
+  { id: "beginner", label: "Beginner" },
+  { id: "intermediate", label: "Intermediate" },
+  { id: "advanced", label: "Advanced" },
+  { id: "professional", label: "Professional" },
+]
+
 // ==================== CreateActivity ====================
 export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
   const { activeBusinessId } = useBusinessContext()
@@ -88,6 +106,9 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
   const [error, setError] = useState<string | null>(null)
 
   const handleCreateActivity = async () => {
+    if (!formData.title.trim()) { setError("Activity title is required"); toast.error("Activity title is required"); return }
+    if (!formData.sport) { setError("Please select a sport"); toast.error("Please select a sport"); return }
+    if (!formData.date) { setError("Date is required"); toast.error("Date is required"); return }
     setSubmitting(true)
     setError(null)
     try {
@@ -109,8 +130,11 @@ export function CreateActivityPage({ onNavigate }: BusinessFormPageProps) {
         organizerId: activeBusinessId,
       })
       onNavigate("business-activities")
+      toast.success("Activity created successfully!")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create activity")
+      const msg = err instanceof Error ? err.message : "Failed to create activity"
+      setError(msg)
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }
@@ -1301,7 +1325,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                   <div className="flex items-start gap-3 bg-muted/30 p-4 rounded-xl border border-border/50">
                     <div className="flex-1">
                       <p className="text-sm font-bold text-foreground">{formData.location.address || "Not set"}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{[formData.location.city, formData.neighborhood].filter(Boolean).join(", ") || "City not specified"}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{[formData.location.city, formData.location.neighborhood].filter(Boolean).join(", ") || "City not specified"}</p>
                     </div>
                     {formData.location.lat && formData.location.lng && (
                       <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-1 rounded-lg shrink-0">
@@ -1807,6 +1831,8 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
   }
 
   const handleCreateBusiness = async () => {
+    if (!formData.name.trim()) { setError("Business name is required"); toast.error("Business name is required"); return }
+    if (!formData.email.trim()) { setError("Email is required"); toast.error("Email is required"); return }
     setSubmitting(true)
     setError(null)
     try {
@@ -1824,8 +1850,11 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
       }, avatarFile, coverFile)
 
       onNavigate("business-dashboard")
+      toast.success("Business created successfully!")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create business")
+      const msg = err instanceof Error ? err.message : "Failed to create business"
+      setError(msg)
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }
@@ -2123,13 +2152,13 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
   const [groundsSearch, setGroundsSearch] = useState("")
   const [amenitiesSearch, setAmenitiesSearch] = useState("")
   const [openingHours, setOpeningHours] = useState<Record<string, { enabled: boolean; open: string; close: string }>>({
-    Monday:    { enabled: false, open: "09:00", close: "18:00" },
-    Tuesday:   { enabled: false, open: "09:00", close: "18:00" },
+    Monday: { enabled: false, open: "09:00", close: "18:00" },
+    Tuesday: { enabled: false, open: "09:00", close: "18:00" },
     Wednesday: { enabled: false, open: "09:00", close: "18:00" },
-    Thursday:  { enabled: false, open: "09:00", close: "18:00" },
-    Friday:    { enabled: false, open: "09:00", close: "18:00" },
-    Saturday:  { enabled: false, open: "10:00", close: "16:00" },
-    Sunday:    { enabled: false, open: "10:00", close: "16:00" },
+    Thursday: { enabled: false, open: "09:00", close: "18:00" },
+    Friday: { enabled: false, open: "09:00", close: "18:00" },
+    Saturday: { enabled: false, open: "10:00", close: "16:00" },
+    Sunday: { enabled: false, open: "10:00", close: "16:00" },
   })
   // Product
   const [price, setPrice] = useState(0)
@@ -2144,6 +2173,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
   const [serviceCategory, setServiceCategory] = useState("")
   const [duration, setDuration] = useState("")
   const [serviceCurrency, setServiceCurrency] = useState("$")
+  const [serviceAddress, setServiceAddress] = useState("")
 
   const [submitting, setSubmitting] = useState(false)
   const [loadingResource, setLoadingResource] = useState(!!resourceId)
@@ -2223,6 +2253,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
           setServiceCategory(data.category || "")
           setDuration(data.duration || "")
           setServiceCurrency(data.currency || "$")
+          setServiceAddress(data.address || "")
           setFeatures(Array.isArray(data.offerings) ? data.offerings : [])
           const imgs: string[] = []
           if (data.image) imgs.push(data.image)
@@ -2367,6 +2398,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
           currency: serviceCurrency,
           category: serviceCategory || "General",
           duration: duration || undefined,
+          address: serviceAddress.trim() || undefined,
           offerings: features.length > 0 ? features : undefined,
           providerId: activeBusinessId,
         }
@@ -2374,9 +2406,11 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
         else await servicesService.create(payload)
       }
       onNavigate("business-resources", resourceType)
+      toast.success(`${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} ${isEditMode ? "updated" : "created"} successfully!`)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : `Failed to ${isEditMode ? "update" : "create"} resource`
       setError(message)
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -2974,16 +3008,28 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
       {resourceType === "service" && (
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <h3 className="mb-4 text-sm font-bold text-foreground">Service Details</h3>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-foreground">Duration</label>
-            <Select value={duration} onValueChange={setDuration}>
-              <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
-                <SelectValue placeholder="Select duration..." />
-              </SelectTrigger>
-              <SelectContent>
-                {addResourceDurationOptions.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Duration</label>
+              <Select value={duration} onValueChange={setDuration}>
+                <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                  <SelectValue placeholder="Select duration..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {addResourceDurationOptions.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
+              <input
+                type="text"
+                placeholder="e.g., 123 Main St, City, State"
+                value={serviceAddress}
+                onChange={(e) => setServiceAddress(e.target.value)}
+                className={inputClass}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -3014,12 +3060,12 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
         {(() => {
           const presets =
             resourceType === "facility" ? facilityAmenityPresets :
-            resourceType === "product" ? addResourceProductFeaturePresets :
-            addResourceServiceOfferingPresets
+              resourceType === "product" ? addResourceProductFeaturePresets :
+                addResourceServiceOfferingPresets
           const label =
             resourceType === "facility" ? "Common amenities" :
-            resourceType === "product" ? "Common features" :
-            "Common offerings"
+              resourceType === "product" ? "Common features" :
+                "Common offerings"
           const available = presets.filter((p) => !features.includes(p) && p.toLowerCase().includes(amenitiesSearch.toLowerCase()))
           return (
             <div className="mb-4">
@@ -3187,6 +3233,43 @@ export function AddTeamMemberPage({ onNavigate }: BusinessFormPageProps) {
       {error && <p className="text-sm text-red-500 text-center">{error}</p>}
     </div>
   )
+}
+
+// ==================== Inline placeholder data (no BE endpoint) ====================
+const businessPartners = [
+  { id: "bp1", name: "SportySponsors Inc.", type: "Sponsor", tier: "Gold", avatar: "SS" },
+  { id: "bp2", name: "Nike Regional", type: "Sponsor", tier: "Silver", avatar: "NR" },
+  { id: "bp3", name: "Alex Johnson", type: "Athlete", sport: "Basketball", avatar: "AJ" },
+  { id: "bp4", name: "Sarah Williams", type: "Athlete", sport: "Tennis", avatar: "SW" },
+]
+
+const athletes: Array<{ id: string; name: string; sport: string; ranking: string; avatar: string; followers: number; engagement: number; collaborations: number; status: string }> = [
+  { id: "ath1", name: "Alex Johnson", sport: "Basketball", ranking: "#12 National", avatar: "AJ", followers: 125000, engagement: 8.5, collaborations: 5, status: "active" },
+  { id: "ath2", name: "Sam Lee", sport: "Tennis", ranking: "#28 Regional", avatar: "SL", followers: 89000, engagement: 7.2, collaborations: 3, status: "active" },
+  { id: "ath3", name: "Maria Gonzalez", sport: "Soccer", ranking: "#5 International", avatar: "MG", followers: 200000, engagement: 9.1, collaborations: 8, status: "pending" },
+]
+
+const businessResources = [
+  { id: "r1", name: "Main Court", type: "Court", status: "available", image: "/placeholder.svg", revenue: 1200 },
+  { id: "r2", name: "Training Room A", type: "Room", status: "maintenance", image: "/placeholder.svg", revenue: 800 },
+  { id: "r3", name: "Swimming Pool", type: "Pool", status: "available", image: "/placeholder.svg", revenue: 2500 },
+  { id: "r4", name: "Tennis Court 1", type: "Court", status: "booked", image: "/placeholder.svg", revenue: 950 },
+]
+
+const businessDashboardData = {
+  totalRevenue: 45600,
+  totalBookings: 312,
+  activeActivities: 15,
+  teamMembers: [
+    { name: "Coach Miller", role: "Head Coach", avatar: "CM", status: "active" as const },
+    { name: "Jane Ops", role: "Manager", avatar: "JO", status: "active" as const },
+    { name: "Tom Trainer", role: "Trainer", avatar: "TT", status: "active" as const },
+  ],
+  topActivities: [
+    { name: "Basketball Practice", bookings: 48, revenue: 2400 },
+    { name: "Swimming Lessons", bookings: 36, revenue: 3200 },
+    { name: "Tennis Coaching", bookings: 28, revenue: 1800 },
+  ],
 }
 
 // ==================== AddCollaboration ====================
@@ -3572,8 +3655,9 @@ export function BusinessProfilePage({ onNavigate }: BusinessFormPageProps) {
         website: businessInfo.website,
       })
       setActiveTab("overview")
+      toast.success("Business profile updated!")
     } catch {
-      // Fail silently for now
+      toast.error("Failed to update business profile")
     } finally {
       setSaving(false)
     }

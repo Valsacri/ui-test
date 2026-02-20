@@ -28,6 +28,7 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
   const [activities, setActivities] = useState<any[]>([])
   const isMobile = useIsMobile()
   const [isLoading, setIsLoading] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(9)
 
   useEffect(() => {
     activitiesService.getAll().then((data) => {
@@ -155,6 +156,7 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search activities..."
+            aria-label="Search activities"
             className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </div>
@@ -257,15 +259,28 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredActivities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              onClick={() => onNavigate("activity-detail", activity.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredActivities.slice(0, visibleCount).map((activity) => (
+              <ActivityCard
+                key={activity.id}
+                activity={activity}
+                onClick={() => onNavigate("activity-detail", activity.id)}
+              />
+            ))}
+          </div>
+          {visibleCount < filteredActivities.length && (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 9)}
+                className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted hover:shadow-md"
+              >
+                Show More ({filteredActivities.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

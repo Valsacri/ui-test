@@ -1,11 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowLeft, Star, CheckCircle, CalendarDays, Loader2 } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { ArrowLeft, Star, CheckCircle, CalendarDays, MapPin, Check, ChevronLeft, ChevronRight } from "lucide-react"
+import { toast } from "sonner"
 import { servicesService } from "@/lib/services"
+import { bookingService } from "@/lib/services/booking"
 import { mapService, type ServiceCardData, type ServiceListingDto } from "@/lib/explore-api"
 import type { PageRoute } from "@/lib/navigation"
 import { ServiceBookingSidebar } from "@/components/sporgates/service-booking-sidebar"
+import { MapView } from "@/components/sporgates/map-view"
+import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
+import { cn } from "@/lib/utils"
 
 interface ServiceDetailPageProps {
   serviceId: string
@@ -16,6 +22,7 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
   const [service, setService] = useState<ServiceCardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -25,7 +32,10 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
     servicesService
       .getById(serviceId)
       .then((data: ServiceListingDto) => {
-        if (!cancelled) setService(mapService(data))
+        if (!cancelled) {
+          setService(mapService(data))
+          setActiveImageIndex(0) // Reset to first image when service changes
+        }
       })
       .catch(() => {
         if (!cancelled) setError("Failed to load service details.")
@@ -37,11 +47,38 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
     return () => { cancelled = true }
   }, [serviceId])
 
+  // Combine image and imageUrls into a single array
+  const images = useMemo(() => {
+    if (!service) return []
+    const allImages: string[] = []
+    if (service.image) allImages.push(service.image)
+    if (service.imageUrls && Array.isArray(service.imageUrls)) {
+      service.imageUrls.forEach((url) => {
+        if (url && !allImages.includes(url)) allImages.push(url)
+      })
+    }
+    return allImages
+  }, [service])
+
+  const nextImage = () => {
+    setActiveImageIndex((prev) => (prev + 1) % images.length)
+  }
+
+  const prevImage = () => {
+    setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length)
+  }
+
   if (isLoading) {
+    return <DetailPageSkeleton />
+  }
+
+  if (error || !service) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <ErrorState
+        title="Service not found"
+        message={error || "The service you're looking for doesn't exist."}
+        onRetry={() => onNavigate("services")}
+      />
     )
   }
 
@@ -77,15 +114,76 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {/* Image Carousel */}
           <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
-            {service.image ? (
-              <img src={service.image} alt={service.name} className="h-full w-full object-cover" crossOrigin="anonymous" />
+            {images.length > 0 ? (
+              <>
+                <img
+                  src={images[activeImageIndex]}
+                  alt={`${service.name} ${activeImageIndex + 1}`}
+                  className="h-full w-full object-cover transition-opacity duration-300"
+                  crossOrigin="anonymous"
+                />
+
+                {/* Navigation Arrows */}
+                {images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm text-foreground shadow-lg transition-all hover:bg-card hover:scale-110"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm text-foreground shadow-lg transition-all hover:bg-card hover:scale-110"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+
+                    {/* Image Counter */}
+                    <div className="absolute bottom-4 right-4 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                      {activeImageIndex + 1} / {images.length}
+                    </div>
+                  </>
+                )}
+              </>
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-muted">
                 <CalendarDays className="h-16 w-16 text-muted-foreground/30" />
               </div>
             )}
           </div>
+
+          {/* Image Thumbnails */}
+          {images.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {images.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={cn(
+                    "h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
+                    activeImageIndex === idx
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-border opacity-70 hover:opacity-100"
+                  )}
+                >
+                  <img
+                    src={img}
+                    alt={`${service.name} thumbnail ${idx + 1}`}
+                    className="h-full w-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -105,6 +203,23 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
             <p className="text-sm text-muted-foreground">{service.description}</p>
           </div>
 
+          {service.offerings && service.offerings.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-foreground">Offerings</h3>
+              <div className="flex flex-wrap gap-2">
+                {service.offerings.map((offering, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground"
+                  >
+                    <Check className="h-3 w-3 text-primary" />
+                    <span>{offering}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
               <CalendarDays className="h-5 w-5 text-primary" />
@@ -121,6 +236,24 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
               </div>
             </div>
           </div>
+
+          {service.address && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-bold text-foreground">Location</h3>
+              </div>
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <MapView
+                  center={[40.7128, -74.0060]} // Default to NYC, will be geocoded from address
+                  markerLabel={service.address}
+                  height="240px"
+                  addressQuery={service.address}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground px-1">{service.address}</p>
+            </div>
+          )}
         </div>
 
         <ServiceBookingSidebar
@@ -132,6 +265,20 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
           rating={service.rating}
           reviews={service.reviews}
           verified={service.verified}
+          onBooking={async (date, time, notes) => {
+            try {
+              await bookingService.createBooking({
+                facilityId: serviceId,
+                date,
+                startTime: time,
+                endTime: time,
+                notes: notes || undefined,
+              })
+              toast.success("Booking request sent! The provider will confirm shortly.")
+            } catch {
+              toast.error("Failed to submit booking. Please try again.")
+            }
+          }}
         />
       </div>
     </div>

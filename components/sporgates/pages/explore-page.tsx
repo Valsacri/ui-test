@@ -2,7 +2,10 @@
 
 import { useState } from "react"
 import { Search, SlidersHorizontal, MapPin, Building2, ArrowRight, Loader2, SearchX } from "lucide-react"
+import { toast } from "sonner"
 import { useExplore } from "@/hooks/use-explore"
+import { activitiesService } from "@/lib/services/activities"
+import { authService } from "@/lib/services/auth"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
@@ -107,6 +110,7 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
             <input
               type="text"
               placeholder="Search everything..."
+              aria-label="Search everything"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
@@ -255,7 +259,16 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
                     image={activity.image}
                     reason={reasons[index % reasons.length]}
                     isJoined={joinedRecommendations.includes(activity.id)}
-                    onJoin={(id) => setJoinedRecommendations((prev) => [...prev, id])}
+                    onJoin={async (id) => {
+                      setJoinedRecommendations((prev) => [...prev, id])
+                      try {
+                        const user = authService.getCurrentUser()
+                        if (user?.id) await activitiesService.joinActivity(id, user.id)
+                      } catch {
+                        setJoinedRecommendations((prev) => prev.filter((x) => x !== id))
+                        toast.error("Failed to join activity")
+                      }
+                    }}
                   />
                 ))}
               </div>

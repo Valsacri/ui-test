@@ -1,8 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { Search, SlidersHorizontal } from "lucide-react"
-import { products } from "@/lib/mock-data"
+import { useMemo, useState, useEffect } from "react"
+import { Search, SlidersHorizontal, ShoppingBag, Loader2 } from "lucide-react"
+import { marketplaceService } from "@/lib/services"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { ProductsFilterSidebar } from "@/components/sporgates/filters/products-filter-sidebar"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
@@ -19,33 +19,59 @@ const priceRanges = ["Any Price", "Under $50", "$50-$100", "$100-$200", "Over $2
 
 export function ProductsPage({ onNavigate }: ProductsPageProps) {
   const [searchQuery, setSearchQuery] = useState("")
+  const [visibleCount, setVisibleCount] = useState(9)
   const [showFilters, setShowFilters] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState("All")
   const [priceRange, setPriceRange] = useState("Any Price")
   const [sortBy, setSortBy] = useState("relevance")
-  const isLoading = false
+  const [products, setProducts] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setIsLoading(true)
+    marketplaceService.getAll().then((data) => {
+      if (Array.isArray(data)) setProducts(data)
+    }).catch(() => {
+      setProducts([])
+    }).finally(() => setIsLoading(false))
+  }, [])
 
   const categories = useMemo(
-    () => ["All", ...Array.from(new Set(products.map((item) => item.category)))],
-    []
+    () => ["All", ...Array.from(new Set(products.map((item: any) => item.category).filter(Boolean)))],
+    [products]
   )
 
-  const filteredProducts = products.filter((product) => {
-    const matchesQuery =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = useMemo(() => {
+    let result = products.filter((product: any) => {
+      const matchesQuery =
+        product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.category?.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const matchesCategory = categoryFilter === "All" || product.category === categoryFilter
+      const matchesCategory = categoryFilter === "All" || product.category === categoryFilter
 
-    if (!matchesQuery || !matchesCategory) return false
+      if (!matchesQuery || !matchesCategory) return false
 
-    if (priceRange === "Under $50" && product.price >= 50) return false
-    if (priceRange === "$50-$100" && (product.price < 50 || product.price > 100)) return false
-    if (priceRange === "$100-$200" && (product.price < 100 || product.price > 200)) return false
-    if (priceRange === "Over $200" && product.price <= 200) return false
+      if (priceRange === "Under $50" && product.price >= 50) return false
+      if (priceRange === "$50-$100" && (product.price < 50 || product.price > 100)) return false
+      if (priceRange === "$100-$200" && (product.price < 100 || product.price > 200)) return false
+      if (priceRange === "Over $200" && product.price <= 200) return false
 
-    return true
-  })
+      return true
+    })
+
+    if (sortBy !== "relevance") {
+      result = [...result].sort((a: any, b: any) => {
+        switch (sortBy) {
+          case "price-low": return a.price - b.price
+          case "price-high": return b.price - a.price
+          case "rating": return (b.rating || 0) - (a.rating || 0)
+          default: return 0
+        }
+      })
+    }
+
+    return result
+  }, [products, searchQuery, categoryFilter, priceRange, sortBy])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -133,15 +159,28 @@ export function ProductsPage({ onNavigate }: ProductsPageProps) {
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onClick={() => onNavigate("product-detail", product.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredProducts.slice(0, visibleCount).map((product: any) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onClick={() => onNavigate("product-detail", product.id)}
+              />
+            ))}
+          </div>
+          {visibleCount < filteredProducts.length && (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 9)}
+                className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted hover:shadow-md"
+              >
+                Show More ({filteredProducts.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -37,6 +37,7 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
           alt={activity.title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           crossOrigin="anonymous"
+          loading="lazy"
         />
         <div className="absolute left-3 top-3 flex gap-1.5">
           {activity.tags.map((tag, index) => (

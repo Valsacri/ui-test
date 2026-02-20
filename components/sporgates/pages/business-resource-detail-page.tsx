@@ -12,7 +12,6 @@ import {
   CalendarDays,
   CheckCircle,
   ShieldCheck,
-  Loader2,
   Edit3,
   Trash2,
   Tag,
@@ -23,8 +22,11 @@ import { facilitiesService } from "@/lib/services/facilities"
 import { marketplaceService } from "@/lib/services/marketplace"
 import { servicesService } from "@/lib/services/services"
 import type { PageRoute } from "@/lib/navigation"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
+import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 type ResourceType = "facility" | "product" | "service"
 
@@ -73,17 +75,25 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
       if (resourceType === "facility") await facilitiesService.delete(resourceId)
       else if (resourceType === "product") await marketplaceService.delete(resourceId)
       else await servicesService.delete(resourceId)
+      toast.success("Resource deleted successfully")
       goBack()
     } catch {
+      toast.error("Failed to delete resource")
       setDeleting(false)
     }
   }
 
   if (isLoading) {
+    return <DetailPageSkeleton />
+  }
+
+  if (error || !data) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <ErrorState
+        title="Resource not found"
+        message={error || "The resource you're looking for doesn't exist."}
+        onRetry={goBack}
+      />
     )
   }
 
@@ -450,34 +460,16 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
       </div>
 
       {/* Delete confirmation */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="max-w-sm p-0">
-          <DialogTitle className="sr-only">Delete Confirmation</DialogTitle>
-          <div className="space-y-4 px-5 py-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-              <Trash2 className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Delete {name}?</p>
-              <p className="mt-1 text-xs text-muted-foreground">This action cannot be undone. The resource will be permanently removed.</p>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setDeleteOpen(false)} className="flex-1 rounded-xl border border-border py-2.5 text-xs font-semibold text-foreground hover:bg-muted">
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 rounded-xl bg-destructive py-2.5 text-xs font-semibold text-white hover:bg-destructive/90 disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {deleting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Delete
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={`Delete ${name}?`}
+        description="This action cannot be undone. The resource will be permanently removed."
+        confirmLabel="Delete"
+        variant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

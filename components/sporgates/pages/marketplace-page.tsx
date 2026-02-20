@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Star } from "lucide-react"
-import { products as mockProducts, marketplaceStores } from "@/lib/mock-data"
+import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Star, Loader2 } from "lucide-react"
 import { marketplaceService } from "@/lib/services"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { MarketplaceFilterSidebar } from "@/components/sporgates/filters/marketplace-filter-sidebar"
@@ -35,21 +34,28 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
   const [showCart, setShowCart] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [priceRange, setPriceRange] = useState("Any Price")
-  const [products, setProducts] = useState(mockProducts)
+  const [products, setProducts] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const [showCollections, setShowCollections] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
   const [searchQuery, setSearchQuery] = useState("")
-  const isLoading = false
+  const [visibleCount, setVisibleCount] = useState(9)
   const [cartItems, setCartItems] = useState<CartItem[]>([
     { productId: "1", name: "Pro Basketball Shoes", price: 149.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop", quantity: 1 },
     { productId: "4", name: "Smart Fitness Watch", price: 299.99, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop", quantity: 1 },
   ])
 
   useEffect(() => {
+    setIsLoading(true)
     marketplaceService.getAll().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setProducts(data)
-    }).catch(() => { })
+      if (Array.isArray(data) && data.length > 0) {
+        setProducts(data)
+      }
+      setIsLoading(false)
+    }).catch(() => {
+      setIsLoading(false)
+    })
   }, [])
 
   const updateQuantity = (productId: string, delta: number) => {
@@ -80,7 +86,11 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
       if (priceRange === "Over $200" && p.price <= 200) return false
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
-        if (!p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) return false
+        if (
+          !p.name.toLowerCase().includes(q) &&
+          !p.category.toLowerCase().includes(q) &&
+          !(p.brand && p.brand.toLowerCase().includes(q))
+        ) return false
       }
       return true
     })
@@ -105,6 +115,47 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
 
     return result
   }, [products, activeCategory, priceRange, searchQuery, sortBy])
+
+  // Compute brands from products
+  const featuredBrands = useMemo(() => {
+    if (!products || products.length === 0) return []
+
+    // Group products by brand
+    const brandMap = new Map<string, { count: number; ratings: number[] }>()
+
+    products.forEach((product) => {
+      const brand = product.brand
+      if (!brand) return
+
+      if (!brandMap.has(brand)) {
+        brandMap.set(brand, { count: 0, ratings: [] })
+      }
+
+      const brandData = brandMap.get(brand)!
+      brandData.count++
+      if (product.rating !== undefined && product.rating !== null) {
+        brandData.ratings.push(product.rating)
+      }
+    })
+
+    // Convert to array and calculate average ratings
+    return Array.from(brandMap.entries())
+      .map(([brandName, data]) => {
+        const avgRating =
+          data.ratings.length > 0
+            ? data.ratings.reduce((sum, r) => sum + r, 0) / data.ratings.length
+            : undefined
+
+        return {
+          id: brandName.toLowerCase().replace(/\s+/g, "-"),
+          name: brandName,
+          productCount: data.count,
+          rating: avgRating ? Math.round(avgRating * 10) / 10 : undefined,
+        }
+      })
+      .sort((a, b) => b.productCount - a.productCount) // Sort by product count descending
+      .slice(0, 8) // Limit to top 8 brands
+  }, [products])
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -200,34 +251,41 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
       </div>
 
       {/* Featured Brands */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-foreground">Featured Brands</h2>
-          <button className="text-xs font-medium text-primary hover:underline">View All</button>
+      {featuredBrands.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-foreground">Featured Brands</h2>
+            <button className="text-xs font-medium text-primary hover:underline">View All</button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {featuredBrands.map((brand) => (
+              <button
+                key={brand.id}
+                onClick={() => {
+                  // Filter products by brand when clicked
+                  setSearchQuery(brand.name)
+                }}
+                className="group flex min-w-[140px] flex-col items-center justify-between rounded-xl border border-border bg-card p-4 text-center transition-all hover:border-primary/50 hover:shadow-md"
+              >
+                <div>
+                  <p className="font-bold text-foreground group-hover:text-primary transition-colors">
+                    {brand.name}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {brand.productCount} {brand.productCount === 1 ? "product" : "products"}
+                  </p>
+                </div>
+                {brand.rating !== undefined && (
+                  <div className="mt-3 flex items-center justify-center gap-1">
+                    <Star className="h-3 w-3 fill-primary text-primary" />
+                    <span className="text-xs font-semibold text-foreground">{brand.rating}</span>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-          {marketplaceStores.map((store) => (
-            <button
-              key={store.id}
-              onClick={() => onNavigate("store-detail", store.id)}
-              className="group flex min-w-[140px] flex-col items-center justify-between rounded-xl border border-border bg-card p-4 text-center transition-all hover:border-primary/50 hover:shadow-md"
-            >
-              <div>
-                <p className="font-bold text-foreground group-hover:text-primary transition-colors">
-                  {store.name}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {store.productCount} products
-                </p>
-              </div>
-              <div className="mt-3 flex items-center justify-center gap-1">
-                <Star className="h-3 w-3 fill-primary text-primary" />
-                <span className="text-xs font-semibold text-foreground">{store.rating}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
@@ -265,15 +323,28 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onClick={() => onNavigate("product-detail", product.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredProducts.slice(0, visibleCount).map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onClick={() => onNavigate("product-detail", product.id)}
+              />
+            ))}
+          </div>
+          {visibleCount < filteredProducts.length && (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 9)}
+                className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted hover:shadow-md"
+              >
+                Show More ({filteredProducts.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Cart Drawer */}

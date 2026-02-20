@@ -24,10 +24,13 @@ export function BottomSheet({ isOpen, onClose, title, children, footer, height =
     if (!isOpen) return
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose() }
+    document.addEventListener("keydown", handleEsc)
     return () => {
       document.body.style.overflow = originalOverflow
+      document.removeEventListener("keydown", handleEsc)
     }
-  }, [isOpen])
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -40,6 +43,9 @@ export function BottomSheet({ isOpen, onClose, title, children, footer, height =
         aria-label="Close"
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? "bottom-sheet-title" : undefined}
         className={cn(
           "absolute bottom-0 left-0 right-0 flex max-h-[95vh] flex-col rounded-t-2xl border border-border bg-card shadow-2xl",
           "animate-slide-in-up",
@@ -51,7 +57,7 @@ export function BottomSheet({ isOpen, onClose, title, children, footer, height =
         </div>
         {title && (
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+            <h2 id="bottom-sheet-title" className="text-sm font-semibold text-foreground">{title}</h2>
             <button
               type="button"
               onClick={onClose}

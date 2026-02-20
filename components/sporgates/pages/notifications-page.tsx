@@ -13,6 +13,9 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { notificationsService, authService } from "@/lib/services"
+import { NotificationSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
+import { toast } from "sonner"
 
 interface Notification {
   id: string
@@ -24,99 +27,6 @@ interface Notification {
   userName: string
   userAvatar: string
 }
-
-const initialNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "activity",
-    title: "Activity Reminder",
-    message: "5v5 Basketball Pickup Game starts in 2 hours",
-    time: "2 hours ago",
-    read: false,
-    userName: "Chelsea Piers",
-    userAvatar: "CP",
-  },
-  {
-    id: "2",
-    type: "social",
-    title: "New Like",
-    message: "liked your post about the basketball session",
-    time: "3 hours ago",
-    read: false,
-    userName: "Sarah Lee",
-    userAvatar: "SL",
-  },
-  {
-    id: "3",
-    type: "follow",
-    title: "New Follower",
-    message: "started following you",
-    time: "4 hours ago",
-    read: false,
-    userName: "Mike Johnson",
-    userAvatar: "MJ",
-  },
-  {
-    id: "4",
-    type: "booking",
-    title: "Booking Confirmed",
-    message: "Your court booking at Chelsea Piers is confirmed for Feb 10",
-    time: "1 day ago",
-    read: true,
-    userName: "Chelsea Piers",
-    userAvatar: "CP",
-  },
-  {
-    id: "5",
-    type: "comment",
-    title: "New Comment",
-    message: "commented on your workout: \"Great progress! 💪\"",
-    time: "1 day ago",
-    read: true,
-    userName: "Alex Chen",
-    userAvatar: "AC",
-  },
-  {
-    id: "6",
-    type: "achievement",
-    title: "Achievement Unlocked",
-    message: "You earned the 'Early Bird' badge for 10 morning activities!",
-    time: "2 days ago",
-    read: true,
-    userName: "Sporgates",
-    userAvatar: "SG",
-  },
-  {
-    id: "7",
-    type: "activity",
-    title: "Activity Invitation",
-    message: "invited you to join \"Tennis Doubles Match\"",
-    time: "2 days ago",
-    read: true,
-    userName: "Emily Park",
-    userAvatar: "EP",
-  },
-  {
-    id: "8",
-    type: "social",
-    title: "New Like",
-    message: "liked your photo",
-    time: "3 days ago",
-    read: true,
-    userName: "Carlos Rivera",
-    userAvatar: "CR",
-  },
-  {
-    id: "9",
-    type: "system",
-    title: "System Update",
-    message: "New features available! Check out the updated marketplace.",
-    time: "3 days ago",
-    read: true,
-    userName: "Sporgates",
-    userAvatar: "SG",
-  },
-]
 
 const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   activity: CalendarDays,
@@ -138,39 +48,77 @@ const typeColors: Record<string, string> = {
   follow: "text-emerald-500",
 }
 
+function formatTimeAgo(dateStr: string): string {
+  try {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMin = Math.floor(diffMs / 60_000)
+    if (diffMin < 1) return "Just now"
+    if (diffMin < 60) return `${diffMin}m ago`
+    const diffHrs = Math.floor(diffMin / 60)
+    if (diffHrs < 24) return `${diffHrs}h ago`
+    const diffDays = Math.floor(diffHrs / 24)
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
+  } catch {
+    return dateStr || ""
+  }
+}
+
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState(initialNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
 
-  useEffect(() => {
+  const fetchNotifications = async () => {
     const user = authService.getCurrentUser()
-    if (user?.id) {
-      notificationsService.getByUser(user.id).then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setNotifications(data.map((n: Record<string, unknown>) => ({
-            id: String(n.id),
-            type: (n.type as Notification["type"]) || "system",
-            title: String(n.title || ""),
-            message: String(n.message || ""),
-            time: n.createdAt ? new Date(n.createdAt as string).toLocaleDateString() : "",
-            read: Boolean(n.read),
-            userName: String(n.referenceType || "Sporgates"),
-            userAvatar: String(n.referenceType || "SG").substring(0, 2).toUpperCase(),
-          })))
-        }
-      }).catch(() => { })
+    if (!user?.id) {
+      setIsLoading(false)
+      return
     }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await notificationsService.getByUser(user.id)
+      const list = Array.isArray(data) ? data : (data?.content || [])
+      setNotifications(list.map((n: Record<string, unknown>) => ({
+        id: String(n.id),
+        type: (n.type as Notification["type"]) || "system",
+        title: String(n.title || ""),
+        message: String(n.message || ""),
+        time: n.createdAt ? formatTimeAgo(String(n.createdAt)) : "",
+        read: Boolean(n.read),
+        userName: String(n.senderName || n.referenceType || "Sporgates"),
+        userAvatar: String(n.senderName || n.referenceType || "SG").substring(0, 2).toUpperCase(),
+      })))
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err)
+      setError("Failed to load notifications")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchNotifications()
   }, [])
 
   const unreadCount = notifications.filter((n) => !n.read).length
   const displayedNotifications =
     activeTab === "unread" ? notifications.filter((n) => !n.read) : notifications
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     const user = authService.getCurrentUser()
     if (user?.id) {
-      notificationsService.markAllAsRead(user.id).catch(() => { })
+      try {
+        await notificationsService.markAllAsRead(user.id)
+        toast.success("All notifications marked as read")
+      } catch {
+        toast.error("Failed to mark notifications as read")
+      }
     }
   }
 
@@ -179,6 +127,26 @@ export function NotificationsPage() {
       prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
     )
     notificationsService.markAsRead(id).catch(() => { })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+          <p className="text-sm text-muted-foreground">Stay updated with your latest activity</p>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <NotificationSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return <ErrorState message={error} onRetry={fetchNotifications} />
   }
 
   return (
@@ -232,8 +200,12 @@ export function NotificationsPage() {
         {displayedNotifications.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card p-12 text-center">
             <Bell className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm font-semibold text-foreground">No unread notifications</p>
-            <p className="mt-1 text-xs text-muted-foreground">You're all caught up!</p>
+            <p className="text-sm font-semibold text-foreground">
+              {activeTab === "unread" ? "No unread notifications" : "No notifications yet"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {activeTab === "unread" ? "You're all caught up!" : "When you get notifications, they'll show up here"}
+            </p>
           </div>
         ) : (
           displayedNotifications.map((notif) => {

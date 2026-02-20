@@ -14,7 +14,6 @@ import {
   Users,
   X,
 } from "lucide-react"
-import { organizerPortfolioEvents } from "@/lib/mock-data"
 
 interface PastEvent {
   id: string
@@ -50,8 +49,30 @@ const formatNumber = (value: number) => {
   return value.toString()
 }
 
+// Inline placeholder data — no BE endpoint for organizer portfolio
+const defaultPortfolioEvents: PastEvent[] = [
+  {
+    id: "pe1",
+    name: "Summer Basketball Championship",
+    date: "2024-07-15",
+    location: "City Sports Arena",
+    metrics: { attendance: 2500, mediaReach: 150000, engagementRate: 8.5, geographicReach: ["New York", "New Jersey", "Connecticut"] },
+    proof: { photos: ["photo1.jpg", "photo2.jpg"], mediaLinks: ["https://sportsnews.com/article"], socialMediaLinks: [], documents: ["report.pdf"] },
+    testimonials: [{ author: "John Smith", role: "Team Captain", text: "Best organized tournament I've attended." }],
+  },
+  {
+    id: "pe2",
+    name: "Community Soccer League",
+    date: "2024-05-01",
+    location: "Riverside Fields",
+    metrics: { attendance: 800, mediaReach: 45000, engagementRate: 12.3, geographicReach: ["Brooklyn", "Queens"] },
+    proof: { photos: ["photo3.jpg"], mediaLinks: [], socialMediaLinks: [], documents: [] },
+    testimonials: [],
+  },
+]
+
 export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
-  const [pastEvents] = useState<PastEvent[]>(organizerPortfolioEvents)
+  const [pastEvents] = useState<PastEvent[]>(defaultPortfolioEvents)
 
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
   const [isAddingEvent, setIsAddingEvent] = useState(false)
@@ -151,87 +172,87 @@ export function OrganizerPortfolio({ onClose }: OrganizerPortfolioProps) {
                 />
               </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-foreground">Date</label>
+                  <input
+                    type="date"
+                    className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-foreground">Location</label>
+                  <input
+                    type="text"
+                    className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                    placeholder="Venue name"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-4">
+                <h4 className="text-xs font-semibold text-foreground">Event Metrics</h4>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="text-xs font-semibold text-foreground">Date</label>
+                    <label className="text-xs text-muted-foreground">Attendance</label>
                     <input
-                      type="date"
+                      type="number"
                       className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-foreground">Location</label>
+                    <label className="text-xs text-muted-foreground">Media Reach</label>
                     <input
-                      type="text"
+                      type="number"
                       className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                      placeholder="Venue name"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Engagement Rate (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      placeholder="0.0"
                     />
                   </div>
                 </div>
+              </div>
 
-                <div className="border-t border-border pt-4">
-                  <h4 className="text-xs font-semibold text-foreground">Event Metrics</h4>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="text-xs text-muted-foreground">Attendance</label>
-                      <input
-                        type="number"
-                        className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Media Reach</label>
-                      <input
-                        type="number"
-                        className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Engagement Rate (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        className="mt-2 h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                        placeholder="0.0"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-border pt-4">
-                  <h4 className="text-xs font-semibold text-foreground">Upload Proof</h4>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/70">
-                      <Upload className="h-4 w-4" />
-                      Photos
-                    </button>
-                    <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/70">
-                      <LinkIcon className="h-4 w-4" />
-                      Media Links
-                    </button>
-                    <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/70">
-                      <FileText className="h-4 w-4" />
-                      Documents
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingEvent(false)}
-                    className="flex-1 rounded-xl border border-border py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-                  >
-                    Cancel
+              <div className="border-t border-border pt-4">
+                <h4 className="text-xs font-semibold text-foreground">Upload Proof</h4>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/70">
+                    <Upload className="h-4 w-4" />
+                    Photos
                   </button>
-                  <button type="button" className="gradient-primary flex-1 rounded-xl py-2.5 text-xs font-semibold text-white shadow-md transition-opacity hover:opacity-90">
-                    Add Event
+                  <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/70">
+                    <LinkIcon className="h-4 w-4" />
+                    Media Links
+                  </button>
+                  <button type="button" className="flex items-center justify-center gap-2 rounded-xl border border-border bg-muted px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted/70">
+                    <FileText className="h-4 w-4" />
+                    Documents
                   </button>
                 </div>
               </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingEvent(false)}
+                  className="flex-1 rounded-xl border border-border py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button type="button" className="gradient-primary flex-1 rounded-xl py-2.5 text-xs font-semibold text-white shadow-md transition-opacity hover:opacity-90">
+                  Add Event
+                </button>
+              </div>
             </div>
+          </div>
         )}
 
         <div className="space-y-3">

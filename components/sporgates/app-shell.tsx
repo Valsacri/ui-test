@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { businessesService } from "@/lib/services/businesses"
 import { authService } from "@/lib/services/auth"
+import { notificationsService } from "@/lib/services/notifications"
 import type { PageRoute } from "@/lib/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
@@ -63,7 +64,6 @@ import { SettingsTransactionsPage } from "@/components/sporgates/pages/settings-
 import { CreateFacilityPage } from "@/components/sporgates/pages/create-facility-page"
 import { CreateSquadPage } from "@/components/sporgates/pages/create-squad-page"
 import { BusinessOnboardingPage } from "@/components/sporgates/pages/business-onboarding-page"
-// import { userBusinesses as initialBusinesses } from "@/lib/mock-data"
 import {
   CreateActivityPage,
   CreateActivityStepsPage,
@@ -96,6 +96,8 @@ export function AppShell() {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [businesses, setBusinesses] = useState<any[]>([])
   const [activeBusinessId, setActiveBusinessId] = useState<string | null>(null)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
   const isBusinessMode = activeBusinessId !== null
 
   useEffect(() => {
@@ -126,6 +128,18 @@ export function AppShell() {
       }
     }
     fetchBusinesses()
+  }, [])
+
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      notificationsService.getUnreadCount(user.id)
+        .then((data) => {
+          const count = typeof data === 'number' ? data : (data?.count ?? 0)
+          setUnreadNotifications(count)
+        })
+        .catch(() => { })
+    }
   }, [])
 
   const navigate = useCallback((page: PageRoute, id?: string) => {
@@ -194,7 +208,7 @@ export function AppShell() {
       case "organizer-portfolio":
         return <OrganizerPortfolio onClose={() => navigate("business-detail", detailId || "1")} />
       case "jobs":
-        return <JobsPage onNavigate={navigate} />
+        return <JobsPage onNavigate={navigate} isBusinessMode={isBusinessMode} activeBusinessId={activeBusinessId} />
       case "messages":
         return <MessagesPage onNavigate={navigate} />
       case "conversation":
@@ -339,8 +353,8 @@ export function AppShell() {
         onSwitchBusiness={switchBusiness}
         onSwitchToUser={switchToUser}
         onCreateNewBusiness={createNewBusiness}
-        unreadMessages={3}
-        unreadNotifications={2}
+        unreadMessages={unreadMessages}
+        unreadNotifications={unreadNotifications}
       />
       <div className="flex">
         {showSidebars && (

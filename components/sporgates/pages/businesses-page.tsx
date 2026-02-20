@@ -1,10 +1,12 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-import { Search, SlidersHorizontal, MapPin, Loader2 } from "lucide-react"
+import { Search, SlidersHorizontal, MapPin, Building2 } from "lucide-react"
 import { businessesService } from "@/lib/services"
 import { BusinessCard } from "@/components/sporgates/cards/business-card"
 import { SortFilter } from "@/components/sporgates/filters/sort-filter"
+import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { LoadingGrid, LoadingFacilityCard } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -142,19 +144,27 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <LoadingGrid className="md:grid-cols-2 lg:grid-cols-3">
+          <LoadingFacilityCard />
+        </LoadingGrid>
       ) : filteredBusinesses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="gradient-primary mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white">
-            <Search className="h-7 w-7" />
-          </div>
-          <p className="text-base font-semibold text-foreground">No businesses found</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {query ? "Try adjusting your search or filters" : "Check back later for new businesses"}
-          </p>
-        </div>
+        <EmptyState
+          icon={Building2}
+          title="No businesses found"
+          description={query ? "Try adjusting your search or filters" : "Check back later for new businesses"}
+          action={
+            query || activeFilter !== "All"
+              ? {
+                  label: "Clear Filters",
+                  onClick: () => {
+                    setActiveFilter("All")
+                    setQuery("")
+                  },
+                  variant: "secondary",
+                }
+              : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredBusinesses.map((business) => (

@@ -33,6 +33,7 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
           alt={service.name}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           crossOrigin="anonymous"
+          loading="lazy"
         />
         <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
           {service.category}

@@ -20,13 +20,7 @@ import {
   Edit3,
   Clock,
 } from "lucide-react"
-import {
-  activities,
-  athletes,
-  businessDashboardData,
-  businessPartners,
-  businessResources,
-} from "@/lib/mock-data"
+
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -80,19 +74,7 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
         const list = Array.isArray(data) ? data : []
         setActivityList(list)
       } catch {
-        // Fallback to mock data
-        setActivityList(
-          activities.map((a) => ({
-            id: a.id,
-            name: a.title,
-            sportName: a.sport,
-            startDateTime: a.date,
-            pricePerPerson: a.price,
-            currentParticipants: a.spots,
-            maxParticipants: a.totalSpots,
-            coverImage: a.image,
-          }))
-        )
+        setActivityList([])
       } finally {
         setLoading(false)
       }
@@ -111,7 +93,7 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
       await activitiesService.delete(activityToDelete)
       toast.success("Activity deleted successfully")
       // Refresh list
-      const data = await activitiesService.getAll({ organizerId: activeBusinessId })
+      const data = await activitiesService.getAll({ organizerId: activeBusinessId ?? undefined })
       const list = Array.isArray(data) ? data : []
       setActivityList(list)
     } catch (error) {
@@ -206,10 +188,10 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
                   <div className="absolute top-3 left-3">
                     <Badge
                       className={`backdrop-blur-md shadow-sm border-none ${activity.status === 'PUBLISHED'
-                          ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                          : activity.status === 'DRAFT'
-                            ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                            : 'bg-white/20 hover:bg-white/30 text-white'
+                        ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                        : activity.status === 'DRAFT'
+                          ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                          : 'bg-white/20 hover:bg-white/30 text-white'
                         }`}
                     >
                       {activity.status || "Active"}
@@ -243,9 +225,9 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
                           {activity.sportName}
                         </Badge>
                       )}
-                      {activity.type && (
+                      {activity.status && (
                         <Badge variant="secondary" className="text-[10px] h-5 px-2 bg-[#FC8936] text-white hover:bg-[#FC8936]/90 border-none shadow-sm">
-                          {activity.type}
+                          {activity.status}
                         </Badge>
                       )}
                     </div>
@@ -279,7 +261,7 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
                           ? `${activity.currency === 'MAD' ? '' : '$'}${activity.pricePerPerson}${activity.currency === 'MAD' ? ' MAD' : ''}`
                           : "Free"}
                       </span>
-                      {activity.pricePerPerson > 0 && (
+                      {(activity.pricePerPerson ?? 0) > 0 && (
                         <span className="text-[10px] text-muted-foreground font-medium">/person</span>
                       )}
                     </div>
@@ -668,7 +650,10 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
       if (resType === "facility") await facilitiesService.delete(target.id)
       else if (resType === "product") await marketplaceService.delete(target.id)
       else await servicesService.delete(target.id)
-    } catch { /* remove locally anyway */ }
+      toast.success(`${resType.charAt(0).toUpperCase() + resType.slice(1)} deleted successfully`)
+    } catch {
+      toast.error(`Failed to delete ${resType}`)
+    }
 
     if (resType === "facility") setFacilities((prev) => prev.filter((item) => item.id !== target.id))
     else if (resType === "product") setProducts((prev) => prev.filter((item) => item.id !== target.id))
@@ -883,7 +868,11 @@ export function BusinessPartnersPage({ onNavigate }: BusinessSubPageProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {businessPartners.map((partner) => (
+        {[
+          { id: "bp1", name: "SportMax", type: "Equipment Sponsor", avatar: "SM", tier: "Gold", sport: null, since: "2024" },
+          { id: "bp2", name: "FitFuel", type: "Nutrition Partner", avatar: "FF", tier: "Silver", sport: null, since: "2023" },
+          { id: "bp3", name: "ProCoach", type: "Training Partner", avatar: "PC", tier: null, sport: "Basketball", since: "2024" },
+        ].map((partner: { id: string; name: string; type: string; avatar: string; tier: string | null; sport: string | null; since: string }) => (
           <div key={partner.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-4">
               <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-xl text-xs font-bold text-white">
@@ -919,7 +908,7 @@ export function BusinessPartnersPage({ onNavigate }: BusinessSubPageProps) {
               tiers={tiers}
               onChange={setTiers}
               eventPoster={tierPoster}
-              onPosterUpload={setTierPoster}
+              onPosterUpload={(fileOrUrl) => setTierPoster(typeof fileOrUrl === 'string' ? fileOrUrl : URL.createObjectURL(fileOrUrl))}
             />
           </div>
         </div>
@@ -949,15 +938,11 @@ export function BusinessPartnersPage({ onNavigate }: BusinessSubPageProps) {
           <div className="mt-4">
             <AthleteCollaborationSelector
               phase={collaborationPhase}
-              athletes={athletes.map((athlete) => ({
-                id: athlete.id,
-                name: athlete.name,
-                sport: athlete.sport,
-                followers: athlete.followers,
-                ranking: athlete.ranking,
-                avatar: athlete.avatar,
-                verified: athlete.status === "active",
-              }))}
+              athletes={[
+                { id: "a1", name: "Alex Johnson", sport: "Basketball", followers: 125000, ranking: "#12", avatar: "AJ", verified: true },
+                { id: "a2", name: "Sam Lee", sport: "Tennis", followers: 89000, ranking: "#28", avatar: "SL", verified: true },
+                { id: "a3", name: "Maria Gonzalez", sport: "Soccer", followers: 200000, ranking: "#5", avatar: "MG", verified: true },
+              ]}
               selectedAthlete={selectedAthleteId}
               onSelectAthlete={setSelectedAthleteId}
               searchQuery={collaborationSearch}
@@ -973,8 +958,23 @@ export function BusinessPartnersPage({ onNavigate }: BusinessSubPageProps) {
 }
 
 export function BusinessAnalyticsPage({ onNavigate }: BusinessSubPageProps) {
-  const data = businessDashboardData
-  const maxRevenue = Math.max(...data.monthlyRevenue.map((d) => d.revenue))
+  const analyticsData = {
+    totalRevenue: 33500,
+    totalBookings: 425,
+    totalCustomers: 1289,
+    monthlyRevenue: [
+      { month: "Jan", revenue: 4200 }, { month: "Feb", revenue: 5100 },
+      { month: "Mar", revenue: 4800 }, { month: "Apr", revenue: 6300 },
+      { month: "May", revenue: 5900 }, { month: "Jun", revenue: 7200 },
+    ],
+    topActivities: [
+      { name: "Morning Yoga", bookings: 45, revenue: 1125 },
+      { name: "Basketball Training", bookings: 32, revenue: 1600 },
+      { name: "Tennis Session", bookings: 28, revenue: 1120 },
+    ],
+  }
+  const data = analyticsData
+  const maxRevenue = Math.max(...data.monthlyRevenue.map((d: { revenue: number }) => d.revenue))
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

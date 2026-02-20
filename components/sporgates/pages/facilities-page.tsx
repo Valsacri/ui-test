@@ -31,6 +31,7 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
   const [sortBy, setSortBy] = useState("relevance")
   const isMobile = useIsMobile()
   const [isLoading, setIsLoading] = useState(true)
+  const [visibleCount, setVisibleCount] = useState(9)
   const [sidebarFilters, setSidebarFilters] = useState<FacilitiesFilterState>({
     availability: "Any",
     priceRange: "Any",
@@ -254,7 +255,7 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
       </div>
 
       {isLoading ? (
-        <LoadingGrid className="md:grid-cols-2">
+        <LoadingGrid className="md:grid-cols-2 lg:grid-cols-3">
           <LoadingFacilityCard />
         </LoadingGrid>
       ) : filteredFacilities.length === 0 ? (
@@ -273,15 +274,28 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {filteredFacilities.map((facility) => (
-            <FacilityCard
-              key={facility.id}
-              facility={facility}
-              onClick={() => onNavigate("facility-detail", facility.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredFacilities.slice(0, visibleCount).map((facility) => (
+              <FacilityCard
+                key={facility.id}
+                facility={facility}
+                onClick={() => onNavigate("facility-detail", facility.id)}
+              />
+            ))}
+          </div>
+          {visibleCount < filteredFacilities.length && (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + 9)}
+                className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted hover:shadow-md"
+              >
+                Show More ({filteredFacilities.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

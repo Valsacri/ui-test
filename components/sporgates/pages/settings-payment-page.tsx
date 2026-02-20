@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { ArrowLeft, CreditCard, Plus, MoreHorizontal, Trash2, Star, Shield } from "lucide-react"
-import { paymentMethods } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
 interface SettingsPaymentPageProps {
@@ -14,6 +13,13 @@ const cardColors: Record<string, string> = {
   mastercard: "from-[#FC8936] to-[#FFA05C]",
   paypal: "from-[#003C66] to-[#FC8936]",
 }
+
+// Inline placeholder data — no payment methods API exists yet
+const paymentMethods = [
+  { id: "pm1", type: "visa", last4: "4242", expiry: "12/26", email: null, isDefault: true },
+  { id: "pm2", type: "mastercard", last4: "8888", expiry: "03/27", email: null, isDefault: false },
+  { id: "pm3", type: "paypal", last4: "", expiry: null, email: "user@email.com", isDefault: false },
+]
 
 export function SettingsPaymentPage({ onBack }: SettingsPaymentPageProps) {
   const [showAddCard, setShowAddCard] = useState(false)

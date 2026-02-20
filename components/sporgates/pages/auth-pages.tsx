@@ -19,10 +19,18 @@ import {
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
-import { experienceLevels, sports } from "@/lib/mock-data"
 import { authService } from "@/lib/services"
 import { userService } from "@/lib/services/user"
+import { sportService } from "@/lib/services/sport"
 import { getApiErrorMessage, isApiError } from "@/lib/api-errors"
+
+// Inline — no BE endpoint for experience levels
+const experienceLevels = [
+  { id: "beginner", label: "Beginner", description: "Just starting out" },
+  { id: "intermediate", label: "Intermediate", description: "Some experience" },
+  { id: "advanced", label: "Advanced", description: "Highly skilled" },
+  { id: "professional", label: "Professional", description: "Competitive level" },
+]
 
 interface AuthPageProps {
   page:
@@ -48,6 +56,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   const [fullName, setFullName] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sports, setSports] = useState<any[]>([])
   const [verificationCode, setVerificationCode] = useState<string[]>(Array(6).fill(""))
   const [resendCooldown, setResendCooldown] = useState(0)
   const [verifySuccess, setVerifySuccess] = useState(false)
@@ -64,6 +73,15 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     return () => clearTimeout(timer)
   }, [resendCooldown])
 
+  // Fetch sports from API for the onboarding flow
+  useEffect(() => {
+    if (page === "choose-sports") {
+      sportService.getAll().then((data: any) => {
+        setSports(Array.isArray(data) ? data : [])
+      }).catch(() => { })
+    }
+  }, [page])
+
   // Restore email from localStorage on verify-email page (state is lost on navigation)
   useEffect(() => {
     if (page === "verify-email" && !email) {
@@ -73,8 +91,10 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   }, [page, email])
 
   const handleSignIn = async () => {
-    setLoading(true)
     setError(null)
+    if (!email.trim()) { setError("Email is required"); return }
+    if (!password) { setError("Password is required"); return }
+    setLoading(true)
     try {
       await authService.login({ email, password })
       // Full page reload so the (main) layout's AuthGuard picks up the token
@@ -87,13 +107,15 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   }
 
   const handleSignUp = async () => {
-    setLoading(true)
     setError(null)
+    if (!fullName.trim()) { setError("Full name is required"); return }
+    if (!email.trim()) { setError("Email is required"); return }
+    if (password.length < 8) { setError("Password must be at least 8 characters"); return }
     if (password !== confirmPassword) {
       setError("Passwords do not match")
-      setLoading(false)
       return
     }
+    setLoading(true)
     try {
       const [firstName, ...rest] = fullName.trim().split(" ")
       const lastName = rest.join(" ") || ""
@@ -109,7 +131,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     }
   }
 
-  const sportsList = sports.map((sport) => sport.name)
+  const sportsList = sports.map((sport: any) => sport.name)
   const goalCategories = [
     { id: "fitness", label: "Stay fit and healthy", icon: Dumbbell, goalType: "GENERAL_FITNESS" },
     { id: "compete", label: "Compete in leagues", icon: Trophy, goalType: "SPORTS_SKILL" },
@@ -250,7 +272,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
                   setError(null)
                   try {
                     const prefs = selectedSports.map((s) => {
-                      const sport = sports.find((sp) => sp.name === s.id)
+                      const sport = sports.find((sp: any) => sp.name === s.id)
                       return {
                         sportId: sport?.id || s.id,
                         sportName: s.id,
