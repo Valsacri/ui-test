@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Building2, ChevronDown, Check, Plus } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,7 +40,7 @@ export function BusinessSwitcher({
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           {currentBusiness?.logo ? (
-            <img src={currentBusiness.logo} alt="" className="h-full w-full rounded-xl object-cover" />
+            <Image src={currentBusiness.logo} alt="" fill className="rounded-xl object-cover" sizes="32px" />
           ) : (
             <Building2 className="h-4 w-4" />
           )}
@@ -81,9 +82,9 @@ export function BusinessSwitcher({
                         : "hover:bg-muted"
                     )}
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                    <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                       {business.logo ? (
-                        <img src={business.logo} alt="" className="h-full w-full rounded-xl object-cover" />
+                        <Image src={business.logo} alt="" fill className="rounded-xl object-cover" sizes="32px" />
                       ) : (
                         <Building2 className="h-4 w-4" />
                       )}

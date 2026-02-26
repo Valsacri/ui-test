@@ -1,12 +1,14 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState } from "react"
+import useSWR from "swr"
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
-import { activitiesService } from "@/lib/services"
+import { fetcher } from "@/lib/fetcher"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ActivitiesFilterSidebar } from "@/components/sporgates/filters/activities-filter-sidebar"
 import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { LoadingActivityCard, LoadingGrid } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -25,50 +27,46 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
-  const [activities, setActivities] = useState<any[]>([])
   const isMobile = useIsMobile()
-  const [isLoading, setIsLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState(9)
 
-  useEffect(() => {
-    activitiesService.getAll().then((data) => {
-      if (Array.isArray(data)) {
-        const mapped = data.map((a: any) => {
-          const parseDate = (d: any) => {
-            if (Array.isArray(d)) {
-              return new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0)
-            }
-            return new Date(d)
-          }
+  // SWR replaces useEffect + useState for data fetching
+  const { data: rawActivities, error, isLoading, mutate } = useSWR('/v1/activities', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
 
-          const startDate = parseDate(a.startDateTime)
-          return {
-            id: a.id,
-            title: a.name,
-            sport: a.sportId || "Sport",
-            date: startDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
-            time: startDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' }),
-            location: a.location || a.city || "TBD",
-            price: a.pricePerPerson || 0,
-            currency: a.currency || "USD",
-            spots: (a.maxParticipants || 0) - (a.currentParticipants || 0),
-            totalSpots: a.maxParticipants || 0,
-            image: a.coverImage || "/images/sports-placeholder.jpg",
-            rating: a.rating || 0,
-            reviews: a.reviewCount || 0,
-            organizer: a.organizerName || "Organizer",
-            organizerAvatar: a.organizerAvatar || "",
-            tags: a.tags || []
-          }
-        })
-        setActivities(mapped)
-      } else {
-        setActivities([])
+  // Map API data to card format (memoized for performance)
+  const activities = useMemo(() => {
+    if (!Array.isArray(rawActivities)) return []
+    return rawActivities.map((a: any) => {
+      const parseDate = (d: any) => {
+        if (Array.isArray(d)) {
+          return new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0)
+        }
+        return new Date(d)
       }
-    }).catch(() => {
-      setActivities([])
-    }).finally(() => setIsLoading(false))
-  }, [])
+      const startDate = parseDate(a.startDateTime)
+      return {
+        id: a.id,
+        title: a.name,
+        sport: a.sportId || "Sport",
+        date: startDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
+        time: startDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' }),
+        location: a.location || a.city || "TBD",
+        price: a.pricePerPerson || 0,
+        currency: a.currency || "USD",
+        spots: (a.maxParticipants || 0) - (a.currentParticipants || 0),
+        totalSpots: a.maxParticipants || 0,
+        image: a.coverImage || "/placeholder.svg",
+        rating: a.rating || 0,
+        reviews: a.reviewCount || 0,
+        organizer: a.organizerName || "Organizer",
+        organizerAvatar: a.organizerAvatar || "",
+        tags: a.tags || []
+      }
+    })
+  }, [rawActivities])
 
   const filteredActivities = useMemo(() => {
     const today = new Date()
@@ -244,6 +242,12 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
         <LoadingGrid>
           <LoadingActivityCard />
         </LoadingGrid>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load activities"
+          message="We're having trouble loading the activities right now."
+          onRetry={() => mutate()}
+        />
       ) : filteredActivities.length === 0 ? (
         <EmptyState
           icon={Search}

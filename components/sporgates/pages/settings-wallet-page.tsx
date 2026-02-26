@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Wallet, TrendingUp, DollarSign, RefreshCw, X } from "lucide-react"
 import { walletService, authService } from "@/lib/services"
 import { cn } from "@/lib/utils"
@@ -20,20 +21,27 @@ export function SettingsWalletPage({ onBack }: SettingsWalletPageProps) {
   const [topUpAmount, setTopUpAmount] = useState("")
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [balance, setBalance] = useState(0)
-  const [transactionHistory, setTransactionHistory] = useState<any[]>([])
+
+  const user = authService.getCurrentUser()
+  const userId = user?.id
+
+  const { data: walletData } = useSWR(
+    userId ? `/wallet/${userId}` : null,
+    () => walletService.getWallet(userId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const { data: txData = [] } = useSWR(
+    userId ? `/wallet/${userId}/transactions` : null,
+    () => walletService.getTransactions(userId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (user?.id) {
-      walletService.getWallet(user.id).then((data) => {
-        if (data?.balance !== undefined) setBalance(data.balance)
-      }).catch(() => { })
+    if (walletData?.balance !== undefined) setBalance(walletData.balance)
+  }, [walletData])
 
-      walletService.getTransactions(user.id).then((data) => {
-        if (Array.isArray(data) && data.length > 0) setTransactionHistory(data)
-      }).catch(() => { })
-    }
-  }, [])
+  const transactionHistory = Array.isArray(txData) && txData.length > 0 ? txData : []
 
   const filteredTransactions = transactionHistory.filter((tx) => {
     if (activeFilter === "All") return true

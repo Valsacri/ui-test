@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Calendar, MapPin, Star, Users, Clock } from "lucide-react"
 
 interface ActivityCardProps {
@@ -32,12 +33,11 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
       className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
     >
       <div className="relative h-44 overflow-hidden">
-        <img
+        <Image
           src={activity.image || "/placeholder.svg"}
           alt={activity.title}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          crossOrigin="anonymous"
-          loading="lazy"
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute left-3 top-3 flex gap-1.5">
           {activity.tags.map((tag, index) => (
@@ -83,10 +83,11 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
           <div className="flex items-center gap-2">
             <div className="relative gradient-primary flex h-6 w-6 items-center justify-center overflow-hidden rounded-full text-[9px] font-bold text-white">
               {activity.organizerAvatar && (activity.organizerAvatar.startsWith("/") || activity.organizerAvatar.startsWith("http")) ? (
-                <img
+                <Image
                   src={activity.organizerAvatar}
                   alt={activity.organizer}
-                  className="h-full w-full object-cover"
+                  fill
+                  className="object-cover"
                 />
               ) : (
                 <span>{activity.organizer.slice(0, 2).toUpperCase()}</span>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -175,7 +176,7 @@ export function CollectionsModal({ open, onClose }: CollectionsModalProps) {
                             }
                           >
                             <div className="flex items-center gap-2">
-                              <img src={product.image} alt={product.name} className="h-10 w-10 rounded-lg object-cover" />
+                              <Image src={product.image} alt={product.name} width={40} height={40} className="rounded-lg object-cover" />
                               <div className="min-w-0">
                                 <p className="truncate text-xs font-semibold text-foreground">{product.name}</p>
                                 <p className="text-[10px] text-muted-foreground">${product.price}</p>

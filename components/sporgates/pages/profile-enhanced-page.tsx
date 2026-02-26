@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import useSWR from "swr"
 import {
   ArrowLeft,
   MapPin,
@@ -100,14 +101,14 @@ const iconMap: Record<string, React.ElementType> = {
 export function ProfileEnhancedPage({ onNavigate }: ProfileEnhancedPageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
   const [joinedIds, setJoinedIds] = useState<string[]>([])
-  const [activities, setActivities] = useState<any[]>([])
 
-  useEffect(() => {
-    activitiesService.getAll({}).then((data: any) => {
-      setActivities(Array.isArray(data) ? data : [])
-    }).catch(() => { })
-  }, [])
+  const { data: activitiesRaw = [] } = useSWR(
+    `/activities/enhanced`,
+    () => activitiesService.getAll({}),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
+  const activities = Array.isArray(activitiesRaw) ? activitiesRaw : []
   const upcomingActivities = useMemo(() => activities.slice(0, 3), [activities])
   const completedGoals = goals.filter((goal) => goal.progress >= goal.target).length
   const completedMilestones = goals.reduce(

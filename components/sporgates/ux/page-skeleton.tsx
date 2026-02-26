@@ -114,6 +114,22 @@ export function NotificationSkeleton() {
     )
 }
 
+/** Message thread loading: alternating left/right bubbles */
+export function ConversationThreadSkeleton({ count = 5 }: { count?: number }) {
+    return (
+        <div className="flex flex-col gap-4 p-4">
+            {Array.from({ length: count }).map((_, i) => (
+                <div key={i} className={i % 2 === 0 ? "flex justify-start" : "flex justify-end"}>
+                    <div className={cn("space-y-1", i % 2 === 0 ? "max-w-[70%]" : "max-w-[70%]")}>
+                        <Skeleton className={cn("rounded-2xl py-3", i % 2 === 0 ? "h-12 w-48 rounded-bl-md" : "h-10 w-36 rounded-br-md ml-auto")} />
+                        <Skeleton className={cn("h-3 w-10", i % 2 === 0 ? "" : "ml-auto")} />
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
 // ==================== Page-level skeletons ====================
 
 export function DetailPageSkeleton({ className }: { className?: string }) {

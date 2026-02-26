@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { ArrowLeft, Briefcase, MapPin, DollarSign, Clock, Wifi, Building2, Check, Users, Mail, Phone, FileText, Calendar } from "lucide-react"
 import { DetailPageSkeleton, PersonCardSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { jobsService } from "@/lib/services"
@@ -90,66 +91,22 @@ function getInitials(name: string) {
 }
 
 export function BusinessJobDetailPage({ jobId, onNavigate, activeBusinessId }: BusinessJobDetailPageProps) {
-  const [job, setJob] = useState<JobDto | null>(null)
   const [applicants, setApplicants] = useState<Applicant[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isLoadingApplicants, setIsLoadingApplicants] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"overview" | "applicants">("overview")
 
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    setError(null)
-
-    jobsService
-      .getById(jobId)
-      .then((data: JobDto) => {
-        if (!cancelled) {
-          setJob(data)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load job details.")
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [jobId])
+  const { data: job, error, isLoading } = useSWR<JobDto>(
+    jobId ? `/jobs/${jobId}` : null,
+    () => jobsService.getById(jobId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   useEffect(() => {
     if (activeTab === "applicants" && jobId) {
-      // TODO: Replace with actual API call when backend is ready
-      // For now, using mock data
       setIsLoadingApplicants(true)
-      setTimeout(() => {
-        // Mock applicants data - replace with actual API call
-        setApplicants([
-          {
-            id: "1",
-            name: "John Doe",
-            email: "john.doe@example.com",
-            phone: "+1 (555) 123-4567",
-            appliedAt: new Date().toISOString(),
-            resume: "resume.pdf",
-            coverLetter: "I am very interested in this position...",
-            status: "pending"
-          },
-          {
-            id: "2",
-            name: "Jane Smith",
-            email: "jane.smith@example.com",
-            phone: "+1 (555) 987-6543",
-            appliedAt: new Date(Date.now() - 86400000).toISOString(),
-            resume: "jane_resume.pdf",
-            coverLetter: "With my experience in...",
-            status: "reviewed"
-          }
-        ])
-        setIsLoadingApplicants(false)
-      }, 500)
+      // Backend has no job applicants endpoint yet; show empty state until GET /v1/jobs/{id}/applicants exists
+      setApplicants([])
+      setIsLoadingApplicants(false)
     }
   }, [activeTab, jobId])
 

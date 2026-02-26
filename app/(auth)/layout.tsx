@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { AUTH_COOKIE_NAME } from "@/lib/constants"
 
 export default function AuthLayout({
     children,
@@ -14,7 +15,8 @@ export default function AuthLayout({
     useEffect(() => {
         const token = localStorage.getItem("auth_token")
         if (token) {
-            // Already authenticated — redirect to home
+            // Sync auth cookie so middleware allows the next request (avoids redirect loop)
+            document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
             router.replace("/")
         } else {
             setReady(true)

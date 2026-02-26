@@ -1,8 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Globe, MapPin, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { userService } from "@/lib/services/user"
+import { authService } from "@/lib/services/auth"
+import { toast } from "sonner"
 
 interface SettingsLanguagePageProps {
   onBack: () => void
@@ -34,6 +37,35 @@ export function SettingsLanguagePage({ onBack }: SettingsLanguagePageProps) {
   const [selectedRegion, setSelectedRegion] = useState("us")
   const [dateFormat, setDateFormat] = useState("MM/DD/YYYY")
   const [distanceUnit, setDistanceUnit] = useState("Miles")
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // Load user's current language preference
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      userService.getUserById(user.id).then((data: any) => {
+        if (data?.languagePreference) setSelectedLang(data.languagePreference)
+      }).catch(() => { })
+    }
+  }, [])
+
+  const handleSave = async () => {
+    const user = authService.getCurrentUser()
+    if (!user?.id) return
+    setSaving(true)
+    setSaved(false)
+    try {
+      await userService.updateLanguagePreference(user.id, selectedLang)
+      setSaved(true)
+      toast.success("Language preferences saved")
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      toast.error("Failed to save preferences. Please try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -183,9 +215,11 @@ export function SettingsLanguagePage({ onBack }: SettingsLanguagePageProps) {
 
       <button
         type="button"
-        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+        onClick={handleSave}
+        disabled={saving}
+        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
       >
-        Save Preferences
+        {saving ? "Saving..." : saved ? "Saved ✓" : "Save Preferences"}
       </button>
     </div>
   )

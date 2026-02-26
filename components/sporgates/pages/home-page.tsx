@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import { ArrowRight, Zap, Trophy, TrendingUp, Target, Users, Calendar } from "lucide-react"
 import { FeedSkeleton } from "@/components/sporgates/ux/page-skeleton"
-import { activitiesService, postsService, servicesService, facilitiesService, userService } from "@/lib/services"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
+import { activitiesService, postsService, servicesService, facilitiesService, userService, feedService } from "@/lib/services"
 import { authService } from "@/lib/services"
+import type { FeedItem } from "@/lib/services/feed"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { PostCard } from "@/components/sporgates/cards/post-card"
@@ -18,20 +20,21 @@ interface HomePageProps {
 
 export function HomePage({ onNavigate }: HomePageProps) {
   const [feedTab, setFeedTab] = useState<"foryou" | "following">("foryou")
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [activities, setActivities] = useState<any[]>([])
   const [posts, setPosts] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
   const [facilities, setFacilities] = useState<any[]>([])
   const [userProfile, setUserProfile] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<Error | null>(null)
 
-  useEffect(() => {
+  const fetchData = async () => {
     const currentUser = authService.getCurrentUser()
     const userId = currentUser?.id
-
-    const fetchData = async () => {
-      setIsLoading(true)
-      try {
+    setIsLoading(true)
+    setLoadError(null)
+    try {
         const [activitiesData, postsData, servicesData, facilitiesData] = await Promise.allSettled([
           activitiesService.getAll(),
           postsService.getAll(undefined, userId),
@@ -57,7 +60,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
               currency: a.currency || "USD",
               spots: (a.maxParticipants || 0) - (a.currentParticipants || 0),
               totalSpots: a.maxParticipants || 0,
-              image: a.coverImage || "/images/sports-placeholder.jpg",
+              image: a.coverImage || "/placeholder.svg",
               rating: a.rating || 0,
               reviews: a.reviewCount || 0,
               organizer: a.organizerName || "Organizer",
@@ -85,29 +88,38 @@ export function HomePage({ onNavigate }: HomePageProps) {
             location: f.address || f.city || "TBD",
             price: f.pricePerHour || 0,
             currency: f.currency || "USD",
-            image: f.coverImage || "/images/sports-placeholder.jpg",
+            image: f.coverImage || "/placeholder.svg",
             amenities: f.amenities || [],
             sports: f.sports || [],
             verified: f.verified || false,
           })))
         }
 
-        // Fetch user profile data
+        // Fetch user profile and personalized feed
         if (userId) {
           try {
-            const userData = await userService.getUserById(userId)
+            const [userData, feedData] = await Promise.all([
+              userService.getUserById(userId),
+              feedService.getFeed(userId),
+            ])
             if (userData) setUserProfile(userData)
-          } catch { /* User profile fetch is non-critical */ }
+            if (Array.isArray(feedData)) setFeedItems(feedData)
+          } catch { /* User profile / feed fetch is non-critical */ }
         }
+      } catch (err) {
+        setLoadError(err instanceof Error ? err : new Error("Failed to load home"))
       } finally {
         setIsLoading(false)
       }
     }
 
+  useEffect(() => {
     fetchData()
   }, [])
 
   const displayedPosts = feedTab === "foryou" ? posts.slice(0, 3) : posts.slice(0, 2)
+  const forYouFeedItems = feedTab === "foryou" ? feedItems : []
+  const showFeedApi = forYouFeedItems.length > 0
 
   const userName = userProfile?.firstName || userProfile?.name?.split(" ")[0] || "Athlete"
   const stats = {
@@ -119,6 +131,18 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   if (isLoading) {
     return <FeedSkeleton count={4} />
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <ErrorState
+          title="Couldn't load home"
+          message={loadError.message || "Something went wrong. Please try again."}
+          onRetry={() => fetchData()}
+        />
+      </div>
+    )
   }
 
   return (
@@ -212,7 +236,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       </div>
 
       {/* Social Feed */}
-      {posts.length > 0 && (
+      {(posts.length > 0 || showFeedApi) && (
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-foreground">Community Feed</h2>
@@ -237,9 +261,63 @@ export function HomePage({ onNavigate }: HomePageProps) {
             ))}
           </div>
           <div className="space-y-4">
-            {displayedPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
-            ))}
+            {showFeedApi
+              ? forYouFeedItems.map((item) => {
+                  if (item.type === "post") {
+                    const post = {
+                      id: item.id,
+                      author: item.authorName ?? "User",
+                      authorAvatar: item.authorAvatar ?? "?",
+                      time: item.createdAt ?? "",
+                      content: item.summary ?? "",
+                      image: item.image,
+                      likes: item.likes ?? 0,
+                      comments: item.comments ?? 0,
+                      shares: item.shares ?? 0,
+                      sport: item.sport,
+                    }
+                    return <PostCard key={item.id} post={post} />
+                  }
+                  if (item.type === "activity") {
+                    const activity = {
+                      id: item.id,
+                      title: item.title ?? "Activity",
+                      sport: item.sport ?? "Sport",
+                      date: item.createdAt ?? "",
+                      time: "",
+                      location: "",
+                      price: 0,
+                      currency: "USD",
+                      spots: 0,
+                      totalSpots: 0,
+                      image: item.image ?? "/placeholder.svg",
+                      rating: 0,
+                      reviews: 0,
+                      organizer: item.authorName ?? "",
+                      organizerAvatar: item.authorAvatar ?? "",
+                      tags: item.sport ? [item.sport] : [],
+                    }
+                    return (
+                      <ActivityCard
+                        key={item.id}
+                        activity={activity}
+                        onClick={() => onNavigate("activity-detail", item.id)}
+                      />
+                    )
+                  }
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-border bg-card p-4"
+                    >
+                      {item.title && <h3 className="font-semibold text-foreground">{item.title}</h3>}
+                      {item.summary && <p className="mt-1 text-sm text-muted-foreground">{item.summary}</p>}
+                    </div>
+                  )
+                })
+              : displayedPosts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
           </div>
         </div>
       )}
@@ -320,7 +398,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       )}
 
       {/* Empty state when nothing loaded */}
-      {activities.length === 0 && posts.length === 0 && services.length === 0 && facilities.length === 0 && (
+      {activities.length === 0 && posts.length === 0 && services.length === 0 && facilities.length === 0 && feedItems.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card p-12 text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <Zap className="h-8 w-8 text-primary" />

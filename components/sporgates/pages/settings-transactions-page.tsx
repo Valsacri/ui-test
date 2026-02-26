@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Search, Download, Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { walletService, authService } from "@/lib/services"
@@ -25,40 +26,28 @@ const filters = ["All", "Payments", "Deposits", "Refunds"]
 export function SettingsTransactionsPage({ onBack }: SettingsTransactionsPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  const fetchTransactions = async () => {
-    const user = authService.getCurrentUser()
-    if (!user?.id) {
-      setIsLoading(false)
-      return
-    }
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await walletService.getTransactions(user.id)
-      const list = Array.isArray(data) ? data : (data?.content || [])
-      setTransactions(list.map((t: Record<string, unknown>) => ({
+  const user = authService.getCurrentUser()
+  const userId = user?.id
+
+  const { data: rawData, error, isLoading, mutate } = useSWR(
+    userId ? `/wallet/${userId}/tx-history` : null,
+    async () => {
+      const data = await walletService.getTransactions(userId!)
+      const list = Array.isArray(data) ? data : ((data as any)?.content || [])
+      return list.map((t: Record<string, unknown>) => ({
         id: String(t.id || t.transactionId || ""),
         description: String(t.description || t.type || "Transaction"),
         type: inferTransactionType(t),
         amount: Number(t.amount || 0),
         date: t.createdAt ? new Date(String(t.createdAt)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
         status: String(t.status || "completed"),
-      })))
-    } catch (err) {
-      console.error("Failed to fetch transactions:", err)
-      setError("Failed to load transactions")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      })) as Transaction[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-  useEffect(() => {
-    fetchTransactions()
-  }, [])
+  const transactions = rawData || []
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesFilter =
@@ -91,7 +80,7 @@ export function SettingsTransactionsPage({ onBack }: SettingsTransactionsPagePro
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={fetchTransactions} />
+    return <ErrorState message="Failed to load transactions" onRetry={() => mutate()} />
   }
 
   return (

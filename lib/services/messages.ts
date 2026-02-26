@@ -23,4 +23,9 @@ export const messagesService = {
         });
         return response.data;
     },
+
+    getUnreadCount: async (userId: string) => {
+        const response = await apiClient.get(`/v1/conversations/user/${userId}/unread-count`);
+        return response.data;
+    },
 };

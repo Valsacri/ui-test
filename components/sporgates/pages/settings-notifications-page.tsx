@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Bell, Mail, Smartphone, MessageCircle } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { userService } from "@/lib/services/user"
+import { authService } from "@/lib/services/auth"
 
 interface SettingsNotificationsPageProps {
   onBack: () => void
@@ -28,6 +30,26 @@ export function SettingsNotificationsPage({ onBack }: SettingsNotificationsPageP
     newsletter: false,
     partnerOffers: false,
   })
+  const [saving, setSaving] = useState(false)
+
+  // Load from user profile
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      userService.getUserById(user.id).then((data: any) => {
+        if (data?.notificationPreferences) {
+          const np = data.notificationPreferences
+          setPushSettings((prev) => ({
+            ...prev,
+            activityUpdates: np.activityUpdates ?? prev.activityUpdates,
+            newMessages: np.newMessages ?? prev.newMessages,
+            newFollowers: np.newFollowers ?? prev.newFollowers,
+            bookingConfirmation: np.bookingConfirmation ?? prev.bookingConfirmation,
+          }))
+        }
+      }).catch(() => { })
+    }
+  }, [])
 
   const togglePush = (key: keyof typeof pushSettings) => {
     setPushSettings((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -35,6 +57,25 @@ export function SettingsNotificationsPage({ onBack }: SettingsNotificationsPageP
 
   const toggleEmail = (key: keyof typeof emailSettings) => {
     setEmailSettings((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleSave = async () => {
+    const user = authService.getCurrentUser()
+    if (!user?.id) return
+    setSaving(true)
+    try {
+      await userService.updateNotificationPreferences(user.id, {
+        activityUpdates: pushSettings.activityUpdates,
+        newMessages: pushSettings.newMessages,
+        newFollowers: pushSettings.newFollowers,
+        bookingConfirmation: pushSettings.bookingConfirmation,
+      })
+      toast.success('Notification preferences saved')
+    } catch {
+      toast.error('Failed to save preferences')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -177,10 +218,11 @@ export function SettingsNotificationsPage({ onBack }: SettingsNotificationsPageP
 
       <button
         type="button"
-        onClick={() => toast.success("Notification preferences saved")}
-        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white"
+        onClick={handleSave}
+        disabled={saving}
+        className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-50"
       >
-        Save Preferences
+        {saving ? 'Saving...' : 'Save Preferences'}
       </button>
     </div>
   )

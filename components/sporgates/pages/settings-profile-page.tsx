@@ -1,10 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { Eye, EyeOff, Mail, Phone, Lock, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { PageRoute } from "@/lib/navigation"
+import { cn } from "@/lib/utils"
 import { authService, userService } from "@/lib/services"
+import { profileFormSchema, type ProfileFormData } from "@/lib/validations/forms"
 
 interface SettingsProfilePageProps {
   onNavigate: (page: PageRoute) => void
@@ -21,34 +24,56 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
     current: "", newPwd: "", confirm: "",
   })
   const [saving, setSaving] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ProfileFormData, string>>>({})
+
+  const user = authService.getCurrentUser()
+  const userId = user?.id
+
+  const { data: userData } = useSWR(
+    userId ? `/users/${userId}/settings-profile` : null,
+    () => userService.getUserById(userId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (user?.id) {
-      userService.getUserById(user.id).then((data: any) => {
-        if (data) {
-          setProfileData({
-            name: [data.firstName, data.lastName].filter(Boolean).join(" ") || "",
-            username: data.username || "",
-            bio: data.bio || "",
-            email: data.email || user.email || "",
-            phone: data.phone || "",
-          })
-        }
-      }).catch(() => {
-        setProfileData((prev) => ({
-          ...prev,
-          name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "",
-          email: user.email || "",
-          username: user.username || "",
-        }))
+    if (userData) {
+      setProfileData({
+        name: [userData.firstName, userData.lastName].filter(Boolean).join(" ") || "",
+        username: userData.username || "",
+        bio: userData.bio || "",
+        email: userData.email || user?.email || "",
+        phone: userData.phone || "",
       })
+    } else if (user && !userData) {
+      setProfileData((prev) => ({
+        ...prev,
+        name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "",
+        email: user.email || "",
+        username: user.username || "",
+      }))
     }
-  }, [])
+  }, [userData])
 
   const handleSave = async () => {
+    setFieldErrors({})
     const user = authService.getCurrentUser()
     if (!user?.id) { toast.error("Not authenticated"); return }
+    const profileResult = profileFormSchema.safeParse({
+      name: profileData.name,
+      username: profileData.username,
+      bio: profileData.bio,
+      email: profileData.email || undefined,
+      phone: profileData.phone,
+    })
+    if (!profileResult.success) {
+      const err: Partial<Record<keyof ProfileFormData, string>> = {}
+      profileResult.error.errors.forEach((e) => {
+        const key = e.path[0] as keyof ProfileFormData
+        if (key && !err[key]) err[key] = e.message
+      })
+      setFieldErrors(err)
+      return
+    }
     if (passwords.newPwd && passwords.newPwd.length < 8) {
       toast.error("New password must be at least 8 characters"); return
     }
@@ -86,27 +111,30 @@ export function SettingsProfilePage({ onNavigate }: SettingsProfilePageProps) {
           <input
             type="text"
             value={profileData.name}
-            onChange={(e) => setProfileData((prev) => ({ ...prev, name: e.target.value }))}
-            className="mt-1 h-11 w-full rounded-full border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+            onChange={(e) => { setProfileData((prev) => ({ ...prev, name: e.target.value })); setFieldErrors((prev) => ({ ...prev, name: undefined })) }}
+            className={cn("mt-1 h-11 w-full rounded-full border bg-muted px-4 text-sm outline-none focus:border-primary", fieldErrors.name ? "border-red-400" : "border-border")}
           />
+          {fieldErrors.name && <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>}
         </div>
         <div>
           <label className="text-xs font-semibold text-muted-foreground">Username</label>
           <input
             type="text"
             value={profileData.username}
-            onChange={(e) => setProfileData((prev) => ({ ...prev, username: e.target.value }))}
-            className="mt-1 h-11 w-full rounded-full border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+            onChange={(e) => { setProfileData((prev) => ({ ...prev, username: e.target.value })); setFieldErrors((prev) => ({ ...prev, username: undefined })) }}
+            className={cn("mt-1 h-11 w-full rounded-full border bg-muted px-4 text-sm outline-none focus:border-primary", fieldErrors.username ? "border-red-400" : "border-border")}
           />
+          {fieldErrors.username && <p className="mt-1 text-xs text-red-500">{fieldErrors.username}</p>}
         </div>
         <div>
           <label className="text-xs font-semibold text-muted-foreground">Bio</label>
           <textarea
             rows={3}
             value={profileData.bio}
-            onChange={(e) => setProfileData((prev) => ({ ...prev, bio: e.target.value }))}
-            className="mt-1 w-full rounded-2xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary"
+            onChange={(e) => { setProfileData((prev) => ({ ...prev, bio: e.target.value })); setFieldErrors((prev) => ({ ...prev, bio: undefined })) }}
+            className={cn("mt-1 w-full rounded-2xl border bg-muted p-4 text-sm outline-none focus:border-primary", fieldErrors.bio ? "border-red-400" : "border-border")}
           />
+          {fieldErrors.bio && <p className="mt-1 text-xs text-red-500">{fieldErrors.bio}</p>}
         </div>
       </div>
 

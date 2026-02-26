@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import useSWR from "swr"
 import {
   Plus,
   Search,
@@ -27,6 +28,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { AddCampaignModal } from "@/components/sporgates/business/add-campaign-modal"
 
 import { AddTeamMemberModal } from "@/components/sporgates/business/add-team-member-modal"
+import { PersonCardSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporgates/business/sponsorship-tier-builder"
 import { AthleteCollaborationSelector } from "@/components/sporgates/business/athlete-collaboration-selector"
 import { facilitiesService } from "@/lib/services/facilities"
@@ -55,32 +57,24 @@ interface BusinessSubPageProps {
 
 export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
   const { activeBusinessId } = useBusinessContext()
-  const [activityList, setActivityList] = useState<Array<{
-    id: string; name: string; sportName?: string; startDateTime?: string; pricePerPerson?: number;
-    currentParticipants?: number; maxParticipants?: number; coverImage?: string; status?: string;
-    location?: string; currency?: string;
-  }>>([])
-  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [activityToDelete, setActivityToDelete] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchActivities = async () => {
-      if (!activeBusinessId) return
-      setLoading(true)
-      try {
-        const data = await activitiesService.getAll({ organizerId: activeBusinessId })
-        const list = Array.isArray(data) ? data : []
-        setActivityList(list)
-      } catch {
-        setActivityList([])
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchActivities()
-  }, [activeBusinessId])
+  const { data: actRaw = [], isLoading: loading, mutate } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/activities-page` : null,
+    async () => {
+      const data = await activitiesService.getAll({ organizerId: activeBusinessId! })
+      return Array.isArray(data) ? data : []
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const activityList: Array<{
+    id: string; name: string; sportName?: string; startDateTime?: string; pricePerPerson?: number;
+    currentParticipants?: number; maxParticipants?: number; coverImage?: string; status?: string;
+    location?: string; currency?: string;
+  }> = actRaw
 
   const handleDeleteClick = (id: string) => {
     setActivityToDelete(id)
@@ -92,10 +86,7 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
     try {
       await activitiesService.delete(activityToDelete)
       toast.success("Activity deleted successfully")
-      // Refresh list
-      const data = await activitiesService.getAll({ organizerId: activeBusinessId ?? undefined })
-      const list = Array.isArray(data) ? data : []
-      setActivityList(list)
+      mutate()
     } catch (error) {
       console.error("Failed to delete activity", error)
       toast.error("Failed to delete activity")
@@ -396,40 +387,27 @@ export function BusinessCustomersPage({ onNavigate }: BusinessSubPageProps) {
 export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
   const { activeBusinessId } = useBusinessContext()
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
-  const [teamMembers, setTeamMembers] = useState<Array<{
-    id?: string; name: string; avatar: string; role?: string; status: string; email?: string
-  }>>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchTeam = async () => {
-      if (!activeBusinessId) return
-      setLoading(true)
-      try {
-        const staff = await businessesService.getStaff(activeBusinessId)
-        const staffList = Array.isArray(staff) ? staff : []
-        if (staffList.length > 0) {
-          setTeamMembers(
-            staffList.map((s: { id?: string; firstName?: string; lastName?: string; email?: string; role?: string; username?: string }) => ({
-              id: s.id,
-              name: `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.username || 'Unknown',
-              avatar: `${(s.firstName || '?')[0]}${(s.lastName || '?')[0]}`,
-              role: s.role || 'Staff',
-              status: 'active',
-              email: s.email,
-            }))
-          )
-        } else {
-          setTeamMembers([])
-        }
-      } catch {
-        setTeamMembers([])
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchTeam()
-  }, [activeBusinessId])
+  const { data: staffRaw = [], isLoading: loading } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/staff-team` : null,
+    async () => {
+      const staff = await businessesService.getStaff(activeBusinessId!)
+      const staffList = Array.isArray(staff) ? staff : []
+      return staffList.map((s: { id?: string; firstName?: string; lastName?: string; email?: string; role?: string; username?: string }) => ({
+        id: s.id,
+        name: `${s.firstName || ''} ${s.lastName || ''}`.trim() || s.username || 'Unknown',
+        avatar: `${(s.firstName || '?')[0]}${(s.lastName || '?')[0]}`,
+        role: s.role || 'Staff',
+        status: 'active',
+        email: s.email,
+      }))
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const teamMembers: Array<{
+    id?: string; name: string; avatar: string; role?: string; status: string; email?: string
+  }> = staffRaw
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -449,8 +427,10 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PersonCardSkeleton key={i} />
+          ))}
         </div>
       )}
 
@@ -460,6 +440,7 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
         </div>
       )}
 
+      {!loading && (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {teamMembers.map((member) => (
           <div
@@ -487,6 +468,7 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
           </div>
         ))}
       </div>
+      )}
 
       <AddTeamMemberModal isOpen={isAddMemberOpen} onClose={() => setIsAddMemberOpen(false)} />
     </div>
@@ -521,19 +503,8 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
   const [activeTab, setActiveTab] = useState<ResourceType>(initialTab || "facility")
   const [dropdownResourceId, setDropdownResourceId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<BusinessResource | null>(null)
-  const [facilities, setFacilities] = useState<BusinessResource[]>([])
-  const [products, setProducts] = useState<BusinessResource[]>([])
-  const [services, setServices] = useState<BusinessResource[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
 
-  const tabs: { key: ResourceType; label: string; count: number }[] = [
-    { key: "facility", label: "Facilities", count: facilities.length },
-    { key: "product", label: "Products", count: products.length },
-    { key: "service", label: "Services", count: services.length },
-  ]
 
-  const activeResources = activeTab === "facility" ? facilities : activeTab === "product" ? products : services
 
   const resolveResourceType = (type: string): ResourceType => {
     const normalized = type.toLowerCase()
@@ -542,96 +513,88 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
     return "service"
   }
 
-  // Fetch all resources on mount and when returning from edit/create
-  useEffect(() => {
-    if (!activeBusinessId) {
-      setLoading(false)
-      return
-    }
+  const { data: facilitiesRaw = [], mutate: mutateFacilities } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/facilities` : null,
+    async () => {
+      const data = await facilitiesService.getAll({ businessId: activeBusinessId! })
+      const list = Array.isArray(data) ? data : []
+      return list.map((f: Record<string, unknown>) => ({
+        id: f.id as string,
+        name: (f.name as string) || "Unnamed Facility",
+        type: "Facility",
+        resourceType: "facility" as ResourceType,
+        status: f.isActive ? "available" : "inactive",
+        bookingsToday: 0, revenue: 0,
+        image: (f.coverImage as string) || ((f.imageUrls as string[])?.[0]) || "/placeholder.svg",
+        description: f.description as string | undefined,
+        pricePerHour: f.pricePerHour as number | undefined,
+        capacity: f.capacity as number | undefined,
+        address: f.address as string | undefined,
+        city: f.city as string | undefined,
+        sport: ((f.sports as string[]) || [])[0] || undefined,
+        category: ((f.sports as string[]) || [])[0] || undefined,
+      })) as BusinessResource[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-    let cancelled = false
-    const fetchAll = async () => {
-      setLoading(true)
-      setError("")
+  const { data: productsRaw = [], mutate: mutateProducts } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/products` : null,
+    async () => {
+      const data = await marketplaceService.getAll({ sellerId: activeBusinessId! })
+      const list = Array.isArray(data) ? data : []
+      return list.map((p: Record<string, unknown>) => ({
+        id: p.id as string,
+        name: (p.name as string) || "Unnamed Product",
+        type: "Product",
+        resourceType: "product" as ResourceType,
+        status: p.inStock ? "available" : "inactive",
+        bookingsToday: 0, revenue: 0,
+        image: (p.image as string) || "/placeholder.svg",
+        description: p.description as string | undefined,
+        price: p.price as number | undefined,
+        brand: p.brand as string | undefined,
+        category: p.category as string | undefined,
+        originalPrice: p.originalPrice as number | undefined,
+      })) as BusinessResource[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-      try {
-        const data = await facilitiesService.getAll({ businessId: activeBusinessId })
-        if (cancelled) return
-        const list = Array.isArray(data) ? data : []
-        setFacilities(
-          list.map((f: Record<string, unknown>) => ({
-            id: f.id as string,
-            name: (f.name as string) || "Unnamed Facility",
-            type: "Facility",
-            resourceType: "facility" as ResourceType,
-            status: f.isActive ? "available" : "inactive",
-            bookingsToday: 0, revenue: 0,
-            image: (f.coverImage as string) || ((f.imageUrls as string[])?.[0]) || "/placeholder.svg",
-            description: f.description as string | undefined,
-            pricePerHour: f.pricePerHour as number | undefined,
-            capacity: f.capacity as number | undefined,
-            address: f.address as string | undefined,
-            city: f.city as string | undefined,
-            sport: ((f.sports as string[]) || [])[0] || undefined,
-            category: ((f.sports as string[]) || [])[0] || undefined,
-          }))
-        )
-      } catch (err) {
-        console.error("Failed to fetch facilities", err)
-      }
+  const { data: servicesRaw = [], mutate: mutateServices } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/services` : null,
+    async () => {
+      const data = await servicesService.getAll({ providerId: activeBusinessId! })
+      const list = Array.isArray(data) ? data : []
+      return list.map((s: Record<string, unknown>) => ({
+        id: s.id as string,
+        name: (s.name as string) || "Unnamed Service",
+        type: "Service",
+        resourceType: "service" as ResourceType,
+        status: s.verified ? "available" : "inactive",
+        bookingsToday: 0, revenue: 0,
+        image: (s.image as string) || "/placeholder.svg",
+        description: s.description as string | undefined,
+        price: s.price as number | undefined,
+        category: s.category as string | undefined,
+        duration: s.duration as string | undefined,
+      })) as BusinessResource[]
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-      try {
-        const data = await marketplaceService.getAll({ sellerId: activeBusinessId })
-        if (cancelled) return
-        const list = Array.isArray(data) ? data : []
-        setProducts(
-          list.map((p: Record<string, unknown>) => ({
-            id: p.id as string,
-            name: (p.name as string) || "Unnamed Product",
-            type: "Product",
-            resourceType: "product" as ResourceType,
-            status: p.inStock ? "available" : "inactive",
-            bookingsToday: 0, revenue: 0,
-            image: (p.image as string) || "/placeholder.svg",
-            description: p.description as string | undefined,
-            price: p.price as number | undefined,
-            brand: p.brand as string | undefined,
-            category: p.category as string | undefined,
-            originalPrice: p.originalPrice as number | undefined,
-          }))
-        )
-      } catch (err) {
-        console.error("Failed to fetch products", err)
-      }
+  const facilities = facilitiesRaw
+  const products = productsRaw
+  const services = servicesRaw
+  const loading = false
 
-      try {
-        const data = await servicesService.getAll({ providerId: activeBusinessId })
-        if (cancelled) return
-        const list = Array.isArray(data) ? data : []
-        setServices(
-          list.map((s: Record<string, unknown>) => ({
-            id: s.id as string,
-            name: (s.name as string) || "Unnamed Service",
-            type: "Service",
-            resourceType: "service" as ResourceType,
-            status: s.verified ? "available" : "inactive",
-            bookingsToday: 0, revenue: 0,
-            image: (s.image as string) || "/placeholder.svg",
-            description: s.description as string | undefined,
-            price: s.price as number | undefined,
-            category: s.category as string | undefined,
-            duration: s.duration as string | undefined,
-          }))
-        )
-      } catch (err) {
-        console.error("Failed to fetch services", err)
-      }
+  const tabs: { key: ResourceType; label: string; count: number }[] = [
+    { key: "facility", label: "Facilities", count: facilities.length },
+    { key: "product", label: "Products", count: products.length },
+    { key: "service", label: "Services", count: services.length },
+  ]
 
-      if (!cancelled) setLoading(false)
-    }
-    fetchAll()
-    return () => { cancelled = true }
-  }, [activeBusinessId])
+  const activeResources = activeTab === "facility" ? facilities : activeTab === "product" ? products : services
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -655,9 +618,9 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
       toast.error(`Failed to delete ${resType}`)
     }
 
-    if (resType === "facility") setFacilities((prev) => prev.filter((item) => item.id !== target.id))
-    else if (resType === "product") setProducts((prev) => prev.filter((item) => item.id !== target.id))
-    else setServices((prev) => prev.filter((item) => item.id !== target.id))
+    if (resType === "facility") mutateFacilities()
+    else if (resType === "product") mutateProducts()
+    else mutateServices()
     setDeleteConfirm(null)
   }
 
@@ -711,11 +674,7 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
         </div>
       )}
 
-      {error && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+
 
       {!loading && activeResources.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">

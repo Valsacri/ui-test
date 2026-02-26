@@ -1,15 +1,18 @@
 "use client"
 
-import { useMemo, useState, useEffect, useCallback } from "react"
+import { useMemo, useState } from "react"
+import useSWR from "swr"
 import { Search, SlidersHorizontal, MapPin } from "lucide-react"
-import { facilitiesService } from "@/lib/services"
-import { mapFacility, type FacilityCardData, type FacilityDto } from "@/lib/explore-api"
+import { fetcher } from "@/lib/fetcher"
+import { mapFacility } from "@/lib/mappers/explore-mappers"
+import type { FacilityCardData, FacilityDto } from "@/lib/types/explore"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { FacilitiesFilterSidebar, type FacilitiesFilterState } from "@/components/sporgates/filters/facilities-filter-sidebar"
 import { MapFilter } from "@/components/sporgates/map-filter"
 import { MapView } from "@/components/sporgates/map-view"
 import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { LoadingFacilityCard, LoadingGrid } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -27,10 +30,8 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [showFilters, setShowFilters] = useState(false)
   const [showMap, setShowMap] = useState(false)
-  const [facilities, setFacilities] = useState<FacilityCardData[]>([])
   const [sortBy, setSortBy] = useState("relevance")
   const isMobile = useIsMobile()
-  const [isLoading, setIsLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState(9)
   const [sidebarFilters, setSidebarFilters] = useState<FacilitiesFilterState>({
     availability: "Any",
@@ -38,23 +39,16 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
     amenities: [],
   })
 
-  const loadFacilities = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const data: FacilityDto[] = await facilitiesService.getAll()
-      if (Array.isArray(data)) {
-        setFacilities(data.map(mapFacility))
-      }
-    } catch (err) {
-      console.error("Failed to load facilities:", err)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  // SWR replaces useEffect + useCallback for data fetching
+  const { data: rawFacilities, error, isLoading, mutate } = useSWR<FacilityDto[]>('/v1/facilities', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
 
-  useEffect(() => {
-    loadFacilities()
-  }, [loadFacilities])
+  const facilities = useMemo<FacilityCardData[]>(() => {
+    if (!Array.isArray(rawFacilities)) return []
+    return rawFacilities.map(mapFacility)
+  }, [rawFacilities])
 
   const mapCenter: [number, number] = useMemo(() => {
     const withCoords = facilities.find(f => f.coordinates[0] !== 0)
@@ -148,9 +142,9 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
     return result
   }, [facilities, searchQuery, activeFilter, sortBy, sidebarFilters])
 
-  const handleApplyFilters = useCallback((filters: FacilitiesFilterState) => {
+  const handleApplyFilters = (filters: FacilitiesFilterState) => {
     setSidebarFilters(filters)
-  }, [])
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -258,6 +252,12 @@ export function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
         <LoadingGrid className="md:grid-cols-2 lg:grid-cols-3">
           <LoadingFacilityCard />
         </LoadingGrid>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load facilities"
+          message="We're having trouble reaching the facilities directory."
+          onRetry={() => mutate()}
+        />
       ) : filteredFacilities.length === 0 ? (
         <EmptyState
           icon={MapPin}

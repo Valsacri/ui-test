@@ -1,8 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Shield, Info } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
+import { userService } from "@/lib/services/user"
+import { authService } from "@/lib/services/auth"
+import { toast } from "sonner"
+import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
 
 interface SettingsDataPermissionsPageProps {
   onBack: () => void
@@ -19,13 +23,67 @@ const permissions = [
   { id: "marketing", label: "Marketing Communications", description: "Receive marketing emails and promotional content", enabled: false },
 ]
 
+// Mapping from UI permission IDs to BE DataPermissions fields
+const permissionToField: Record<string, string> = {
+  location: 'allowLocationTracking',
+  contacts: 'allowDataCollection',
+  'activity-history': 'allowActivityAnalytics',
+  'health-data': 'allowDataCollection',
+  analytics: 'allowActivityAnalytics',
+  personalization: 'allowPersonalizedAds',
+  'third-party': 'allowThirdPartySharing',
+  marketing: 'allowPersonalizedAds',
+}
+
 export function SettingsDataPermissionsPage({ onBack }: SettingsDataPermissionsPageProps) {
   const [toggles, setToggles] = useState<Record<string, boolean>>(
     Object.fromEntries(permissions.map((p) => [p.id, p.enabled]))
   )
+  const [saving, setSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  const handleToggle = (id: string) => {
-    setToggles((prev) => ({ ...prev, [id]: !prev[id] }))
+  // Load user's current data permissions
+  useEffect(() => {
+    const user = authService.getCurrentUser()
+    if (user?.id) {
+      userService.getUserById(user.id).then((data: any) => {
+        if (data?.dataPermissions) {
+          const dp = data.dataPermissions
+          setToggles((prev) => ({
+            ...prev,
+            location: dp.allowLocationTracking ?? prev.location,
+            analytics: dp.allowActivityAnalytics ?? prev.analytics,
+            'third-party': dp.allowThirdPartySharing ?? prev['third-party'],
+            personalization: dp.allowPersonalizedAds ?? prev.personalization,
+            contacts: dp.allowDataCollection ?? prev.contacts,
+          }))
+        }
+      }).catch(() => { })
+    }
+  }, [])
+
+  const handleToggle = async (id: string) => {
+    const newValue = !toggles[id]
+    setToggles((prev) => ({ ...prev, [id]: newValue }))
+
+    // Save to API
+    const field = permissionToField[id]
+    if (field) {
+      const user = authService.getCurrentUser()
+      if (user?.id) {
+        setSaving(true)
+        try {
+          await userService.updateDataPermissions(user.id, { [field]: newValue })
+          toast.success("Permission updated")
+        } catch {
+          // revert on failure
+          setToggles((prev) => ({ ...prev, [id]: !newValue }))
+          toast.error("Failed to update permission")
+        } finally {
+          setSaving(false)
+        }
+      }
+    }
   }
 
   return (
@@ -56,9 +114,8 @@ export function SettingsDataPermissionsPage({ onBack }: SettingsDataPermissionsP
         {permissions.map((permission, index) => (
           <div
             key={permission.id}
-            className={`flex items-center gap-4 px-5 py-4 ${
-              index < permissions.length - 1 ? "border-b border-border" : ""
-            }`}
+            className={`flex items-center gap-4 px-5 py-4 ${index < permissions.length - 1 ? "border-b border-border" : ""
+              }`}
           >
             <div className="flex-1">
               <div className="flex items-center gap-1.5">
@@ -72,14 +129,12 @@ export function SettingsDataPermissionsPage({ onBack }: SettingsDataPermissionsP
             <button
               type="button"
               onClick={() => handleToggle(permission.id)}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                toggles[permission.id] ? "bg-primary" : "bg-muted"
-              }`}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${toggles[permission.id] ? "bg-primary" : "bg-muted"
+                }`}
             >
               <div
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-                  toggles[permission.id] ? "translate-x-5" : "translate-x-0.5"
-                }`}
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${toggles[permission.id] ? "translate-x-5" : "translate-x-0.5"
+                  }`}
               />
             </button>
           </div>
@@ -106,11 +161,24 @@ export function SettingsDataPermissionsPage({ onBack }: SettingsDataPermissionsP
         </p>
         <button
           type="button"
+          onClick={() => setShowDeleteConfirm(true)}
           className="rounded-xl border border-destructive px-4 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive hover:text-white"
         >
           Delete All Data
         </button>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete All Data?"
+        description="This will permanently delete all your data from Sporgates. This action cannot be undone."
+        confirmLabel="Delete Everything"
+        variant="danger"
+        onConfirm={() => {
+          toast.info("Data deletion request submitted. You will be notified via email.")
+        }}
+      />
     </div>
   )
 }

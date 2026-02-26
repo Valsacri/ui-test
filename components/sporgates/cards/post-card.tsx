@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -69,12 +70,12 @@ export function PostCard({ post }: PostCardProps) {
       {/* Post Image */}
       {post.image && (
         <div className="relative overflow-hidden">
-          <img
+          <Image
             src={post.image}
             alt="Post"
-            className="h-64 w-full object-cover md:h-80"
-            crossOrigin="anonymous"
-            loading="lazy"
+            width={600}
+            height={320}
+            className="w-full object-cover"
           />
         </div>
       )}

@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState } from "react"
+import useSWR from "swr"
 import { Search, SlidersHorizontal, ShoppingBag, Loader2 } from "lucide-react"
-import { marketplaceService } from "@/lib/services"
+import { fetcher } from "@/lib/fetcher"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { ProductsFilterSidebar } from "@/components/sporgates/filters/products-filter-sidebar"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
@@ -24,17 +25,11 @@ export function ProductsPage({ onNavigate }: ProductsPageProps) {
   const [categoryFilter, setCategoryFilter] = useState("All")
   const [priceRange, setPriceRange] = useState("Any Price")
   const [sortBy, setSortBy] = useState("relevance")
-  const [products, setProducts] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    setIsLoading(true)
-    marketplaceService.getAll().then((data) => {
-      if (Array.isArray(data)) setProducts(data)
-    }).catch(() => {
-      setProducts([])
-    }).finally(() => setIsLoading(false))
-  }, [])
+  const { data: products = [], isLoading } = useSWR<any[]>('/v1/products', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(products.map((item: any) => item.category).filter(Boolean)))],

@@ -16,6 +16,7 @@ import {
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { createFacilitySchema, type CreateFacilityFormData } from "@/lib/validations/forms"
 import {
     Select,
     SelectContent,
@@ -59,6 +60,7 @@ export function CreateFacilityPage({ onNavigate }: CreateFacilityPageProps) {
         capacity: "",
         pricePerHour: "",
     })
+    const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CreateFacilityFormData, string>>>({})
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
     const [operatingDays, setOperatingDays] = useState<string[]>(["Mon", "Tue", "Wed", "Thu", "Fri"])
     const [openTime, setOpenTime] = useState("06:00")
@@ -77,8 +79,20 @@ export function CreateFacilityPage({ onNavigate }: CreateFacilityPageProps) {
     }
 
     const handleSubmit = () => {
-        if (!formData.name || !formData.type) {
-            toast.error("Please fill in at least the name and type")
+        setFieldErrors({})
+        const result = createFacilitySchema.safeParse({
+            name: formData.name,
+            type: formData.type,
+            description: formData.description,
+            address: formData.address,
+        })
+        if (!result.success) {
+            const err: Partial<Record<keyof CreateFacilityFormData, string>> = {}
+            result.error.errors.forEach((e) => {
+                const key = e.path[0] as keyof CreateFacilityFormData
+                if (key && !err[key]) err[key] = e.message
+            })
+            setFieldErrors(err)
             return
         }
         toast.success("Facility created successfully!")
@@ -135,10 +149,11 @@ export function CreateFacilityPage({ onNavigate }: CreateFacilityPageProps) {
                         <input
                             type="text"
                             value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFieldErrors((p) => ({ ...p, name: undefined })) }}
                             placeholder="e.g., Main Basketball Court"
-                            className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                            className={cn("h-11 w-full rounded-xl border bg-muted px-4 text-sm outline-none focus:border-primary", fieldErrors.name ? "border-red-400" : "border-border")}
                         />
+                        {fieldErrors.name && <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>}
                     </div>
                     <div>
                         <label className="mb-1.5 block text-xs font-medium text-foreground">
@@ -146,9 +161,9 @@ export function CreateFacilityPage({ onNavigate }: CreateFacilityPageProps) {
                         </label>
                         <Select
                             value={formData.type}
-                            onValueChange={(val) => setFormData({ ...formData, type: val })}
+                            onValueChange={(val) => { setFormData({ ...formData, type: val }); setFieldErrors((p) => ({ ...p, type: undefined })) }}
                         >
-                            <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                            <SelectTrigger className={cn("h-11 w-full rounded-xl border bg-muted px-4 text-sm", fieldErrors.type ? "border-red-400" : "border-border")}>
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -159,6 +174,7 @@ export function CreateFacilityPage({ onNavigate }: CreateFacilityPageProps) {
                                 ))}
                             </SelectContent>
                         </Select>
+                        {fieldErrors.type && <p className="mt-1 text-xs text-red-500">{fieldErrors.type}</p>}
                     </div>
                     <div>
                         <label className="mb-1.5 block text-xs font-medium text-foreground">

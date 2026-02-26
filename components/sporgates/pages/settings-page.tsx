@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import {
   User,
   Shield,
@@ -60,51 +62,39 @@ const settingsGroups = [
 ]
 
 export function SettingsPage({ onNavigate }: SettingsPageProps) {
-  const [userProfile, setUserProfile] = useState<{
-    name: string; username: string; email: string; avatar: string; profilePicture?: string
-  }>({ name: "", username: "", email: "", avatar: "" })
-  const [businesses, setBusinesses] = useState<{
-    id: string; name: string; bio?: string; email?: string; avatar?: string
-  }[]>([])
+  const user = authService.getCurrentUser()
+  const userId = user?.id
 
-  useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (user?.id) {
-      userService.getUserById(user.id).then((data: any) => {
-        if (data) {
-          const fullName = [data.firstName, data.lastName].filter(Boolean).join(" ") || user.email
-          const initials = [data.firstName?.[0], data.lastName?.[0]].filter(Boolean).join("").toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
-          setUserProfile({
-            name: fullName,
-            username: data.username ? `@${data.username}` : "",
-            email: data.email || user.email || "",
-            avatar: initials,
-            profilePicture: data.profilePicture || undefined,
-          })
-        }
-      }).catch(() => {
-        // Fallback to localStorage user
-        setUserProfile({
-          name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email,
-          username: user.username ? `@${user.username}` : "",
-          email: user.email || "",
-          avatar: [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "U",
-        })
-      })
+  const { data: userData } = useSWR(
+    userId ? `/users/${userId}/settings` : null,
+    () => userService.getUserById(userId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-      businessesService.getMyBusinesses().then((data: any) => {
-        const list = Array.isArray(data) ? data : (data?.content || [])
-        const mapped = list.map((b: any) => ({
-          id: b.id,
-          name: b.name,
-          bio: b.bio || "",
-          email: b.email || "",
-          avatar: b.avatar || undefined,
-        }))
-        setBusinesses(mapped)
-      }).catch(() => { })
-    }
-  }, [])
+  const { data: bizRaw = [] } = useSWR(
+    userId ? `/businesses/my` : null,
+    () => businessesService.getMyBusinesses(),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const fallbackName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || ""
+  const fallbackAvatar = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "U"
+
+  const userProfile = userData ? {
+    name: [userData.firstName, userData.lastName].filter(Boolean).join(" ") || user?.email || "",
+    username: userData.username ? `@${userData.username}` : "",
+    email: userData.email || user?.email || "",
+    avatar: [userData.firstName?.[0], userData.lastName?.[0]].filter(Boolean).join("").toUpperCase() || user?.email?.[0]?.toUpperCase() || "U",
+    profilePicture: userData.profilePicture || undefined,
+  } : {
+    name: fallbackName, username: user?.username ? `@${user.username}` : "",
+    email: user?.email || "", avatar: fallbackAvatar,
+  }
+
+  const bizList = Array.isArray(bizRaw) ? bizRaw : ((bizRaw as any)?.content || [])
+  const businesses: { id: string; name: string; bio: string; email: string; avatar?: string }[] = bizList.map((b: any) => ({
+    id: b.id, name: b.name, bio: b.bio || "", email: b.email || "", avatar: b.avatar || undefined,
+  }))
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -118,11 +108,12 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
       {/* Profile Summary */}
       <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
         {userProfile.profilePicture ? (
-          <img
+          <Image
             src={userProfile.profilePicture}
             alt={userProfile.name}
-            className="h-14 w-14 rounded-xl object-cover"
-            crossOrigin="anonymous"
+            width={56}
+            height={56}
+            className="rounded-xl object-cover"
           />
         ) : (
           <div className="gradient-primary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
@@ -153,11 +144,12 @@ export function SettingsPage({ onNavigate }: SettingsPageProps) {
         {businesses.map((business) => (
           <div key={business.id} className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
             {business.avatar ? (
-              <img
+              <Image
                 src={business.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${business.avatar}` : business.avatar}
                 alt={business.name}
-                className="h-14 w-14 rounded-xl object-cover"
-                crossOrigin="anonymous"
+                width={56}
+                height={56}
+                className="rounded-xl object-cover"
               />
             ) : (
               <div className="gradient-secondary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">

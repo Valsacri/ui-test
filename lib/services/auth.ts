@@ -1,4 +1,5 @@
 import apiClient from '../api';
+import { STORAGE_KEYS, AUTH_COOKIE_NAME } from '../constants';
 
 export interface LoginRequest {
     email: string;
@@ -33,15 +34,7 @@ export const authService = {
         const response = await apiClient.post('/auth/login', data);
         const d = response.data;
         if (d.accessToken) {
-            localStorage.setItem('auth_token', d.accessToken);
-            if (d.refreshToken) {
-                localStorage.setItem('refresh_token', d.refreshToken);
-            }
-            localStorage.setItem('user', JSON.stringify({
-                id: d.userId, email: d.email,
-                firstName: d.firstName, lastName: d.lastName,
-                username: d.username,
-            }));
+            authService._saveTokens(d);
         }
         return d;
     },
@@ -50,28 +43,21 @@ export const authService = {
         const response = await apiClient.post('/auth/signup', data);
         const d = response.data;
         if (d.accessToken) {
-            localStorage.setItem('auth_token', d.accessToken);
-            if (d.refreshToken) {
-                localStorage.setItem('refresh_token', d.refreshToken);
-            }
-            localStorage.setItem('user', JSON.stringify({
-                id: d.userId, email: d.email,
-                firstName: d.firstName, lastName: d.lastName,
-                username: d.username,
-            }));
+            authService._saveTokens(d);
         }
         return d;
     },
 
     logout: () => {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+        document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0`;
     },
 
     getCurrentUser: () => {
         if (typeof window !== 'undefined') {
-            const user = localStorage.getItem('user');
+            const user = localStorage.getItem(STORAGE_KEYS.USER);
             return user ? JSON.parse(user) : null;
         }
         return null;
@@ -79,14 +65,14 @@ export const authService = {
 
     getToken: () => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('auth_token');
+            return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
         }
         return null;
     },
 
     getRefreshToken: () => {
         if (typeof window !== 'undefined') {
-            return localStorage.getItem('refresh_token');
+            return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
         }
         return null;
     },
@@ -118,11 +104,26 @@ export const authService = {
     refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
         const response = await apiClient.post('/auth/refresh', { refreshToken });
         if (response.data.accessToken) {
-            localStorage.setItem('auth_token', response.data.accessToken);
+            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, response.data.accessToken);
             if (response.data.refreshToken) {
-                localStorage.setItem('refresh_token', response.data.refreshToken);
+                localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
             }
         }
         return response.data;
+    },
+
+    /** Internal helper — saves tokens + user + sets auth cookie marker */
+    _saveTokens: (d: AuthResponse) => {
+        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, d.accessToken);
+        if (d.refreshToken) {
+            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, d.refreshToken);
+        }
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify({
+            id: d.userId, email: d.email,
+            firstName: d.firstName, lastName: d.lastName,
+            username: d.username,
+        }));
+        // Set cookie marker for middleware auth check (365 days)
+        document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     },
 };

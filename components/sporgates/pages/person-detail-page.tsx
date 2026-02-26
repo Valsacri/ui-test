@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { ArrowLeft, Users, MapPin, Trophy, Calendar, BadgeCheck, Star, MessageCircle } from "lucide-react"
 import { toast } from "sonner"
-import { userService, activitiesService, squadService } from "@/lib/services"
+import { userService, activitiesService, squadService, authService } from "@/lib/services"
 import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import type { PageRoute } from "@/lib/navigation"
@@ -21,40 +23,28 @@ const achievements = [
 ]
 
 export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps) {
-  const [person, setPerson] = useState<any>(null)
-  const [relatedActivities, setRelatedActivities] = useState<any[]>([])
-  const [relatedSquads, setRelatedSquads] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isFollowing, setIsFollowing] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
+  const { data: person, isLoading } = useSWR(
+    personId ? `/users/${personId}` : null,
+    () => userService.getUserById(personId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-    userService.getUserById(personId).then((data) => {
-      if (cancelled) return
-      setPerson(data)
+  const { data: allActivities = [] } = useSWR(
+    person ? `/activities` : null,
+    () => activitiesService.getAll(),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-      // Fetch related data based on user sport/interests
-      Promise.allSettled([
-        activitiesService.getAll(),
-        squadService.search(""),
-      ]).then(([activitiesResult, squadsResult]) => {
-        if (cancelled) return
-        if (activitiesResult.status === "fulfilled" && Array.isArray(activitiesResult.value)) {
-          setRelatedActivities(activitiesResult.value.slice(0, 3))
-        }
-        if (squadsResult.status === "fulfilled" && Array.isArray(squadsResult.value)) {
-          setRelatedSquads(squadsResult.value.slice(0, 2))
-        }
-        setIsLoading(false)
-      })
-    }).catch(() => {
-      if (!cancelled) setIsLoading(false)
-    })
+  const { data: allSquads = [] } = useSWR(
+    person ? `/squads/search` : null,
+    () => squadService.search(""),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-    return () => { cancelled = true }
-  }, [personId])
+  const relatedActivities = Array.isArray(allActivities) ? allActivities.slice(0, 3) : []
+  const relatedSquads = Array.isArray(allSquads) ? allSquads.slice(0, 2) : []
 
   if (isLoading) {
     return <ProfileSkeleton />
@@ -70,7 +60,8 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
     )
   }
 
-  const initials = person.name ? person.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "?"
+  const displayName = person.name || [person.firstName, person.lastName].filter(Boolean).join(" ") || person.username || "Unknown"
+  const initials = displayName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) || "?"
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -92,7 +83,7 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-foreground">{person.name || "Unknown"}</h1>
+                <h1 className="text-xl font-bold text-foreground">{displayName}</h1>
                 {person.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
               </div>
               <p className="text-sm text-muted-foreground">{person.sport || "Athlete"}</p>
@@ -119,11 +110,13 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
               <button
                 type="button"
                 onClick={async () => {
+                  const me = authService.getCurrentUser()?.id
+                  if (!me) return
                   const prev = isFollowing
                   setIsFollowing(!prev)
                   try {
-                    if (prev) await userService.unfollowUser(personId)
-                    else await userService.followUser(personId)
+                    if (prev) await userService.unfollowUser(me, personId)
+                    else await userService.followUser(me, personId)
                   } catch {
                     setIsFollowing(prev)
                     toast.error(prev ? "Failed to unfollow" : "Failed to follow")
@@ -180,11 +173,12 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
                 className="flex w-full items-center gap-4 rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:shadow-md"
               >
                 {activity.image && (
-                  <img
+                  <Image
                     src={activity.image}
                     alt={activity.title}
-                    className="h-14 w-14 rounded-xl object-cover"
-                    crossOrigin="anonymous"
+                    width={56}
+                    height={56}
+                    className="rounded-xl object-cover"
                   />
                 )}
                 <div className="flex-1">

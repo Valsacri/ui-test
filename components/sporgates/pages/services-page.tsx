@@ -1,10 +1,12 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
+import useSWR from "swr"
 import { Search, Wrench } from "lucide-react"
-import { servicesService } from "@/lib/services"
+import { fetcher } from "@/lib/fetcher"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { LoadingGrid, LoadingActivityCard } from "@/components/sporgates/ux/loading-cards"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -17,22 +19,13 @@ const categories = ["All", "Training", "Recovery", "Wellness", "Coaching"]
 
 export function ServicesPage({ onNavigate }: ServicesPageProps) {
   const [activeCategory, setActiveCategory] = useState("All")
-  const [services, setServices] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [visibleCount, setVisibleCount] = useState(9)
 
-  useEffect(() => {
-    setIsLoading(true)
-    servicesService.getAll().then((data) => {
-      if (Array.isArray(data) && data.length > 0) {
-        setServices(data)
-      }
-      setIsLoading(false)
-    }).catch(() => {
-      setIsLoading(false)
-    })
-  }, [])
+  const { data: services = [], error, isLoading, mutate } = useSWR<any[]>('/v1/services', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
 
   const filteredServices = useMemo(() => {
     let result = services.filter((service) => {
@@ -93,6 +86,12 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
         <LoadingGrid className="md:grid-cols-2 lg:grid-cols-3">
           <LoadingActivityCard />
         </LoadingGrid>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load services"
+          message="We ran into an error fetching the available services."
+          onRetry={() => mutate()}
+        />
       ) : filteredServices.length === 0 ? (
         <EmptyState
           icon={Wrench}

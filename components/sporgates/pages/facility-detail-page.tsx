@@ -1,11 +1,14 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { ArrowLeft, Star, MapPin, Clock, ChevronLeft, ChevronRight, Calendar, Users, Phone } from "lucide-react"
 import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { facilitiesService, bookingService } from "@/lib/services"
 import { mapFacility, type FacilityCardData, type FacilityDto } from "@/lib/explore-api"
 import type { PageRoute } from "@/lib/navigation"
+import { toast } from "sonner"
 import { BookingSidebar } from "@/components/sporgates/booking-sidebar"
 import { MapView } from "@/components/sporgates/map-view"
 import { cn } from "@/lib/utils"
@@ -16,34 +19,17 @@ interface FacilityDetailPageProps {
 }
 
 export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPageProps) {
-  const [facility, setFacility] = useState<FacilityCardData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [bookingStatus, setBookingStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
 
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    setError(null)
-
-    facilitiesService
-      .getById(facilityId)
-      .then((data: FacilityDto) => {
-        if (!cancelled) {
-          setFacility(mapFacility(data))
-          setActiveImageIndex(0) // Reset to first image when facility changes
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load facility details.")
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [facilityId])
+  const { data: facility, error, isLoading } = useSWR(
+    facilityId ? `/facilities/${facilityId}` : null,
+    async () => {
+      const data: FacilityDto = await facilitiesService.getById(facilityId)
+      return mapFacility(data)
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   // Combine image and imageUrls into a single array
   const images = useMemo(() => {
@@ -108,11 +94,12 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
       <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
         {images.length > 0 ? (
           <>
-            <img
+            <Image
               src={images[activeImageIndex]}
               alt={`${facility.name} ${activeImageIndex + 1}`}
-              className="h-full w-full object-cover transition-opacity duration-300"
-              crossOrigin="anonymous"
+              fill
+              className="object-cover transition-opacity duration-300"
+              sizes="(max-width: 768px) 100vw, 66vw"
             />
 
             {/* Navigation Arrows */}
@@ -265,20 +252,35 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
           onBooking={async (date, time, duration, participants) => {
             setBookingStatus("loading")
             try {
-              const startTime = time
-              const endHour = parseInt(time) + duration
-              const endTime = `${endHour}:00`
+              const timeToHHmm = (t: string) => {
+                const match = t.match(/(\d+):(\d{2})\s*(AM|PM)/i)
+                if (!match) return "09:00"
+                let h = parseInt(match[1], 10)
+                const m = match[2]
+                if (match[3].toUpperCase() === "PM" && h !== 12) h += 12
+                if (match[3].toUpperCase() === "AM" && h === 12) h = 0
+                return `${h.toString().padStart(2, "0")}:${m}`
+              }
+              const startTime = timeToHHmm(time)
+              const [sh, sm] = startTime.split(":").map(Number)
+              const endMin = sh * 60 + sm + duration * 60
+              const eh = Math.floor(endMin / 60) % 24
+              const em = endMin % 60
+              const endTime = `${eh.toString().padStart(2, "0")}:${em.toString().padStart(2, "0")}`
               await bookingService.createBooking({
                 facilityId: facility.id,
                 date,
                 startTime,
                 endTime,
+                duration,
                 notes: `Duration: ${duration}h, Participants: ${participants}`,
               })
               setBookingStatus("success")
+              toast.success("Booking request submitted successfully")
               setTimeout(() => setBookingStatus("idle"), 3000)
             } catch {
               setBookingStatus("error")
+              toast.error("Failed to submit booking. Please try again.")
               setTimeout(() => setBookingStatus("idle"), 3000)
             }
           }}

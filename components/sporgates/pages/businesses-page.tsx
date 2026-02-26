@@ -1,8 +1,10 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState } from "react"
+import useSWR from "swr"
 import { Search, SlidersHorizontal, MapPin, Building2 } from "lucide-react"
-import { businessesService } from "@/lib/services"
+import { fetcher } from "@/lib/fetcher"
+import { DEFAULT_API_BASE_URL } from "@/lib/constants"
 import { BusinessCard } from "@/components/sporgates/cards/business-card"
 import { SortFilter } from "@/components/sporgates/filters/sort-filter"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
@@ -20,33 +22,32 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
   const [activeFilter, setActiveFilter] = useState("All")
   const [query, setQuery] = useState("")
   const [sortBy, setSortBy] = useState("rating")
-  const [businesses, setBusinesses] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    setLoading(true)
-    businessesService.getAll().then((data: any) => {
-      const list = Array.isArray(data) ? data : (data?.content || [])
-      const mapped = list.map((b: any) => ({
-        id: b.id,
-        name: b.name || "Unnamed Business",
-        type: (b.bio && b.bio.length > 60) ? b.bio.slice(0, 60) + "…" : (b.bio || "Business"),
-        location: [b.city, b.state].filter(Boolean).join(", ") || b.address || "—",
-        rating: b.rating || 0,
-        reviews: b.reviews || 0,
-        image: b.cover
-          ? (b.cover.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${b.cover}` : b.cover)
-          : b.avatar
-            ? (b.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${b.avatar}` : b.avatar)
-            : "",
-        followers: b.followers || 0,
-        activities: b.activities || 0,
-        verified: !!b.verifiedAt,
-      }))
-      setBusinesses(mapped)
-    }).catch(() => { })
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: rawData, isLoading: loading } = useSWR<any>('/v1/businesses', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
+
+  const businesses: any[] = useMemo(() => {
+    const list = Array.isArray(rawData) ? rawData : (rawData?.content || [])
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL
+    return list.map((b: any) => ({
+      id: b.id,
+      name: b.name || "Unnamed Business",
+      type: (b.bio && b.bio.length > 60) ? b.bio.slice(0, 60) + "…" : (b.bio || "Business"),
+      location: [b.city, b.state].filter(Boolean).join(", ") || b.address || "—",
+      rating: b.rating || 0,
+      reviews: b.reviews || 0,
+      image: b.cover
+        ? (b.cover.startsWith("/") ? `${apiUrl}${b.cover}` : b.cover)
+        : b.avatar
+          ? (b.avatar.startsWith("/") ? `${apiUrl}${b.avatar}` : b.avatar)
+          : "",
+      followers: b.followers || 0,
+      activities: b.activities || 0,
+      verified: !!b.verifiedAt,
+    }))
+  }, [rawData])
 
   const filteredBusinesses = useMemo(() => {
     let result = businesses.filter((b) => {
@@ -155,13 +156,13 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
           action={
             query || activeFilter !== "All"
               ? {
-                  label: "Clear Filters",
-                  onClick: () => {
-                    setActiveFilter("All")
-                    setQuery("")
-                  },
-                  variant: "secondary",
-                }
+                label: "Clear Filters",
+                onClick: () => {
+                  setActiveFilter("All")
+                  setQuery("")
+                },
+                variant: "secondary",
+              }
               : undefined
           }
         />

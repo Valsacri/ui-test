@@ -2,6 +2,10 @@
 
 import { useState } from "react"
 import { CalendarDays, Clock, CheckCircle } from "lucide-react"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface ServiceBookingSidebarProps {
   serviceName: string
@@ -26,7 +30,7 @@ export function ServiceBookingSidebar({
   verified,
   onBooking,
 }: ServiceBookingSidebarProps) {
-  const [date, setDate] = useState("")
+  const [date, setDate] = useState<Date | undefined>(undefined)
   const [time, setTime] = useState("")
   const [notes, setNotes] = useState("")
 
@@ -34,7 +38,7 @@ export function ServiceBookingSidebar({
     <aside className="sticky top-20 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-lg">
       <div className="flex gap-3">
         <div className="h-16 w-16 overflow-hidden rounded-xl bg-muted">
-          <img src={serviceImage} alt={serviceName} className="h-full w-full object-cover" />
+          <img src={serviceImage} alt={serviceName} className="h-full w-full object-cover" crossOrigin="anonymous" />
         </div>
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground">{serviceName}</p>
@@ -56,16 +60,29 @@ export function ServiceBookingSidebar({
 
       <div className="space-y-3">
         <label className="text-xs font-semibold text-foreground">Preferred date</label>
-        <div className="relative">
-          <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="h-10 w-full rounded-full border border-border bg-muted pl-10 pr-3 text-xs outline-none focus:border-primary"
-            min={new Date().toISOString().split("T")[0]}
-          />
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "flex h-10 w-full items-center gap-2 rounded-full border border-border bg-muted px-3 text-xs outline-none transition-colors hover:bg-muted/80 focus:border-primary",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              {date ? format(date, "PPP") : "Pick a date"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {date && (
@@ -98,7 +115,7 @@ export function ServiceBookingSidebar({
 
       <button
         type="button"
-        onClick={() => onBooking?.(date, time, notes)}
+        onClick={() => onBooking?.(date ? format(date, "yyyy-MM-dd") : "", time, notes)}
         disabled={!date || !time}
         className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
       >

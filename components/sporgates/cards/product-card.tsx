@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Star, ShoppingCart } from "lucide-react"
 
 interface ProductCardProps {
@@ -27,12 +28,12 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
       className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
     >
       <div className="relative h-44 overflow-hidden bg-muted">
-        <img
+        <Image
           src={product.image || "/placeholder.svg"}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          crossOrigin="anonymous"
-          loading="lazy"
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
         {!product.inStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-foreground/40">

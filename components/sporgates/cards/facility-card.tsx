@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { MapPin, Star, Clock, CheckCircle } from "lucide-react"
 
 interface FacilityCardProps {
@@ -29,18 +30,18 @@ export function FacilityCard({ facility, onClick }: FacilityCardProps) {
       className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
     >
       <div className="relative h-40 overflow-hidden">
-        <img
+        <Image
           src={facility.image || "/placeholder.svg"}
           alt={facility.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          crossOrigin="anonymous"
-          loading="lazy"
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
         <div className="absolute right-3 top-3">
           <span
             className={`rounded-full px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm ${facility.available
-                ? "bg-green-500/90 text-white"
-                : "bg-red-500/90 text-white"
+              ? "bg-green-500/90 text-white"
+              : "bg-red-500/90 text-white"
               }`}
           >
             {facility.available ? "Available" : "Fully Booked"}

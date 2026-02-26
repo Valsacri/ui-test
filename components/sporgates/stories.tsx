@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -181,11 +182,11 @@ export function Stories() {
               </div>
             </div>
 
-            <img
+            <Image
               src={viewingStory.image}
               alt={viewingStory.name}
-              className="h-full w-full object-cover"
-              crossOrigin="anonymous"
+              fill
+              className="object-cover"
             />
           </div>
         </div>

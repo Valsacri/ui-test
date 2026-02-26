@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { ArrowLeft, Star, CheckCircle, CalendarDays, MapPin, Check, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { servicesService } from "@/lib/services"
@@ -19,33 +21,16 @@ interface ServiceDetailPageProps {
 }
 
 export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPageProps) {
-  const [service, setService] = useState<ServiceCardData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
 
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    setError(null)
-
-    servicesService
-      .getById(serviceId)
-      .then((data: ServiceListingDto) => {
-        if (!cancelled) {
-          setService(mapService(data))
-          setActiveImageIndex(0) // Reset to first image when service changes
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load service details.")
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [serviceId])
+  const { data: service, error, isLoading } = useSWR(
+    serviceId ? `/services/${serviceId}` : null,
+    async () => {
+      const data: ServiceListingDto = await servicesService.getById(serviceId)
+      return mapService(data)
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   // Combine image and imageUrls into a single array
   const images = useMemo(() => {
@@ -118,11 +103,12 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
           <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
             {images.length > 0 ? (
               <>
-                <img
+                <Image
                   src={images[activeImageIndex]}
                   alt={`${service.name} ${activeImageIndex + 1}`}
-                  className="h-full w-full object-cover transition-opacity duration-300"
-                  crossOrigin="anonymous"
+                  fill
+                  className="object-cover transition-opacity duration-300"
+                  sizes="(max-width: 768px) 100vw, 66vw"
                 />
 
                 {/* Navigation Arrows */}
@@ -266,12 +252,21 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
           reviews={service.reviews}
           verified={service.verified}
           onBooking={async (date, time, notes) => {
+            const durationStr = service.duration || "60 min"
+            const durationMinutes = parseInt(durationStr.replace(/\D/g, ""), 10) || 60
+            const durationHours = durationMinutes / 60
+            const [h, m] = time.split(":").map(Number)
+            const endMin = h * 60 + m + durationMinutes
+            const endH = Math.floor(endMin / 60) % 24
+            const endM = endMin % 60
+            const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`
             try {
               await bookingService.createBooking({
                 facilityId: serviceId,
                 date,
                 startTime: time,
-                endTime: time,
+                endTime,
+                duration: durationHours,
                 notes: notes || undefined,
               })
               toast.success("Booking request sent! The provider will confirm shortly.")

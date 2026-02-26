@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
 import { ArrowLeft, MapPin, Clock, DollarSign, Building2, Briefcase, CheckCircle, Calendar, Wifi, Check } from "lucide-react"
 import { jobsService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
@@ -66,31 +67,11 @@ function getInitials(name: string) {
 }
 
 export function JobDetailPage({ jobId, onNavigate }: JobDetailPageProps) {
-  const [job, setJob] = useState<JobDto | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    setError(null)
-
-    jobsService
-      .getById(jobId)
-      .then((data: JobDto) => {
-        if (!cancelled) {
-          setJob(data)
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load job details.")
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [jobId])
+  const { data: job, error, isLoading } = useSWR<JobDto>(
+    jobId ? `/jobs/${jobId}` : null,
+    () => jobsService.getById(jobId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   if (isLoading) {
     return <DetailPageSkeleton />

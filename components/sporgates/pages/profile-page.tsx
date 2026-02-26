@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import {
   MapPin,
   Calendar,
@@ -15,8 +17,10 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react"
-import { userService, authService, activitiesService } from "@/lib/services"
+import { userService, authService, activitiesService, postsService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
+import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { cn } from "@/lib/utils"
 
 interface ProfilePageProps {
@@ -77,57 +81,76 @@ const goals = [
 
 export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
-  const [userProfile, setUserProfile] = useState(defaultProfile)
-  const [activities, setActivities] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const maxHours = Math.max(...weeklyData.map((d) => d.hours))
 
-  useEffect(() => {
-    const user = authService.getCurrentUser()
-    const userId = user?.id
-    setIsLoading(true)
+  const user = authService.getCurrentUser()
+  const userId = user?.id
 
-    const fetchAll = async () => {
-      try {
-        if (userId) {
-          const data = await userService.getUserById(userId)
-          if (data) {
-            setUserProfile((prev) => ({
-              ...prev,
-              name: data.firstName && data.lastName ? `${data.firstName} ${data.lastName}` : prev.name,
-              bio: data.bio || prev.bio,
-              location: data.location || prev.location,
-              avatar: data.firstName?.charAt(0) || prev.avatar,
-              username: data.username ? `@${data.username}` : prev.username,
-              followers: data.followersCount ?? prev.followers,
-              following: data.followingCount ?? prev.following,
-              favoriteSports: data.sportsPreferences?.map((s: any) => s.sportName) || prev.favoriteSports,
-            }))
-          }
-        }
+  const { data: userData, error: userError, isLoading: userLoading } = useSWR(
+    userId ? `/users/${userId}` : null,
+    () => userService.getUserById(userId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-        const actData = await activitiesService.getAll()
-        if (Array.isArray(actData)) {
-          setActivities(actData.map((a: any) => {
-            const parseDate = (d: any) => Array.isArray(d) ? new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0) : new Date(d)
-            const startDate = parseDate(a.startDateTime)
-            return {
-              id: a.id,
-              title: a.name,
-              sport: a.sportId || "Sport",
-              date: startDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
-              time: startDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' }),
-              image: a.coverImage || "/images/sports-placeholder.jpg",
-            }
-          }))
-        }
-      } catch { /* non-critical */ } finally {
-        setIsLoading(false)
+  const { data: actData = [], error: actError, isLoading: actLoading } = useSWR(
+    `/activities`,
+    () => activitiesService.getAll(),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const { data: userPosts = [] } = useSWR(
+    userId ? `/posts/user/${userId}` : null,
+    () => postsService.getByUser(userId!, userId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const isLoading = userLoading || (actLoading && actData.length === 0)
+  const error = userError || actError
+
+  const userProfile = {
+    ...defaultProfile,
+    ...(userData ? {
+      name: userData.firstName && userData.lastName ? `${userData.firstName} ${userData.lastName}` : defaultProfile.name,
+      bio: userData.bio || defaultProfile.bio,
+      location: userData.location || defaultProfile.location,
+      avatar: userData.firstName?.charAt(0) || defaultProfile.avatar,
+      username: userData.username ? `@${userData.username}` : defaultProfile.username,
+      followers: userData.followersCount ?? defaultProfile.followers,
+      following: userData.followingCount ?? defaultProfile.following,
+      favoriteSports: userData.sportsPreferences?.map((s: any) => s.sportName) || defaultProfile.favoriteSports,
+    } : {}),
+  }
+
+  const parseDate = (d: any) => Array.isArray(d) ? new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0) : new Date(d)
+  const activities = Array.isArray(actData)
+    ? actData.map((a: any) => {
+      const startDate = parseDate(a.startDateTime)
+      return {
+        id: a.id,
+        title: a.name,
+        sport: a.sportId || "Sport",
+        date: startDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
+        time: startDate.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' }),
+        image: a.coverImage || "/placeholder.svg",
       }
-    }
+    })
+    : []
 
-    fetchAll()
-  }, [])
+  if (isLoading) {
+    return <ProfileSkeleton />
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Couldn't load profile"
+        message="We ran into an issue fetching your profile data."
+        onRetry={() => {
+          // Both will be retried by SWR
+        }}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -310,7 +333,7 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <h2 className="mb-4 text-base font-bold text-foreground">Favorite Sports</h2>
             <div className="flex flex-wrap gap-2">
-              {userProfile.favoriteSports.map((sport) => (
+              {userProfile.favoriteSports.map((sport: string) => (
                 <span
                   key={sport}
                   className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary"
@@ -319,6 +342,29 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
                 </span>
               ))}
             </div>
+          </div>
+
+          {/* My Posts (from API) */}
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <h2 className="mb-4 text-base font-bold text-foreground">My Posts</h2>
+            {Array.isArray(userPosts) && userPosts.length > 0 ? (
+              <div className="space-y-3">
+                {userPosts.slice(0, 5).map((post: any) => (
+                  <div
+                    key={post.id}
+                    className="rounded-xl border border-border bg-muted/50 p-3"
+                  >
+                    <p className="text-sm text-foreground line-clamp-2">{post.content || post.text || post.body}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      {post.createdAt ? new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+                      {(post.likesCount ?? post.likeCount) != null && ` · ${post.likesCount ?? post.likeCount} likes`}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No posts yet. Share something with the community!</p>
+            )}
           </div>
         </div>
       )}
@@ -332,7 +378,13 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
               <p className="text-xs text-muted-foreground">Your activity timeline</p>
             </div>
             <div className="divide-y divide-border">
-              {recentActivity.map((item) => (
+              {(activities.length > 0 ? activities.slice(0, 8).map((activity) => ({
+                id: activity.id,
+                type: "joined" as const,
+                title: activity.title,
+                date: activity.date,
+                sport: activity.sport,
+              })) : recentActivity).map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/50"
@@ -375,11 +427,12 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
                   key={activity.id}
                   className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <img
+                  <Image
                     src={activity.image}
                     alt={activity.title}
-                    className="h-14 w-14 rounded-xl object-cover"
-                    crossOrigin="anonymous"
+                    width={56}
+                    height={56}
+                    className="rounded-xl object-cover"
                   />
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-foreground">{activity.title}</p>

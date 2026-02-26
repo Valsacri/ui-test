@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { ArrowLeft, Mail, Phone, MapPin, Lock, Camera, Pencil } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { authService, userService } from "@/lib/services"
@@ -10,40 +11,34 @@ interface ProfileInformationPageProps {
 }
 
 export function ProfileInformationPage({ onNavigate }: ProfileInformationPageProps) {
-  const [profile, setProfile] = useState({
-    name: "", username: "", avatar: "", email: "", phone: "", location: "",
-    memberSince: "", profilePicture: "",
-  })
+  const user = authService.getCurrentUser()
+  const userId = user?.id
 
-  useEffect(() => {
-    const user = authService.getCurrentUser()
-    if (user?.id) {
-      userService.getUserById(user.id).then((data: any) => {
-        if (data) {
-          const fullName = [data.firstName, data.lastName].filter(Boolean).join(" ")
-          const initials = [data.firstName?.[0], data.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "U"
-          setProfile({
-            name: fullName || user.email || "",
-            username: data.username ? `@${data.username}` : "",
-            avatar: initials,
-            email: data.email || user.email || "",
-            phone: data.phone || "",
-            location: data.location || "",
-            memberSince: data.createdAt ? new Date(data.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "",
-            profilePicture: data.profilePicture || "",
-          })
-        }
-      }).catch(() => {
-        setProfile({
-          name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "",
-          username: user.username ? `@${user.username}` : "",
-          avatar: [user.firstName?.[0], user.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "U",
-          email: user.email || "",
-          phone: "", location: "", memberSince: "", profilePicture: "",
-        })
-      })
-    }
-  }, [])
+  const { data: userData } = useSWR(
+    userId ? `/users/${userId}/info` : null,
+    () => userService.getUserById(userId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const fallbackName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || ""
+  const fallbackAvatar = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "U"
+
+  const profile = userData ? {
+    name: [userData.firstName, userData.lastName].filter(Boolean).join(" ") || user?.email || "",
+    username: userData.username ? `@${userData.username}` : "",
+    avatar: [userData.firstName?.[0], userData.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "U",
+    email: userData.email || user?.email || "",
+    phone: userData.phone || "",
+    location: userData.location || "",
+    memberSince: userData.createdAt ? new Date(userData.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "",
+    profilePicture: userData.profilePicture || "",
+  } : {
+    name: fallbackName,
+    username: user?.username ? `@${user.username}` : "",
+    avatar: fallbackAvatar,
+    email: user?.email || "",
+    phone: "", location: "", memberSince: "", profilePicture: "",
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -64,11 +59,12 @@ export function ProfileInformationPage({ onNavigate }: ProfileInformationPagePro
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
           {profile.profilePicture ? (
-            <img
+            <Image
               src={profile.profilePicture}
               alt={profile.name}
-              className="h-16 w-16 rounded-2xl object-cover"
-              crossOrigin="anonymous"
+              width={64}
+              height={64}
+              className="rounded-2xl object-cover"
             />
           ) : (
             <div className="gradient-primary flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-bold text-white">

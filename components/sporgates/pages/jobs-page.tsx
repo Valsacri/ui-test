@@ -1,12 +1,15 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState } from "react"
+import useSWR, { mutate } from "swr"
 import { Search, Briefcase, Plus } from "lucide-react"
 import { jobsService, businessesService } from "@/lib/services"
+import { fetcher } from "@/lib/fetcher"
 import type { PageRoute } from "@/lib/navigation"
 import { CreateJobOfferModal } from "@/components/sporgates/business/create-job-offer-modal"
 import { JobCard } from "@/components/sporgates/cards/job-card"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { LoadingGrid, LoadingActivityCard } from "@/components/sporgates/ux/loading-cards"
 import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
 import { toast } from "sonner"
@@ -62,42 +65,29 @@ function formatPostedDate(createdAt: string | number[] | undefined): string {
 
 export function JobsPage({ onNavigate, isBusinessMode = false, activeBusinessId }: JobsPageProps) {
   const [query, setQuery] = useState("")
-  const [jobList, setJobList] = useState<JobDto[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [editJob, setEditJob] = useState<JobDto | null>(null)
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null)
-  const [activeBusiness, setActiveBusiness] = useState<{ id: string; name: string; logo?: string } | null>(null)
 
-  useEffect(() => {
-    setIsLoading(true)
-    jobsService.getAll().then((data) => {
-      if (Array.isArray(data)) {
-        setJobList(data)
-      }
-      setIsLoading(false)
-    }).catch(() => {
-      setIsLoading(false)
-    })
-  }, [])
+  const { data: jobList = [], error, isLoading, mutate: mutateJobs } = useSWR<JobDto[]>('/v1/jobs', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
 
-  useEffect(() => {
-    const fetchActiveBusiness = async () => {
-      if (activeBusinessId) {
-        try {
-          const business = await businessesService.getById(activeBusinessId)
-          setActiveBusiness({
-            id: business.id,
-            name: business.name,
-            logo: business.avatar || business.logo,
-          })
-        } catch (error) {
-          console.error("Failed to fetch active business:", error)
-        }
-      }
+  const { data: activeBusiness } = useSWR<any>(
+    activeBusinessId ? `/v1/businesses/${activeBusinessId}` : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+
+  const activeBusinessMapped = useMemo(() => {
+    if (!activeBusiness) return null
+    return {
+      id: activeBusiness.id,
+      name: activeBusiness.name,
+      logo: activeBusiness.avatar || activeBusiness.logo,
     }
-    fetchActiveBusiness()
-  }, [activeBusinessId])
+  }, [activeBusiness])
 
   const filteredJobs = useMemo(() => {
     // In business mode, filter to show only jobs created by the active business
@@ -150,6 +140,12 @@ export function JobsPage({ onNavigate, isBusinessMode = false, activeBusinessId 
         <LoadingGrid className="md:grid-cols-2">
           <LoadingActivityCard />
         </LoadingGrid>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load jobs"
+          message="There was an error retrieving the latest job opportunities."
+          onRetry={() => mutateJobs()}
+        />
       ) : filteredJobs.length === 0 ? (
         <EmptyState
           icon={Briefcase}
@@ -168,7 +164,7 @@ export function JobsPage({ onNavigate, isBusinessMode = false, activeBusinessId 
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {filteredJobs.map((job) => {
-            const isOwnJob = isBusinessMode && activeBusiness && job.companyId === activeBusiness.id
+            const isOwnJob = isBusinessMode && activeBusinessMapped && job.companyId === activeBusinessMapped.id
             return (
               <JobCard
                 key={job.id}
@@ -219,7 +215,7 @@ export function JobsPage({ onNavigate, isBusinessMode = false, activeBusinessId 
         } : null}
         onCreate={async (job) => {
           try {
-            if (!activeBusiness) {
+            if (!activeBusinessMapped) {
               console.error("No active business selected")
               return
             }
@@ -232,15 +228,15 @@ export function JobsPage({ onNavigate, isBusinessMode = false, activeBusinessId 
               } else if (job.locationType === "Hybrid") {
                 locationValue = "Hybrid"
               } else {
-                locationValue = activeBusiness.name || "On-site"
+                locationValue = activeBusinessMapped.name || "On-site"
               }
             }
 
             // Generate logo initials from business name
-            const logoInitials = activeBusiness.name
-              ? activeBusiness.name
+            const logoInitials = activeBusinessMapped.name
+              ? activeBusinessMapped.name
                 .split(" ")
-                .map((word) => word[0])
+                .map((word: string) => word[0])
                 .join("")
                 .toUpperCase()
                 .slice(0, 2)
@@ -248,33 +244,33 @@ export function JobsPage({ onNavigate, isBusinessMode = false, activeBusinessId 
 
             if (editJob) {
               // Update existing job
-              const updatedJob = await jobsService.update(editJob.id, {
+              await jobsService.update(editJob.id, {
                 title: job.title,
-                companyName: activeBusiness.name,
-                companyId: activeBusiness.id,
+                companyName: activeBusinessMapped.name,
+                companyId: activeBusinessMapped.id,
                 location: locationValue || "On-site",
                 type: job.type,
                 salary: job.salary || "Competitive",
                 description: job.description || "New opening",
                 requirements: job.requirements || [],
-                logo: activeBusiness.logo || logoInitials,
+                logo: activeBusinessMapped.logo || logoInitials,
               })
-              setJobList((prev) => prev.map((j) => (j.id === editJob.id ? updatedJob : j)))
+              await mutateJobs()
               setEditJob(null)
             } else {
               // Create new job
-              const newJob = await jobsService.create({
+              await jobsService.create({
                 title: job.title,
-                companyName: activeBusiness.name,
-                companyId: activeBusiness.id,
+                companyName: activeBusinessMapped.name,
+                companyId: activeBusinessMapped.id,
                 location: locationValue || "On-site",
                 type: job.type,
                 salary: job.salary || "Competitive",
                 description: job.description || "New opening",
                 requirements: job.requirements || [],
-                logo: activeBusiness.logo || logoInitials,
+                logo: activeBusinessMapped.logo || logoInitials,
               })
-              setJobList((prev) => [newJob, ...prev])
+              await mutateJobs()
               setIsCreateModalOpen(false)
             }
           } catch (error) {
@@ -295,7 +291,7 @@ export function JobsPage({ onNavigate, isBusinessMode = false, activeBusinessId 
           if (!deleteJobId) return
           try {
             await jobsService.delete(deleteJobId)
-            setJobList((prev) => prev.filter((j) => j.id !== deleteJobId))
+            await mutateJobs()
             setDeleteJobId(null)
             toast.success("Job deleted successfully")
           } catch (error) {

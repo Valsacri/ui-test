@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import {
   Heart,
   MessageCircle,
@@ -15,9 +17,14 @@ import {
   Zap,
   Loader2,
 } from "lucide-react"
-import { postsService, squadService } from "@/lib/services"
+import { fetcher } from "@/lib/fetcher"
+import { userService } from "@/lib/services/user"
 import { Stories } from "@/components/sporgates/stories"
 import { PullToRefresh } from "@/components/sporgates/ux/pull-to-refresh"
+import { FeedSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
@@ -39,13 +46,6 @@ const activityLevelColors: Record<string, string> = {
   Low: "bg-slate-100 text-slate-600",
 }
 
-// No BE endpoints for people/groups browse — inline placeholder data
-const communityPeople: any[] = [
-  { id: "1", name: "Sarah Chen", avatar: "SC", location: "New York, NY", bio: "Basketball enthusiast and coach", sports: ["Basketball", "Tennis"], level: "Expert", activities: 48, mutualConnections: 12, isConnected: true, sport: "Basketball" },
-  { id: "2", name: "Marcus Williams", avatar: "MW", location: "Brooklyn, NY", bio: "Soccer player and fitness trainer", sports: ["Soccer", "Running"], level: "Advanced", activities: 35, mutualConnections: 8, isConnected: false, sport: "Soccer" },
-  { id: "3", name: "Emily Rodriguez", avatar: "ER", location: "Manhattan, NY", bio: "Aspiring swimmer and yoga practitioner", sports: ["Swimming", "Yoga"], level: "Intermediate", activities: 22, mutualConnections: 5, isConnected: false, sport: "Swimming" },
-]
-
 const communityGroups: any[] = [
   { id: "1", name: "NYC Basketball League", description: "Weekly pickup games across NYC", sport: "Basketball", members: 156, activityLevel: "Very High", isJoined: true },
   { id: "2", name: "Manhattan Runners", description: "Morning runs through Central Park", sport: "Running", members: 89, activityLevel: "High", isJoined: false },
@@ -57,28 +57,43 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
   const [newPost, setNewPost] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [groupFilter, setGroupFilter] = useState<"all" | "mine">("all")
-  const [posts, setPosts] = useState<any[]>([])
-  const [squads, setSquads] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    setIsLoading(true)
-    Promise.allSettled([
-      postsService.getAll(),
-      squadService.search(""),
-    ]).then(([postsResult, squadsResult]) => {
-      if (postsResult.status === "fulfilled" && Array.isArray(postsResult.value)) setPosts(postsResult.value)
-      if (squadsResult.status === "fulfilled" && Array.isArray(squadsResult.value)) setSquads(squadsResult.value)
-    }).finally(() => setIsLoading(false))
-  }, [])
+  const { data: posts = [], mutate: mutatePosts, isLoading: postsLoading, error: postsError } = useSWR<any[]>('/v1/posts', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
+
+  const { data: squads = [], mutate: mutateSquads, isLoading: squadsLoading, error: squadsError } = useSWR<any[]>('/v1/squads/search?query=', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
+
+  const { data: peopleRaw } = useSWR(
+    activeTab === "People" ? '/v1/users/browse' : null,
+    () => userService.browseUsers({ size: 50 }),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const peopleList = Array.isArray(peopleRaw) ? peopleRaw : (peopleRaw?.content ?? [])
+  const communityPeople = peopleList.map((p: any) => ({
+    id: p.id,
+    name: [p.firstName, p.lastName].filter(Boolean).join(" ") || p.username || "Unknown",
+    avatar: (p.firstName?.[0] || "") + (p.lastName?.[0] || "") || (p.username?.[0] || "?").toUpperCase(),
+    location: p.location || "",
+    bio: p.bio || "",
+    sports: p.sportsPreferences?.map((s: any) => s.sportName) || [],
+    level: "Intermediate",
+    activities: 0,
+    mutualConnections: 0,
+    isConnected: false,
+    sport: p.sportsPreferences?.[0]?.sportName || "Athlete",
+  }))
+
+  const isLoading = (postsLoading && activeTab === "Feed") || (squadsLoading && activeTab === "Squads")
+  const hasError = (postsError && activeTab === "Feed") || (squadsError && activeTab === "Squads")
 
   const handleRefresh = async () => {
-    const [postsResult, squadsResult] = await Promise.allSettled([
-      postsService.getAll(),
-      squadService.search(""),
-    ])
-    if (postsResult.status === "fulfilled" && Array.isArray(postsResult.value)) setPosts(postsResult.value)
-    if (squadsResult.status === "fulfilled" && Array.isArray(squadsResult.value)) setSquads(squadsResult.value)
+    await Promise.all([mutatePosts(), mutateSquads()])
   }
 
   const tabs = ["Feed", "Squads", "People", "Groups", "Discover"]
@@ -160,81 +175,71 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
         {/* ====== FEED TAB ====== */}
         {activeTab === "Feed" && (
           <div className="space-y-4">
-            {/* Create Post */}
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="gradient-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
-                  JR
-                </div>
-                <div className="flex-1">
-                  <textarea
-                    value={newPost}
-                    onChange={(e) => setNewPost(e.target.value)}
-                    placeholder="Share something with the community..."
-                    rows={2}
-                    className="w-full resize-none rounded-xl border border-border bg-muted p-3 text-sm outline-none focus:border-primary"
-                  />
-                  <div className="mt-2 flex items-center justify-between">
-                    <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-                      <ImageIcon className="h-4 w-4" />
-                      Photo
-                    </button>
-                    <button
-                      type="button"
-                      className="gradient-primary rounded-full px-4 py-1.5 text-xs font-semibold text-white"
-                    >
-                      Post
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Posts */}
-            {posts.map((post) => (
-              <div key={post.id} className="rounded-2xl border border-border bg-card shadow-sm">
-                <div className="flex items-center gap-3 p-4 pb-2">
-                  <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white">
-                    {post.authorAvatar}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground">{post.author}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{post.time}</span>
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                        {post.sport}
-                      </span>
+            {postsLoading ? (
+              <FeedSkeleton count={3} />
+            ) : postsError ? (
+              <ErrorState
+                title="Couldn't load feed"
+                message="We're having trouble reaching the community feed."
+                onRetry={() => mutatePosts()}
+              />
+            ) : posts.length === 0 ? (
+              <div className="rounded-2xl border border-border bg-card">
+                <EmptyState
+                  icon={ImageIcon}
+                  title="No posts yet"
+                  description="Be the first to share something with the community."
+                  action={{ label: "Go to Home", onClick: () => onNavigate("home"), variant: "primary" }}
+                  size="md"
+                />
+              </div>
+            ) : (
+              posts.map((post) => (
+                <div key={post.id} className="rounded-2xl border border-border bg-card shadow-sm">
+                  <div className="flex items-center gap-3 p-4 pb-2">
+                    <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white">
+                      {post.authorAvatar}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">{post.author}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{post.time}</span>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {post.sport}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <div className="px-4 pb-3">
+                    <p className="text-sm text-foreground leading-relaxed">{post.content}</p>
+                  </div>
+                  {post.image && (
+                    <Image
+                      src={post.image}
+                      alt=""
+                      width={600}
+                      height={300}
+                      className="w-full object-cover"
+                    />
+                  )}
+                  <div className="flex items-center gap-6 border-t border-border px-4 py-3">
+                    <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-secondary transition-colors">
+                      <Heart className="h-4 w-4" />
+                      {post.likes}
+                    </button>
+                    <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                      <MessageCircle className="h-4 w-4" />
+                      {post.comments}
+                    </button>
+                    <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+                      <Share2 className="h-4 w-4" />
+                      {post.shares}
+                    </button>
+                  </div>
                 </div>
-                <div className="px-4 pb-3">
-                  <p className="text-sm text-foreground leading-relaxed">{post.content}</p>
-                </div>
-                {post.image && (
-                  <img
-                    src={post.image}
-                    alt=""
-                    className="w-full object-cover"
-                    style={{ maxHeight: 300 }}
-                    crossOrigin="anonymous"
-                  />
-                )}
-                <div className="flex items-center gap-6 border-t border-border px-4 py-3">
-                  <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-secondary transition-colors">
-                    <Heart className="h-4 w-4" />
-                    {post.likes}
-                  </button>
-                  <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                    <MessageCircle className="h-4 w-4" />
-                    {post.comments}
-                  </button>
-                  <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                    <Share2 className="h-4 w-4" />
-                    {post.shares}
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 
@@ -248,34 +253,68 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
                 Create Squad
               </button>
             </div>
-            {squads.map((squad) => (
-              <button
-                type="button"
-                key={squad.id}
-                onClick={() => onNavigate("squad-detail", squad.id)}
-                className="w-full rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:shadow-md"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="gradient-primary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
-                    {squad.avatar}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-bold text-foreground">{squad.name}</h3>
-                    <p className="text-xs text-muted-foreground">{squad.description}</p>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {squad.members}/{squad.maxMembers} members
-                      </span>
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                        {squad.sport}
-                      </span>
-                      <span>{squad.upcomingEvents} upcoming</span>
+            {squadsLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 animate-pulse">
+                    <Skeleton className="h-14 w-14 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-48" />
+                      <div className="flex gap-3">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                ))}
+              </div>
+            ) : squadsError ? (
+              <ErrorState
+                title="Couldn't load squads"
+                message="Unable to fetch your squads right now."
+                onRetry={() => mutateSquads()}
+              />
+            ) : squads.length === 0 ? (
+              <div className="rounded-2xl border border-border bg-card">
+                <EmptyState
+                  icon={Users}
+                  title="No squads yet"
+                  description="Join a squad or create your own to connect with other athletes."
+                  action={{ label: "Create Squad", onClick: () => onNavigate("create-squad"), variant: "primary" }}
+                  size="md"
+                />
+              </div>
+            ) : (
+              squads.map((squad) => (
+                <button
+                  type="button"
+                  key={squad.id}
+                  onClick={() => onNavigate("squad-detail", squad.id)}
+                  className="w-full rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:shadow-md"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="gradient-primary flex h-14 w-14 items-center justify-center rounded-xl text-lg font-bold text-white">
+                      {squad.avatar}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-foreground">{squad.name}</h3>
+                      <p className="text-xs text-muted-foreground">{squad.description}</p>
+                      <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {squad.members}/{squad.maxMembers} members
+                        </span>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {squad.sport}
+                        </span>
+                        <span>{squad.upcomingEvents} upcoming</span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         )}
 

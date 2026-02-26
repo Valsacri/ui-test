@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Star, Clock, BadgeCheck } from "lucide-react"
 
 interface ServiceCardProps {
@@ -28,12 +29,12 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
       className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
     >
       <div className="relative h-40 overflow-hidden">
-        <img
+        <Image
           src={service.image || "/placeholder.svg"}
           alt={service.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          crossOrigin="anonymous"
-          loading="lazy"
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
         <span className="absolute left-3 top-3 rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
           {service.category}

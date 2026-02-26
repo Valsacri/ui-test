@@ -1,12 +1,16 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useMemo } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { ArrowLeft, Star, Package, ShieldCheck, ShoppingCart, Heart, Store, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { marketplaceService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
 import { ProductOrderSidebar } from "@/components/sporgates/product-order-sidebar"
+import { useCart } from "@/lib/cart-context"
 import { cn } from "@/lib/utils"
 
 interface ProductDetailPageProps {
@@ -32,33 +36,14 @@ interface Product {
 }
 
 export function ProductDetailPage({ productId, onNavigate }: ProductDetailPageProps) {
-  const [product, setProduct] = useState<Product | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const cart = useCart()
 
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    setError(null)
-
-    marketplaceService
-      .getById(productId)
-      .then((data: Product) => {
-        if (!cancelled) {
-          setProduct(data)
-          setActiveImageIndex(0) // Reset to first image when product changes
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load product details.")
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [productId])
+  const { data: product, error, isLoading } = useSWR<Product>(
+    productId ? `/marketplace/${productId}` : null,
+    () => marketplaceService.getById(productId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   // Combine image and imageUrls into a single array
   const images = useMemo(() => {
@@ -96,10 +81,17 @@ export function ProductDetailPage({ productId, onNavigate }: ProductDetailPagePr
           <ArrowLeft className="h-4 w-4" />
           Back to Marketplace
         </button>
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-base font-semibold text-foreground">Product not found</p>
-          <p className="mt-2 text-sm text-muted-foreground">{error || "The product you're looking for doesn't exist."}</p>
-        </div>
+        <ErrorState
+          title={error ? "Couldn't load product" : "Product not found"}
+          message={error || "The product you're looking for doesn't exist or has been removed."}
+          onRetry={() => {
+            if (productId) {
+              marketplaceService.getById(productId)
+            } else {
+              onNavigate("marketplace")
+            }
+          }}
+        />
       </div>
     )
   }
@@ -118,16 +110,17 @@ export function ProductDetailPage({ productId, onNavigate }: ProductDetailPagePr
       </button>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-8 lg:col-span-2">
           {/* Image Carousel */}
           <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
             {images.length > 0 ? (
               <>
-                <img
+                <Image
                   src={images[activeImageIndex]}
                   alt={`${product.name} ${activeImageIndex + 1}`}
-                  className="h-full w-full object-cover transition-opacity duration-300"
-                  crossOrigin="anonymous"
+                  fill
+                  className="object-cover transition-opacity duration-300"
+                  sizes="(max-width: 768px) 100vw, 66vw"
                 />
 
                 {/* Navigation Arrows */}
@@ -238,6 +231,15 @@ export function ProductDetailPage({ productId, onNavigate }: ProductDetailPagePr
           reviews={product.reviews ?? 0}
           inStock={product.inStock ?? true}
           onAddToCart={(quantity) => {
+            if (cart) {
+              cart.addItem({
+                productId: product.id,
+                name: product.name,
+                price: product.price,
+                image: product.image || "",
+                quantity,
+              })
+            }
             toast.success(`Added ${quantity} × ${product.name} to cart`)
           }}
         />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import useSWR from "swr"
 import {
   DollarSign,
   CalendarDays,
@@ -25,31 +25,28 @@ interface BusinessDashboardPageProps {
 
 export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps) {
   const { activeBusinessId } = useBusinessContext()
-  const [activities, setActivities] = useState<any[]>([])
-  const [teamMembers, setTeamMembers] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      if (!activeBusinessId) return
-      setLoading(true)
-      try {
-        const [activitiesData, teamData] = await Promise.all([
-          activitiesService.getAll({ organizerId: activeBusinessId }),
-          businessesService.getStaff(activeBusinessId)
-        ])
-        setActivities(Array.isArray(activitiesData) ? activitiesData : [])
-        setTeamMembers(Array.isArray(teamData) ? teamData : [])
-      } catch (error) {
-        console.error("Failed to load dashboard data", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadDashboardData()
-  }, [activeBusinessId])
+  const { data: activitiesRaw = [] } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/activities` : null,
+    () => activitiesService.getAll({ organizerId: activeBusinessId! }),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-  // Build dashboard data from API + inline defaults for KPIs (no analytics endpoint exists)
+  const { data: teamRaw = [] } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/staff` : null,
+    () => businessesService.getStaff(activeBusinessId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const { data: analytics } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/analytics` : null,
+    () => businessesService.getAnalytics(activeBusinessId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const activities = Array.isArray(activitiesRaw) ? activitiesRaw : []
+  const teamMembers = Array.isArray(teamRaw) ? teamRaw : []
+
   const topActivities = activities
     .map((a: any) => ({
       ...a,
@@ -77,13 +74,14 @@ export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps
   ]
 
   const data = {
-    totalRevenue: monthlyRevenue.reduce((s, m) => s + m.revenue, 0),
+    totalRevenue: analytics?.totalRevenue ?? monthlyRevenue.reduce((s, m) => s + m.revenue, 0),
     revenueChange: 12.5,
-    totalBookings: activities.length * 4,
+    totalBookings: analytics?.totalBookings ?? activities.length * 4,
     bookingChange: 8.3,
-    totalCustomers: 1289,
+    totalCustomers: (analytics?.totalBookings ?? 0) + (analytics?.totalStaff ?? 0) || 1289,
     customerChange: 15.2,
     activeActivities: activities.length,
+    totalStaff: analytics?.totalStaff ?? teamMembers.length,
     monthlyRevenue,
     topActivities,
     teamMembers: mappedTeamMembers,

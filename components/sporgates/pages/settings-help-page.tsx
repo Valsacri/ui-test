@@ -13,6 +13,7 @@ import {
   ArrowLeft,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { contactFormSchema, type ContactFormData } from "@/lib/validations/forms"
 import {
   Select,
   SelectContent,
@@ -73,6 +74,7 @@ export function SettingsHelpPage({ onBack }: SettingsHelpPageProps) {
   const [formSubject, setFormSubject] = useState(subjects[0])
   const [formMessage, setFormMessage] = useState("")
   const [formSent, setFormSent] = useState(false)
+  const [contactErrors, setContactErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({})
 
   const filteredFaqs = useMemo(() => {
     let list = faqs
@@ -89,11 +91,28 @@ export function SettingsHelpPage({ onBack }: SettingsHelpPageProps) {
   }, [searchQuery, activeCategory])
 
   const handleSubmit = () => {
+    setContactErrors({})
+    const result = contactFormSchema.safeParse({
+      name: formName,
+      email: formEmail,
+      subject: formSubject,
+      message: formMessage,
+    })
+    if (!result.success) {
+      const err: Partial<Record<keyof ContactFormData, string>> = {}
+      result.error.errors.forEach((e) => {
+        const key = e.path[0] as keyof ContactFormData
+        if (key && !err[key]) err[key] = e.message
+      })
+      setContactErrors(err)
+      return
+    }
     setFormSent(true)
     setFormName("")
     setFormEmail("")
     setFormSubject(subjects[0])
     setFormMessage("")
+    setContactErrors({})
     setTimeout(() => setFormSent(false), 4000)
   }
 
@@ -229,10 +248,11 @@ export function SettingsHelpPage({ onBack }: SettingsHelpPageProps) {
             <input
               type="text"
               value={formName}
-              onChange={(e) => setFormName(e.target.value)}
+              onChange={(e) => { setFormName(e.target.value); setContactErrors((p) => ({ ...p, name: undefined })) }}
               placeholder="Your name"
-              className="h-10 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className={cn("h-10 w-full rounded-xl border bg-muted px-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary", contactErrors.name ? "border-red-400" : "border-border")}
             />
+            {contactErrors.name && <p className="mt-1 text-xs text-red-500">{contactErrors.name}</p>}
           </div>
 
           {/* Email */}
@@ -241,17 +261,18 @@ export function SettingsHelpPage({ onBack }: SettingsHelpPageProps) {
             <input
               type="email"
               value={formEmail}
-              onChange={(e) => setFormEmail(e.target.value)}
+              onChange={(e) => { setFormEmail(e.target.value); setContactErrors((p) => ({ ...p, email: undefined })) }}
               placeholder="you@example.com"
-              className="h-10 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className={cn("h-10 w-full rounded-xl border bg-muted px-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary", contactErrors.email ? "border-red-400" : "border-border")}
             />
+            {contactErrors.email && <p className="mt-1 text-xs text-red-500">{contactErrors.email}</p>}
           </div>
 
           {/* Subject */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-foreground">Subject</label>
-            <Select value={formSubject} onValueChange={setFormSubject}>
-              <SelectTrigger className="h-10 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+            <Select value={formSubject} onValueChange={(v) => { setFormSubject(v); setContactErrors((p) => ({ ...p, subject: undefined })) }}>
+              <SelectTrigger className={cn("h-10 w-full rounded-xl border bg-muted px-4 text-sm", contactErrors.subject ? "border-red-400" : "border-border")}>
                 <SelectValue placeholder="Select subject" />
               </SelectTrigger>
               <SelectContent>
@@ -262,6 +283,7 @@ export function SettingsHelpPage({ onBack }: SettingsHelpPageProps) {
                 ))}
               </SelectContent>
             </Select>
+            {contactErrors.subject && <p className="mt-1 text-xs text-red-500">{contactErrors.subject}</p>}
           </div>
 
           {/* Message */}
@@ -269,19 +291,19 @@ export function SettingsHelpPage({ onBack }: SettingsHelpPageProps) {
             <label className="mb-1.5 block text-xs font-semibold text-foreground">Message</label>
             <textarea
               value={formMessage}
-              onChange={(e) => setFormMessage(e.target.value)}
+              onChange={(e) => { setFormMessage(e.target.value); setContactErrors((p) => ({ ...p, message: undefined })) }}
               placeholder="Describe your issue or question..."
               rows={4}
-              className="w-full resize-none rounded-xl border border-border bg-muted p-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className={cn("w-full resize-none rounded-xl border bg-muted p-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary", contactErrors.message ? "border-red-400" : "border-border")}
             />
+            {contactErrors.message && <p className="mt-1 text-xs text-red-500">{contactErrors.message}</p>}
           </div>
 
           {/* Submit */}
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!formName || !formEmail || !formMessage}
-            className="gradient-primary flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="gradient-primary flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
           >
             <Send className="h-4 w-4" />
             Send Message

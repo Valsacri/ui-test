@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Star, MapPin, Users, CalendarDays, BadgeCheck } from "lucide-react"
 
 interface BusinessCardProps {
@@ -32,12 +33,11 @@ export function BusinessCard({ business, onClick }: BusinessCardProps) {
     >
       <div className="relative h-36 overflow-hidden">
         {business.image ? (
-          <img
+          <Image
             src={business.image || "/placeholder.svg"}
             alt={business.name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            crossOrigin="anonymous"
-            loading="lazy"
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="h-full w-full gradient-primary flex items-center justify-center">

@@ -16,27 +16,23 @@ import {
   Trophy,
   X,
 } from "lucide-react"
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { authService } from "@/lib/services/auth"
+import { searchService } from "@/lib/services/search"
+import { messagesService } from "@/lib/services/messages"
+import { notificationsService } from "@/lib/services/notifications"
 import { cn } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
+import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
 
 // Inline defaults — no BE endpoints for topbar goals/conversations/notifications preview
 const goals = [
   { id: "g1", title: "Weekly Activity", progress: 3, target: 5, unit: "sessions" },
   { id: "g2", title: "Monthly Distance", progress: 18, target: 30, unit: "km" },
 ]
-const conversations = [
-  { id: "c1", name: "Jordan Rivera", avatar: "JR", lastMessage: "See you at practice!", time: "2m", unread: 2, online: true },
-  { id: "c2", name: "Emily Park", avatar: "EP", lastMessage: "Great game!", time: "1h", unread: 0, online: false },
-  { id: "c3", name: "David Kim", avatar: "DK", lastMessage: "When is the next session?", time: "3h", unread: 1, online: true },
-]
-const notifications = [
-  { id: "n1", type: "activity", title: "New Activity Nearby", message: "Basketball training at City Court", time: "5m ago", read: false },
-  { id: "n2", type: "social", title: "New Follower", message: "Jordan Rivera started following you", time: "1h ago", read: false },
-  { id: "n3", type: "booking", title: "Booking Confirmed", message: "Tennis session on Thursday 6pm", time: "2h ago", read: true },
-  { id: "n4", type: "achievement", title: "New Badge Earned!", message: "5-Day Streak Achievement", time: "1d ago", read: true },
-]
+// Conversations and notifications are loaded from API when dropdowns open (see useEffect below).
 
 type Business = {
   id: string;
@@ -86,9 +82,21 @@ export function TopBar({
   const [showMessages, setShowMessages] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const currentGoal = goals[0]
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchSuggestions, setSearchSuggestions] = useState<unknown>(null)
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [conversations, setConversations] = useState<Array<{ id: string; name: string; avatar: string; lastMessage: string; time: string; unread: number; online?: boolean }>>([])
+  const [conversationsLoading, setConversationsLoading] = useState(false)
+  const [notificationsList, setNotificationsList] = useState<Array<{ id: string; type: string; title: string; message: string; time: string; read: boolean }>>([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
 
+  const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const [user, setUser] = useState<{ firstName: string; lastName: string; email: string } | null>(null)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+  const [user, setUser] = useState<{ id?: string; firstName?: string; lastName?: string; email?: string } | null>(null)
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser()
@@ -96,6 +104,63 @@ export function TopBar({
       setUser(currentUser)
     }
   }, [])
+
+  useEffect(() => {
+    if (!showMessages || !user?.id) return
+    setConversationsLoading(true)
+    messagesService.getConversations(user.id)
+      .then((data: any[]) => {
+        const list = Array.isArray(data) ? data : []
+        setConversations(list.slice(0, 10).map((c: any) => ({
+          id: c.id || String(c),
+          name: c.name || c.participantNames?.[0] || "Conversation",
+          avatar: (c.name || "C").slice(0, 2).toUpperCase(),
+          lastMessage: c.lastMessageContent || c.lastMessage || "",
+          time: c.lastMessageAt ? formatTimeAgo(String(c.lastMessageAt)) : "",
+          unread: c.unreadCount ?? 0,
+          online: false,
+        })))
+      })
+      .catch(() => setConversations([]))
+      .finally(() => setConversationsLoading(false))
+  }, [showMessages, user?.id])
+
+  useEffect(() => {
+    if (!showNotifications || !user?.id) return
+    setNotificationsLoading(true)
+    notificationsService.getByUser(user.id)
+      .then((data: any) => {
+        const list = Array.isArray(data) ? data : (data?.content ?? [])
+        setNotificationsList(list.slice(0, 15).map((n: any) => ({
+          id: String(n.id),
+          type: n.type || "system",
+          title: String(n.title || ""),
+          message: String(n.message || ""),
+          time: n.createdAt ? formatTimeAgo(String(n.createdAt)) : "",
+          read: Boolean(n.read),
+        })))
+      })
+      .catch(() => setNotificationsList([]))
+      .finally(() => setNotificationsLoading(false))
+  }, [showNotifications, user?.id])
+
+  function formatTimeAgo(dateStr: string): string {
+    try {
+      const date = new Date(dateStr)
+      const now = new Date()
+      const diffMs = now.getTime() - date.getTime()
+      const diffMin = Math.floor(diffMs / 60_000)
+      if (diffMin < 1) return "Just now"
+      if (diffMin < 60) return `${diffMin}m ago`
+      const diffHrs = Math.floor(diffMin / 60)
+      if (diffHrs < 24) return `${diffHrs}h ago`
+      const diffDays = Math.floor(diffHrs / 24)
+      if (diffDays < 7) return `${diffDays}d ago`
+      return date.toLocaleDateString()
+    } catch {
+      return dateStr || ""
+    }
+  }
 
   const handleLogout = () => {
     authService.logout()
@@ -109,7 +174,43 @@ export function TopBar({
     setShowGoal(false)
     setShowMessages(false)
     setShowNotifications(false)
+    setShowSearchDropdown(false)
   }
+
+  // Debounced search suggestions when user types
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchSuggestions(null)
+      setShowSearchDropdown(false)
+      return
+    }
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    searchDebounceRef.current = setTimeout(() => {
+      searchService.getSuggestions(searchQuery, 8)
+        .then((data) => {
+          setSearchSuggestions(data)
+          setShowSearchDropdown(true)
+        })
+        .catch(() => setSearchSuggestions(null))
+    }, 300)
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    }
+  }, [searchQuery])
+
+  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault()
+    const q = searchQuery.trim()
+    if (!q) return
+    closeAll()
+    setIsSearching(true)
+    searchService.search({ query: q })
+      .then(() => {
+        router.push(`/explore?q=${encodeURIComponent(q)}`)
+      })
+      .catch(() => {})
+      .finally(() => setIsSearching(false))
+  }, [searchQuery, router])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -136,15 +237,51 @@ export function TopBar({
         <span className="hidden text-xl font-bold text-primary md:block">Sporgates</span>
       </button>
 
-      {/* Search */}
-      <div className="relative hidden max-w-md flex-1 md:block">
-        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search activities, facilities, people..."
-          aria-label="Search activities, facilities, people"
-          className="h-10 w-full rounded-full border border-border bg-muted pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
-        />
+      {/* Search — wired to searchService (SearchController) */}
+      <div ref={searchContainerRef} className="relative hidden max-w-md flex-1 md:block">
+        <form onSubmit={handleSearchSubmit} className="relative">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)}
+            placeholder="Search activities, facilities, people..."
+            aria-label="Search activities, facilities, people"
+            disabled={isSearching}
+            className="h-10 w-full rounded-full border border-border bg-muted pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+        </form>
+        {showSearchDropdown && searchSuggestions && (
+          <div
+            className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto rounded-xl border border-border bg-card py-2 shadow-lg"
+            role="listbox"
+          >
+            <p className="px-4 py-1 text-xs text-muted-foreground">Suggestions — press Enter to search</p>
+            {(() => {
+              const res = searchSuggestions as { suggestions?: string[]; results?: Record<string, Array<{ id?: string; title?: string }>> }
+              const suggestionsList = Array.isArray(res.suggestions)
+                ? res.suggestions.slice(0, 8).map((s) => ({ text: s, id: s }))
+                : res.results && typeof res.results === "object"
+                  ? Object.values(res.results).flat().slice(0, 8).map((r) => ({ text: r.title ?? r.id ?? "—", id: r.id ?? r.title ?? "" }))
+                  : []
+              return suggestionsList.map((item, i) => (
+                <button
+                  key={item.id || i}
+                  type="button"
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-muted"
+                  onClick={() => {
+                    setSearchQuery(item.text)
+                    setShowSearchDropdown(false)
+                    searchService.search({ query: item.text }).then(() => router.push(`/explore?q=${encodeURIComponent(item.text)}`)).catch(() => {})
+                  }}
+                >
+                  {item.text}
+                </button>
+              ))
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Right actions */}
@@ -256,36 +393,45 @@ export function TopBar({
                 </button>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {conversations.map((convo) => (
-                  <button
-                    type="button"
-                    key={convo.id}
-                    onClick={() => {
-                      closeAll()
-                      onNavigate("messages")
-                    }}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted"
-                  >
-                    <div className="relative shrink-0">
-                      <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-full text-xs font-bold text-white">
-                        {convo.avatar}
+                {conversationsLoading ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">Loading…</div>
+                ) : conversations.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <MessageCircle className="mb-2 h-10 w-10 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No conversations yet</p>
+                  </div>
+                ) : (
+                  conversations.map((convo) => (
+                    <button
+                      type="button"
+                      key={convo.id}
+                      onClick={() => {
+                        closeAll()
+                        onNavigate("messages")
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted"
+                    >
+                      <div className="relative shrink-0">
+                        <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-full text-xs font-bold text-white">
+                          {convo.avatar}
+                        </div>
+                        {convo.online && (
+                          <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
+                        )}
                       </div>
-                      {convo.online && (
-                        <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={cn("truncate text-sm", convo.unread > 0 ? "font-bold text-foreground" : "font-medium text-foreground")}>{convo.name}</p>
+                          <span className={cn("shrink-0 text-[11px]", convo.unread > 0 ? "font-semibold text-secondary" : "text-muted-foreground")}>{convo.time}</span>
+                        </div>
+                        <p className={cn("truncate text-xs", convo.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>{convo.lastMessage}</p>
+                      </div>
+                      {convo.unread > 0 && (
+                        <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
                       )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={cn("truncate text-sm", convo.unread > 0 ? "font-bold text-foreground" : "font-medium text-foreground")}>{convo.name}</p>
-                        <span className={cn("shrink-0 text-[11px]", convo.unread > 0 ? "font-semibold text-secondary" : "text-muted-foreground")}>{convo.time}</span>
-                      </div>
-                      <p className={cn("truncate text-xs", convo.unread > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>{convo.lastMessage}</p>
-                    </div>
-                    {convo.unread > 0 && (
-                      <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
-                    )}
-                  </button>
-                ))}
+                    </button>
+                  ))
+                )}
               </div>
               <div className="border-t border-border">
                 <button
@@ -329,12 +475,19 @@ export function TopBar({
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <h3 className="text-base font-bold text-foreground">Notifications</h3>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-secondary transition-colors hover:text-secondary/80"
-                  >
-                    Mark all read
-                  </button>
+                  {notificationsList.some((n) => !n.read) && user?.id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        notificationsService.markAllAsRead(user.id!).then(() => {
+                          setNotificationsList((prev) => prev.map((n) => ({ ...n, read: true })))
+                        }).catch(() => {})
+                      }}
+                      className="text-xs font-semibold text-secondary transition-colors hover:text-secondary/80"
+                    >
+                      Mark all read
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowNotifications(false)}
@@ -345,40 +498,49 @@ export function TopBar({
                 </div>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {notifications.map((notif) => {
-                  const Icon = notifTypeIcons[notif.type] || Bell
-                  return (
-                    <button
-                      type="button"
-                      key={notif.id}
-                      onClick={() => {
-                        closeAll()
-                        onNavigate("notifications")
-                      }}
-                      className={cn(
-                        "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted",
-                        !notif.read && "bg-secondary/5"
-                      )}
-                    >
-                      <div
+                {notificationsLoading ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">Loading…</div>
+                ) : notificationsList.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Bell className="mb-2 h-10 w-10 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No notifications yet</p>
+                  </div>
+                ) : (
+                  notificationsList.map((notif) => {
+                    const Icon = notifTypeIcons[notif.type] || Bell
+                    return (
+                      <button
+                        type="button"
+                        key={notif.id}
+                        onClick={() => {
+                          closeAll()
+                          onNavigate("notifications")
+                        }}
                         className={cn(
-                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                          !notif.read ? "gradient-secondary text-white" : "bg-muted text-muted-foreground"
+                          "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted",
+                          !notif.read && "bg-secondary/5"
                         )}
                       >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className={cn("text-sm", !notif.read ? "font-bold text-foreground" : "font-medium text-foreground")}>{notif.title}</p>
-                        <p className="truncate text-xs text-muted-foreground">{notif.message}</p>
-                        <p className={cn("mt-0.5 text-[11px]", !notif.read ? "font-semibold text-secondary" : "text-muted-foreground")}>{notif.time}</p>
-                      </div>
-                      {!notif.read && (
-                        <div className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
-                      )}
-                    </button>
-                  )
-                })}
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                            !notif.read ? "gradient-secondary text-white" : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className={cn("text-sm", !notif.read ? "font-bold text-foreground" : "font-medium text-foreground")}>{notif.title}</p>
+                          <p className="truncate text-xs text-muted-foreground">{notif.message}</p>
+                          <p className={cn("mt-0.5 text-[11px]", !notif.read ? "font-semibold text-secondary" : "text-muted-foreground")}>{notif.time}</p>
+                        </div>
+                        {!notif.read && (
+                          <div className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
+                        )}
+                      </button>
+                    )
+                  })
+                )}
               </div>
               <div className="border-t border-border">
                 <button
@@ -462,11 +624,11 @@ export function TopBar({
                       )}
                     >
                       <div className={cn(
-                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-base overflow-hidden",
+                        "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-base overflow-hidden",
                         biz.avatar && "bg-transparent"
                       )}>
                         {biz.avatar ? (
-                          <img src={biz.avatar} alt={biz.name} className="h-full w-full object-cover" />
+                          <Image src={biz.avatar} alt={biz.name} fill className="object-cover" sizes="36px" />
                         ) : (
                           biz.emoji || <Building2 className="h-4 w-4" />
                         )}
@@ -516,8 +678,8 @@ export function TopBar({
                 <button
                   type="button"
                   onClick={() => {
-                    handleLogout()
                     setShowProfileMenu(false)
+                    setShowLogoutConfirm(true)
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2 text-sm text-destructive transition-colors hover:bg-muted"
                 >
@@ -529,6 +691,16 @@ export function TopBar({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+        title="Sign Out?"
+        description="Are you sure you want to sign out? You'll need to sign in again to access your account."
+        confirmLabel="Sign Out"
+        variant="danger"
+        onConfirm={handleLogout}
+      />
     </header>
   )
 }

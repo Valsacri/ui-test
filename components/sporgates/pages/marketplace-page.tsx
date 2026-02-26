@@ -1,81 +1,52 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { Search, SlidersHorizontal, ShoppingBag, X, Trash2, Plus, Minus, Star, Loader2 } from "lucide-react"
-import { marketplaceService } from "@/lib/services"
+import { fetcher } from "@/lib/fetcher"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { MarketplaceFilterSidebar } from "@/components/sporgates/filters/marketplace-filter-sidebar"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loading-cards"
 
 import { CollectionsModal } from "@/components/sporgates/business/collections-modal"
 import { SortFilter } from "@/components/sporgates/filters/sort-filter"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { useCart } from "@/lib/cart-context"
 
 interface MarketplacePageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
   isBusinessMode?: boolean
 }
 
-interface CartItem {
-  productId: string
-  name: string
-  price: number
-  image: string
-  quantity: number
-}
-
 const categories = ["All", "Footwear", "Equipment", "Apparel", "Wearables", "Nutrition"]
 const priceRanges = ["Any Price", "Under $50", "$50-$100", "$100-$200", "Over $200"]
 
 export function MarketplacePage({ onNavigate, isBusinessMode = false }: MarketplacePageProps) {
+  const cart = useCart()
+  const cartItems = cart?.items ?? []
+  const cartTotal = cart?.cartTotal ?? 0
+  const cartCount = cart?.cartCount ?? 0
+  const updateQuantity = cart?.updateQuantity ?? (() => {})
+  const removeItem = cart?.removeItem ?? (() => {})
+
   const [activeCategory, setActiveCategory] = useState("All")
   const [showCart, setShowCart] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [priceRange, setPriceRange] = useState("Any Price")
-  const [products, setProducts] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
   const [showCollections, setShowCollections] = useState(false)
   const [sortBy, setSortBy] = useState("relevance")
   const [searchQuery, setSearchQuery] = useState("")
   const [visibleCount, setVisibleCount] = useState(9)
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { productId: "1", name: "Pro Basketball Shoes", price: 149.99, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop", quantity: 1 },
-    { productId: "4", name: "Smart Fitness Watch", price: 299.99, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=100&fit=crop", quantity: 1 },
-  ])
 
-  useEffect(() => {
-    setIsLoading(true)
-    marketplaceService.getAll().then((data) => {
-      if (Array.isArray(data) && data.length > 0) {
-        setProducts(data)
-      }
-      setIsLoading(false)
-    }).catch(() => {
-      setIsLoading(false)
-    })
-  }, [])
-
-  const updateQuantity = (productId: string, delta: number) => {
-    setCartItems((prev) =>
-      prev
-        .map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    )
-  }
-
-  const removeItem = (productId: string) => {
-    setCartItems((prev) => prev.filter((item) => item.productId !== productId))
-  }
-
-  const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const { data: products = [], error, isLoading, mutate } = useSWR<any[]>('/v1/products', fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10000,
+  })
 
   const filteredProducts = useMemo(() => {
     let result = products.filter((p) => {
@@ -308,6 +279,12 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
         <LoadingGrid>
           <LoadingProductCard />
         </LoadingGrid>
+      ) : error ? (
+        <ErrorState
+          title="Couldn't load products"
+          message="We ran into an issue fetching the marketplace items."
+          onRetry={() => mutate()}
+        />
       ) : filteredProducts.length === 0 ? (
         <EmptyState
           icon={ShoppingBag}
@@ -389,11 +366,12 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
                         key={item.productId}
                         className="flex gap-4 rounded-xl border border-border bg-card p-3"
                       >
-                        <img
+                        <Image
                           src={item.image}
                           alt={item.name}
-                          className="h-16 w-16 rounded-lg object-cover"
-                          crossOrigin="anonymous"
+                          width={64}
+                          height={64}
+                          className="rounded-lg object-cover"
                         />
                         <div className="flex-1">
                           <p className="text-sm font-semibold text-foreground">{item.name}</p>

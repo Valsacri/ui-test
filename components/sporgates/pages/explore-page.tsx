@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Search, SlidersHorizontal, MapPin, Building2, ArrowRight, Loader2, SearchX } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
+import { Search, SlidersHorizontal, MapPin, Building2, ArrowRight, SearchX } from "lucide-react"
 import { toast } from "sonner"
 import { useExplore } from "@/hooks/use-explore"
 import { activitiesService } from "@/lib/services/activities"
@@ -62,6 +63,7 @@ function LoadingGrid({ count = 3 }: { count?: number }) {
 }
 
 export function ExplorePage({ onNavigate }: ExplorePageProps) {
+  const searchParams = useSearchParams()
   const {
     activities,
     facilities,
@@ -81,6 +83,11 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
   } = useExplore()
 
   const [showFilters, setShowFilters] = useState(false)
+
+  useEffect(() => {
+    const q = searchParams.get("q")
+    if (q != null) setSearchQuery(q)
+  }, [searchParams, setSearchQuery])
   const [showMap, setShowMap] = useState(false)
   const [joinedRecommendations, setJoinedRecommendations] = useState<string[]>([])
   const isMobile = useIsMobile()
@@ -115,9 +122,7 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-11 w-full rounded-full border border-border bg-card pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
-            {loading && searchQuery && (
-              <Loader2 className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-            )}
+            {/* No spinner here when loading: the skeleton grid below is the single loading indicator. */}
           </div>
           <button
             type="button"

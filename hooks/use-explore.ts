@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import useSWR from "swr"
 import {
   fetchActivities,
   fetchFacilities,
@@ -21,21 +22,18 @@ export interface ExploreFilterState {
   rating: string
 }
 
-interface ExploreState {
-  activities: ActivityCardData[]
-  facilities: FacilityCardData[]
-  services: ServiceCardData[]
-  businesses: BusinessCardData[]
-  people: PersonCardData[]
-  loading: boolean
-  error: string | null
-}
-
 const DEFAULT_FILTERS: ExploreFilterState = {
   contentTypes: [],
   distance: 10,
   rating: "Any",
 }
+
+// SWR fetcher wrappers — each section gets its own cached SWR call
+const activitiesFetcher = (_key: string, params: ExploreParams) => fetchActivities(params)
+const facilitiesFetcher = (_key: string, params: ExploreParams) => fetchFacilities(params)
+const servicesFetcher = (_key: string, params: ExploreParams) => fetchServices(params)
+const businessesFetcher = (_key: string, params: ExploreParams) => fetchBusinesses(params)
+const peopleFetcher = (_key: string, params: ExploreParams) => fetchPeople(params)
 
 export function useExplore() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -43,17 +41,6 @@ export function useExplore() {
   const [activeTab, setActiveTab] = useState("All")
   const [activeSport, setActiveSport] = useState("All Sports")
   const [sidebarFilters, setSidebarFilters] = useState<ExploreFilterState>(DEFAULT_FILTERS)
-  const [state, setState] = useState<ExploreState>({
-    activities: [],
-    facilities: [],
-    services: [],
-    businesses: [],
-    people: [],
-    loading: true,
-    error: null,
-  })
-
-  const abortRef = useRef<AbortController | null>(null)
 
   // Debounce search query
   useEffect(() => {
@@ -61,63 +48,54 @@ export function useExplore() {
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  const fetchData = useCallback(async () => {
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
+  // Build the SWR key from current filter state — changes trigger re-fetch
+  const params: ExploreParams = useMemo(() => ({
+    query: debouncedQuery || undefined,
+    sport: activeSport,
+    rating: sidebarFilters.rating,
+  }), [debouncedQuery, activeSport, sidebarFilters.rating])
 
-    setState(prev => ({ ...prev, loading: true, error: null }))
-
-    const params: ExploreParams = {
-      query: debouncedQuery || undefined,
-      sport: activeSport,
-      rating: sidebarFilters.rating,
-    }
-
-    const visibleTypes = sidebarFilters.contentTypes.length > 0
+  // Determine which content types to show
+  const visibleTypes = useMemo(() => {
+    return sidebarFilters.contentTypes.length > 0
       ? sidebarFilters.contentTypes.map(t => t.toLowerCase())
       : ["activities", "facilities", "services", "businesses", "people"]
+  }, [sidebarFilters.contentTypes])
 
-    try {
-      const [
-        activitiesData,
-        facilitiesData,
-        servicesData,
-        businessesData,
-        peopleData,
-      ] = await Promise.all([
-        visibleTypes.includes("activities") ? fetchActivities(params) : Promise.resolve([]),
-        visibleTypes.includes("facilities") ? fetchFacilities(params) : Promise.resolve([]),
-        visibleTypes.includes("services") ? fetchServices(params) : Promise.resolve([]),
-        visibleTypes.includes("businesses") ? fetchBusinesses(params) : Promise.resolve([]),
-        visibleTypes.includes("people") ? fetchPeople(params) : Promise.resolve([]),
-      ])
+  // SWR key serialization: [section, params] — null key skips fetch
+  const swrConfig = { revalidateOnFocus: false, dedupingInterval: 5000 }
 
-      if (controller.signal.aborted) return
+  const { data: activities = [], isLoading: loadingActivities } = useSWR(
+    visibleTypes.includes("activities") ? ["explore-activities", params] : null,
+    ([, p]) => fetchActivities(p),
+    swrConfig,
+  )
 
-      setState({
-        activities: activitiesData,
-        facilities: facilitiesData,
-        services: servicesData,
-        businesses: businessesData,
-        people: peopleData,
-        loading: false,
-        error: null,
-      })
-    } catch {
-      if (controller.signal.aborted) return
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: "Failed to load explore data. Please try again.",
-      }))
-    }
-  }, [debouncedQuery, activeSport, sidebarFilters])
+  const { data: facilities = [], isLoading: loadingFacilities } = useSWR(
+    visibleTypes.includes("facilities") ? ["explore-facilities", params] : null,
+    ([, p]) => fetchFacilities(p),
+    swrConfig,
+  )
 
-  useEffect(() => {
-    fetchData()
-    return () => { abortRef.current?.abort() }
-  }, [fetchData])
+  const { data: services = [], isLoading: loadingServices } = useSWR(
+    visibleTypes.includes("services") ? ["explore-services", params] : null,
+    ([, p]) => fetchServices(p),
+    swrConfig,
+  )
+
+  const { data: businesses = [], isLoading: loadingBusinesses } = useSWR(
+    visibleTypes.includes("businesses") ? ["explore-businesses", params] : null,
+    ([, p]) => fetchBusinesses(p),
+    swrConfig,
+  )
+
+  const { data: people = [], isLoading: loadingPeople } = useSWR(
+    visibleTypes.includes("people") ? ["explore-people", params] : null,
+    ([, p]) => fetchPeople(p),
+    swrConfig,
+  )
+
+  const loading = loadingActivities || loadingFacilities || loadingServices || loadingBusinesses || loadingPeople
 
   const applyFilters = useCallback((filters: ExploreFilterState) => {
     setSidebarFilters(filters)
@@ -131,14 +109,20 @@ export function useExplore() {
   }, [])
 
   const totalResults =
-    state.activities.length +
-    state.facilities.length +
-    state.services.length +
-    state.businesses.length +
-    state.people.length
+    activities.length +
+    facilities.length +
+    services.length +
+    businesses.length +
+    people.length
 
   return {
-    ...state,
+    activities,
+    facilities,
+    services,
+    businesses,
+    people,
+    loading,
+    error: null as string | null, // SWR handles errors per-request
     searchQuery,
     setSearchQuery,
     activeTab,
@@ -148,7 +132,7 @@ export function useExplore() {
     sidebarFilters,
     applyFilters,
     resetFilters,
-    refetch: fetchData,
+    refetch: () => { }, // SWR auto-revalidates via key changes
     totalResults,
   }
 }

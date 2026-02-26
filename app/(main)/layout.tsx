@@ -1,17 +1,22 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { usePathname } from "next/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
 import { FeedSidebar } from "@/components/sporgates/feed-sidebar"
 import { BottomNav } from "@/components/sporgates/bottom-nav"
 import { AuthGuard } from "@/components/sporgates/auth-guard"
-import { useBusinessContext } from "@/lib/business-context"
+import { ErrorBoundary } from "@/components/sporgates/ux/error-boundary"
+import { BusinessProvider, useBusinessContext } from "@/lib/business-context"
+import { CartProvider } from "@/lib/cart-context"
 import { useAppRouter } from "@/lib/route-map"
 import { notificationsService } from "@/lib/services/notifications"
+import { messagesService } from "@/lib/services/messages"
 import { authService } from "@/lib/services/auth"
+import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
 import type { PageRoute } from "@/lib/navigation"
+
 
 /** Determines the current PageRoute from the URL pathname */
 function pathnameToPageRoute(pathname: string): PageRoute {
@@ -97,6 +102,18 @@ export default function MainLayout({
 }: {
     children: React.ReactNode
 }) {
+    return (
+        <BusinessProvider>
+            <AuthGuard>
+                <CartProvider>
+                    <MainLayoutInner>{children}</MainLayoutInner>
+                </CartProvider>
+            </AuthGuard>
+        </BusinessProvider>
+    )
+}
+
+function MainLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
     const currentPage = pathnameToPageRoute(pathname)
     const { navigate } = useAppRouter()
@@ -109,15 +126,28 @@ export default function MainLayout({
         createNewBusiness,
     } = useBusinessContext()
 
-    const isMessages = currentPage === "messages" || currentPage === "conversation"
-    const showSidebars = !isMessages
+    const showSidebars = true
     const showRightSidebar =
         showSidebars && !isBusinessMode && !hideRightSidebarPages.includes(currentPage)
 
     const [unreadNotifications, setUnreadNotifications] = useState(0)
+    const [unreadMessages, setUnreadMessages] = useState(0)
+
+    const refetchNotificationCount = useCallback(() => {
+        const u = authService.getCurrentUser()
+        if (!u?.id) return
+        notificationsService.getUnreadCount(u.id)
+            .then((data) => {
+                const count = typeof data === 'number' ? data : (data?.count ?? 0)
+                setUnreadNotifications(count)
+            })
+            .catch(() => {})
+    }, [])
+
+    const user = authService.getCurrentUser()
+    useNotificationStream(user?.id ?? null, refetchNotificationCount)
 
     useEffect(() => {
-        const user = authService.getCurrentUser()
         if (user?.id) {
             notificationsService.getUnreadCount(user.id)
                 .then((data) => {
@@ -125,42 +155,48 @@ export default function MainLayout({
                     setUnreadNotifications(count)
                 })
                 .catch(() => { })
+            messagesService.getUnreadCount(user.id)
+                .then((data: { unreadCount?: number }) => {
+                    setUnreadMessages(data?.unreadCount ?? 0)
+                })
+                .catch(() => { })
         }
-    }, [])
+    }, [user?.id])
 
     return (
-        <AuthGuard>
-            <div className="min-h-screen bg-background">
-                <TopBar
-                    onNavigate={navigate}
-                    isBusinessMode={isBusinessMode}
-                    businesses={businesses}
-                    activeBusinessId={activeBusinessId}
-                    onSwitchBusiness={switchBusiness}
-                    onSwitchToUser={switchToUser}
-                    onCreateNewBusiness={createNewBusiness}
-                    unreadMessages={0}
-                    unreadNotifications={unreadNotifications}
-                />
-                <div className="flex">
-                    {showSidebars && (
-                        <ExploreSidebar
-                            currentPage={currentPage}
-                            onNavigate={navigate}
-                            isBusinessMode={isBusinessMode}
-                        />
-                    )}
-                    <main className="min-w-0 flex-1 p-4 lg:p-6">
+        <div className="min-h-screen bg-background">
+            <TopBar
+                onNavigate={navigate}
+                isBusinessMode={isBusinessMode}
+                businesses={businesses}
+                activeBusinessId={activeBusinessId}
+                onSwitchBusiness={switchBusiness}
+                onSwitchToUser={switchToUser}
+                onCreateNewBusiness={createNewBusiness}
+                unreadMessages={unreadMessages}
+                unreadNotifications={unreadNotifications}
+            />
+            <div className="flex">
+                {showSidebars && (
+                    <ExploreSidebar
+                        currentPage={currentPage}
+                        onNavigate={navigate}
+                        isBusinessMode={isBusinessMode}
+                    />
+                )}
+                <main className="min-w-0 flex-1 p-4 lg:p-6">
+                    <ErrorBoundary>
                         {children}
-                    </main>
-                    {showRightSidebar && <FeedSidebar onNavigate={navigate} />}
-                </div>
-                <BottomNav
-                    currentPage={currentPage}
-                    onNavigate={navigate}
-                    isBusinessMode={isBusinessMode}
-                />
+                    </ErrorBoundary>
+                </main>
+                {showRightSidebar && <FeedSidebar onNavigate={navigate} />}
             </div>
-        </AuthGuard>
+            <BottomNav
+                currentPage={currentPage}
+                onNavigate={navigate}
+                isBusinessMode={isBusinessMode}
+            />
+        </div>
     )
 }
+

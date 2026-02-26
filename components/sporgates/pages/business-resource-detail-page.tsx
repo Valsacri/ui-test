@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import {
   ArrowLeft,
   Star,
@@ -37,34 +39,19 @@ interface BusinessResourceDetailPageProps {
 }
 
 export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigate }: BusinessResourceDetailPageProps) {
-  const [data, setData] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [activeImage, setActiveImage] = useState(0)
 
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    setError(null)
-
-    const fetch = async () => {
-      try {
-        let result: any
-        if (resourceType === "facility") result = await facilitiesService.getById(resourceId)
-        else if (resourceType === "product") result = await marketplaceService.getById(resourceId)
-        else result = await servicesService.getById(resourceId)
-        if (!cancelled) setData(result)
-      } catch {
-        if (!cancelled) setError("Failed to load resource details.")
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-    fetch()
-    return () => { cancelled = true }
-  }, [resourceId, resourceType])
+  const { data, error, isLoading } = useSWR(
+    resourceId ? `/${resourceType}s/${resourceId}` : null,
+    async () => {
+      if (resourceType === "facility") return facilitiesService.getById(resourceId)
+      if (resourceType === "product") return marketplaceService.getById(resourceId)
+      return servicesService.getById(resourceId)
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   const goBack = () => onNavigate("business-resources", resourceType)
   const goEdit = () => onNavigate("edit-resource", `${resourceType}--${resourceId}`)
@@ -139,11 +126,12 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
       {/* Hero Image */}
       <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
         {images.length > 0 ? (
-          <img
+          <Image
             src={images[activeImage] || images[0]}
             alt={name}
-            className="h-full w-full object-cover transition-opacity duration-300"
-            crossOrigin="anonymous"
+            fill
+            className="object-cover transition-opacity duration-300"
+            sizes="(max-width: 768px) 100vw, 66vw"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted">
@@ -165,7 +153,7 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
                 activeImage === idx ? "border-primary ring-2 ring-primary/20" : "border-border opacity-70 hover:opacity-100"
               )}
             >
-              <img src={img} alt={`${name} ${idx + 1}`} className="h-full w-full object-cover" crossOrigin="anonymous" />
+              <Image src={img} alt={`${name} ${idx + 1}`} fill className="object-cover" sizes="64px" />
             </button>
           ))}
         </div>

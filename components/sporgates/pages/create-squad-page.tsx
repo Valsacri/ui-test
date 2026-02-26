@@ -13,6 +13,7 @@ import {
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { createSquadSchema, type CreateSquadFormData } from "@/lib/validations/forms"
 import { sportService } from "@/lib/services/sport"
 import { userService } from "@/lib/services/user"
 import {
@@ -36,6 +37,7 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
         description: "",
         maxMembers: "20",
     })
+    const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CreateSquadFormData, string>>>({})
     const [privacy, setPrivacy] = useState<"public" | "private">("public")
     const [invitedPeople, setInvitedPeople] = useState<string[]>([])
     const [searchQuery, setSearchQuery] = useState("")
@@ -63,8 +65,20 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
     )
 
     const handleSubmit = () => {
-        if (!formData.name || !formData.sport) {
-            toast.error("Please fill in squad name and sport")
+        setFieldErrors({})
+        const result = createSquadSchema.safeParse({
+            name: formData.name,
+            sport: formData.sport,
+            description: formData.description,
+            maxMembers: formData.maxMembers,
+        })
+        if (!result.success) {
+            const err: Partial<Record<keyof CreateSquadFormData, string>> = {}
+            result.error.errors.forEach((e) => {
+                const key = e.path[0] as keyof CreateSquadFormData
+                if (key && !err[key]) err[key] = e.message
+            })
+            setFieldErrors(err)
             return
         }
         toast.success("Squad created successfully!")
@@ -104,10 +118,11 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
                             <input
                                 type="text"
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFieldErrors((p) => ({ ...p, name: undefined })) }}
                                 placeholder="e.g., Thunder Hawks"
-                                className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                                className={cn("h-11 w-full rounded-xl border bg-muted px-4 text-sm outline-none focus:border-primary", fieldErrors.name ? "border-red-400" : "border-border")}
                             />
+                            {fieldErrors.name && <p className="mt-1 text-xs text-red-500">{fieldErrors.name}</p>}
                         </div>
                     </div>
                 </div>
@@ -115,9 +130,9 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
                     <label className="mb-1.5 block text-xs font-medium text-foreground">Sport</label>
                     <Select
                         value={formData.sport}
-                        onValueChange={(val) => setFormData({ ...formData, sport: val })}
+                        onValueChange={(val) => { setFormData({ ...formData, sport: val }); setFieldErrors((p) => ({ ...p, sport: undefined })) }}
                     >
-                        <SelectTrigger className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm">
+                        <SelectTrigger className={cn("h-11 w-full rounded-xl border bg-muted px-4 text-sm", fieldErrors.sport ? "border-red-400" : "border-border")}>
                             <SelectValue placeholder="Select a sport" />
                         </SelectTrigger>
                         <SelectContent>
@@ -128,6 +143,7 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
                             ))}
                         </SelectContent>
                     </Select>
+                    {fieldErrors.sport && <p className="mt-1 text-xs text-red-500">{fieldErrors.sport}</p>}
                 </div>
             </div>
 

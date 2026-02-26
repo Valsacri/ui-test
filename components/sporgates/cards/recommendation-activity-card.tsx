@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Calendar, MapPin, Users, Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -38,8 +39,8 @@ export function RecommendationActivityCard({
   return (
     <div className="flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md">
       {image && (
-        <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
-          <img src={image} alt={title} className="h-full w-full object-cover" loading="lazy" />
+        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
+          <Image src={image} alt={title} className="object-cover" fill sizes="80px" />
         </div>
       )}
 

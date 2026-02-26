@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react"
 import { businessesService } from "@/lib/services/businesses"
 import { authService } from "@/lib/services/auth"
 import { notificationsService } from "@/lib/services/notifications"
+import { messagesService } from "@/lib/services/messages"
 import type { PageRoute } from "@/lib/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
@@ -137,6 +138,11 @@ export function AppShell() {
         .then((data) => {
           const count = typeof data === 'number' ? data : (data?.count ?? 0)
           setUnreadNotifications(count)
+        })
+        .catch(() => { })
+      messagesService.getUnreadCount(user.id)
+        .then((data: { unreadCount?: number }) => {
+          setUnreadMessages(data?.unreadCount ?? 0)
         })
         .catch(() => { })
     }

@@ -1,28 +1,93 @@
 "use client"
 
 import { useState } from "react"
+import useSWR from "swr"
 import { ArrowLeft, Search, UserX, ShieldOff } from "lucide-react"
+import { toast } from "sonner"
+import { authService, userService } from "@/lib/services"
+import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 
 interface SettingsBlockedPageProps {
   onBack: () => void
 }
 
-const initialBlockedUsers = [
-  { id: "1", name: "Jordan Rivera", avatar: "JR", reason: "Spam", blockedDate: "Jan 15, 2026" },
-  { id: "2", name: "Maya Chen", avatar: "MC", reason: "Harassment", blockedDate: "Dec 20, 2025" },
-  { id: "3", name: "Tom Wilson", avatar: "TW", reason: "Inappropriate content", blockedDate: "Nov 10, 2025" },
-]
-
 export function SettingsBlockedPage({ onBack }: SettingsBlockedPageProps) {
-  const [blockedUsers, setBlockedUsers] = useState(initialBlockedUsers)
   const [query, setQuery] = useState("")
+  const [unblockTarget, setUnblockTarget] = useState<string | null>(null)
+
+  const user = authService.getCurrentUser()
+  const userId = user?.id
+
+  const { data: rawList = [], error, isLoading, mutate } = useSWR(
+    userId ? `/users/${userId}/blocked` : null,
+    () => userService.getBlockedUsers(userId!, { size: 100 }),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const blockedUsers = rawList.map((u: any) => ({
+    id: u.id,
+    name: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "Unknown",
+    avatar: (u.firstName?.[0] || "") + (u.lastName?.[0] || "") || (u.username?.[0] || "?").toUpperCase(),
+    blockedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
+  }))
 
   const filteredUsers = blockedUsers.filter((u) =>
     u.name.toLowerCase().includes(query.toLowerCase())
   )
 
-  const unblock = (id: string) => {
-    setBlockedUsers((prev) => prev.filter((u) => u.id !== id))
+  const unblock = async (id: string) => {
+    if (!userId) return
+    const target = blockedUsers.find((u) => u.id === id)
+    try {
+      await userService.unblockUser(userId, id)
+      toast.success(`${target?.name || "User"} has been unblocked`)
+      mutate()
+    } catch {
+      toast.error("Failed to unblock user")
+    }
+    setUnblockTarget(null)
+  }
+
+  if (!userId) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <button type="button" onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" /> Back to Settings
+        </button>
+        <p className="text-sm text-muted-foreground">Sign in to manage blocked users.</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <button type="button" onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" /> Back to Settings
+        </button>
+        <ErrorState message="Failed to load blocked users" onRetry={() => mutate()} />
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <button type="button" onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" /> Back to Settings
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Blocked Users</h1>
+          <p className="text-sm text-muted-foreground">Manage accounts you have blocked</p>
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 animate-pulse rounded-2xl border border-border bg-card" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -74,15 +139,13 @@ export function SettingsBlockedPage({ onBack }: SettingsBlockedPageProps) {
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">{user.name}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Reason: {user.reason}</span>
-                  <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-                  <span>Blocked {user.blockedDate}</span>
-                </div>
+                {user.blockedDate && (
+                  <p className="text-xs text-muted-foreground">Blocked {user.blockedDate}</p>
+                )}
               </div>
               <button
                 type="button"
-                onClick={() => unblock(user.id)}
+                onClick={() => setUnblockTarget(user.id)}
                 className="flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
               >
                 <UserX className="h-3.5 w-3.5" />
@@ -99,6 +162,16 @@ export function SettingsBlockedPage({ onBack }: SettingsBlockedPageProps) {
           They will not be notified that you blocked them.
         </p>
       </div>
+
+      <ConfirmDialog
+        open={!!unblockTarget}
+        onOpenChange={(open) => { if (!open) setUnblockTarget(null) }}
+        title="Unblock User?"
+        description={`This user will be able to see your profile, send you messages, and invite you to activities again.`}
+        confirmLabel="Unblock"
+        variant="warning"
+        onConfirm={() => { if (unblockTarget) unblock(unblockTarget) }}
+      />
     </div>
   )
 }

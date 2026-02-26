@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
+import useSWR from "swr"
 import {
   Bell,
   CalendarDays,
@@ -67,23 +68,15 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
+  const user = authService.getCurrentUser()
 
-  const fetchNotifications = async () => {
-    const user = authService.getCurrentUser()
-    if (!user?.id) {
-      setIsLoading(false)
-      return
-    }
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await notificationsService.getByUser(user.id)
+  const { data: rawNotifications, error, isLoading, mutate: mutateNotifications } = useSWR(
+    user?.id ? `/notifications/user/${user.id}` : null,
+    async (url: string) => {
+      const data = await notificationsService.getByUser(user!.id)
       const list = Array.isArray(data) ? data : (data?.content || [])
-      setNotifications(list.map((n: Record<string, unknown>) => ({
+      return list.map((n: Record<string, unknown>) => ({
         id: String(n.id),
         type: (n.type as Notification["type"]) || "system",
         title: String(n.title || ""),
@@ -92,41 +85,44 @@ export function NotificationsPage() {
         read: Boolean(n.read),
         userName: String(n.senderName || n.referenceType || "Sporgates"),
         userAvatar: String(n.senderName || n.referenceType || "SG").substring(0, 2).toUpperCase(),
-      })))
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err)
-      setError("Failed to load notifications")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      }))
+    },
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
+  const notifications: Notification[] = rawNotifications || []
 
   const unreadCount = notifications.filter((n) => !n.read).length
   const displayedNotifications =
     activeTab === "unread" ? notifications.filter((n) => !n.read) : notifications
 
   const handleMarkAllRead = async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-    const user = authService.getCurrentUser()
+    // Optimistic update
+    mutateNotifications(
+      notifications.map((n: Notification) => ({ ...n, read: true })),
+      false
+    )
     if (user?.id) {
       try {
         await notificationsService.markAllAsRead(user.id)
         toast.success("All notifications marked as read")
       } catch {
         toast.error("Failed to mark notifications as read")
+        mutateNotifications() // revert on failure
       }
     }
   }
 
   const handleToggleRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
+    // Optimistic update
+    mutateNotifications(
+      notifications.map((n: Notification) => (n.id === id ? { ...n, read: !n.read } : n)),
+      false
     )
-    notificationsService.markAsRead(id).catch(() => { })
+    notificationsService.markAsRead(id).catch(() => {
+      toast.error("Failed to update notification")
+      mutateNotifications() // revert on failure
+    })
   }
 
   if (isLoading) {
@@ -146,7 +142,7 @@ export function NotificationsPage() {
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={fetchNotifications} />
+    return <ErrorState message="Failed to load notifications" onRetry={() => mutateNotifications()} />
   }
 
   return (

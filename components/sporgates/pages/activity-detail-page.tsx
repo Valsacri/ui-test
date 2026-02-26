@@ -11,7 +11,9 @@ import {
   Heart,
   CheckCircle,
 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { activitiesService } from "@/lib/services/activities"
 import { TicketModal } from "@/components/sporgates/attendance/ticket-modal"
 import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
@@ -67,27 +69,13 @@ function formatTime(dateVal: any): string {
 }
 
 export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPageProps) {
-  const [activity, setActivity] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
   const [showTicket, setShowTicket] = useState(false)
 
-  useEffect(() => {
-    const fetchActivity = async () => {
-      setLoading(true)
-      setError("")
-      try {
-        const data = await activitiesService.getById(activityId)
-        setActivity(data)
-      } catch (err) {
-        console.error("Failed to fetch activity:", err)
-        setError("Activity not found")
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchActivity()
-  }, [activityId])
+  const { data: activity, error, isLoading: loading } = useSWR(
+    activityId ? `/activities/${activityId}` : null,
+    () => activitiesService.getById(activityId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
   if (loading) {
     return <DetailPageSkeleton />
@@ -95,27 +83,20 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
 
   if (error || !activity) {
     return (
-      <ErrorState
-        title="Activity not found"
-        message={error || "The activity you're looking for doesn't exist or has been removed."}
-        onRetry={() => onNavigate("activities")}
-      />
-    )
-  }
-
-  if (error || !activity) {
-    return (
-      <div className="space-y-4 py-10 text-center">
-        <p className="text-lg font-semibold text-foreground">Activity not found</p>
-        <p className="text-sm text-muted-foreground">The activity you're looking for doesn't exist or has been removed.</p>
+      <div className="space-y-6 pb-20 lg:pb-0">
         <button
           type="button"
           onClick={() => onNavigate("activities")}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Activities
         </button>
+        <ErrorState
+          title="Activity not found"
+          message={error || "The activity you're looking for doesn't exist or has been removed."}
+          onRetry={() => onNavigate("activities")}
+        />
       </div>
     )
   }
@@ -159,11 +140,12 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
 
       {/* Hero Image */}
       <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
-        <img
+        <Image
           src={image}
           alt={title}
-          className="h-full w-full object-cover"
-          crossOrigin="anonymous"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 66vw"
         />
         <div className="absolute right-4 top-4 flex gap-2">
           <button
@@ -248,7 +230,7 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {organizerAvatar ? (
-                  <img src={organizerAvatar} alt={organizerName} className="h-12 w-12 rounded-full object-cover" />
+                  <Image src={organizerAvatar} alt={organizerName} width={48} height={48} className="rounded-full object-cover" />
                 ) : (
                   <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white">
                     {organizerInitials}

@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import useSWR from "swr"
 import { Users, Calendar, Trophy, TrendingUp, ChevronRight } from "lucide-react"
 import { DashboardSkeleton } from "@/components/sporgates/ux/page-skeleton"
-import { squadService, activitiesService } from "@/lib/services"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
+import { squadService, activitiesService, authService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
 
 interface SquadDashboardPageProps {
@@ -11,38 +12,66 @@ interface SquadDashboardPageProps {
 }
 
 export function SquadDashboardPage({ onNavigate }: SquadDashboardPageProps) {
-  const [squad, setSquad] = useState<any>(null)
-  const [activities, setActivities] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const currentUser = authService.getCurrentUser()
+  const userId = currentUser?.id ?? ""
 
-  useEffect(() => {
-    setIsLoading(true)
-    Promise.allSettled([
-      squadService.search(""),
-      activitiesService.getAll(),
-    ]).then(([squadsResult, activitiesResult]) => {
-      if (squadsResult.status === "fulfilled" && Array.isArray(squadsResult.value) && squadsResult.value.length > 0) {
-        setSquad(squadsResult.value[0])
-      }
-      if (activitiesResult.status === "fulfilled" && Array.isArray(activitiesResult.value)) {
-        setActivities(activitiesResult.value.slice(0, 3))
-      }
-    }).finally(() => setIsLoading(false))
-  }, [])
+  const { data: squadsRaw, error: squadsError, isLoading: sqLoading, mutate: mutateSquads } = useSWR(
+    userId ? `/squads/user/${userId}` : null,
+    () => squadService.getByUser(userId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-  if (isLoading) {
+  const squad = Array.isArray(squadsRaw) && squadsRaw.length > 0 ? squadsRaw[0] : null
+  const squadId = squad?.id
+
+  const { data: actRaw = [], isLoading: actLoading } = useSWR(
+    squad ? `/activities/squad-dash` : null,
+    () => activitiesService.getAll(),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const isLoading = sqLoading || actLoading
+  const activities = Array.isArray(actRaw) ? actRaw.slice(0, 3) : []
+
+  if (isLoading && !squad) {
     return <DashboardSkeleton />
+  }
+
+  if (squadsError) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <h1 className="text-2xl font-bold text-foreground">Squad Dashboard</h1>
+        <ErrorState
+          title="Couldn't load squads"
+          message={squadsError?.message || "Something went wrong. Please try again."}
+          onRetry={() => mutateSquads()}
+        />
+      </div>
+    )
+  }
+
+  if (!userId) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <h1 className="text-2xl font-bold text-foreground">Squad Dashboard</h1>
+        <ErrorState
+          title="Sign in required"
+          message="Sign in to view your squad dashboard."
+          onRetry={() => onNavigate("community")}
+        />
+      </div>
+    )
   }
 
   if (!squad) {
     return (
       <div className="space-y-6 pb-20 lg:pb-0">
         <h1 className="text-2xl font-bold text-foreground">Squad Dashboard</h1>
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Users className="mb-3 h-12 w-12 text-muted-foreground/40" />
-          <h3 className="text-sm font-semibold text-foreground">No squad found</h3>
-          <p className="text-xs text-muted-foreground">Create or join a squad to get started</p>
-        </div>
+        <ErrorState
+          title="No squad yet"
+          message="Create or join a squad from Community to get started."
+          onRetry={() => onNavigate("community")}
+        />
       </div>
     )
   }

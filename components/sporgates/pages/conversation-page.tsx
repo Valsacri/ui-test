@@ -1,8 +1,11 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
-import { ArrowLeft, Send, Phone, Video, MoreVertical, Loader2 } from "lucide-react"
+import { useMemo, useState, useEffect, useRef } from "react"
+import { ArrowLeft, Send, Phone, Video, MoreVertical } from "lucide-react"
+import { toast } from "sonner"
 import { messagesService, authService } from "@/lib/services"
+import { subscribeToConversation, sendMessageOverWs, type MessagePayload } from "@/lib/messaging-ws"
+import { ConversationThreadSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import type { PageRoute } from "@/lib/navigation"
 
 interface ConversationPageProps {
@@ -15,22 +18,25 @@ export function ConversationPage({ conversationId, onNavigate }: ConversationPag
   const [messages, setMessages] = useState<any[]>([])
   const [conversationInfo, setConversationInfo] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const messageIdsRef = useRef<Set<string>>(new Set())
 
   const currentUser = useMemo(() => authService.getCurrentUser(), [])
 
+  // Initial load + conversation info
   useEffect(() => {
     if (!conversationId) return
     setIsLoading(true)
+    messageIdsRef.current = new Set()
 
     messagesService.getMessages(conversationId).then((data) => {
       if (Array.isArray(data)) {
         setMessages(data)
+        data.forEach((m: any) => m.id && messageIdsRef.current.add(m.id))
       }
     }).catch(() => {
       setMessages([])
     }).finally(() => setIsLoading(false))
 
-    // Try to get conversation info from conversations list
     if (currentUser?.id) {
       messagesService.getConversations(currentUser.id).then((convos) => {
         if (Array.isArray(convos)) {
@@ -41,21 +47,45 @@ export function ConversationPage({ conversationId, onNavigate }: ConversationPag
     }
   }, [conversationId, currentUser?.id])
 
+  // Real-time: subscribe to WebSocket for this conversation
+  useEffect(() => {
+    if (!conversationId || !currentUser?.id) return
+    const unsub = subscribeToConversation(
+      conversationId,
+      (msg: MessagePayload) => {
+        if (messageIdsRef.current.has(msg.id)) return
+        messageIdsRef.current.add(msg.id)
+        setMessages((prev) => [...prev, { ...msg, createdAt: msg.createdAt, content: msg.content, senderId: msg.senderId, id: msg.id }])
+      }
+    )
+    return unsub
+  }, [conversationId, currentUser?.id])
+
   const handleSendMessage = async () => {
     if (!message.trim() || !currentUser?.id) return
+    const content = message.trim()
+    setMessage("")
+
+    const sentOverWs = sendMessageOverWs(conversationId, {
+      senderId: currentUser.id,
+      senderName: currentUser.firstName || currentUser.username || "",
+      content,
+    })
+    if (sentOverWs) return
 
     try {
       const sent = await messagesService.sendMessage({
         conversationId,
         senderId: currentUser.id,
-        content: message.trim(),
+        content,
       })
-      if (sent) {
-        setMessages((prev) => [...prev, sent])
-        setMessage("")
+      if (sent && !messageIdsRef.current.has((sent as any).id)) {
+        messageIdsRef.current.add((sent as any).id)
+        setMessages((prev) => [...prev, sent as any])
       }
     } catch {
-      // Handle silently for now
+      toast.error("Failed to send message. Please try again.")
+      setMessage(content)
     }
   }
 
@@ -99,9 +129,7 @@ export function ConversationPage({ conversationId, onNavigate }: ConversationPag
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {isLoading ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
+          <ConversationThreadSkeleton count={5} />
         ) : messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">No messages yet. Say hi!</p>

@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from "react"
 import { CalendarDays, Clock, Users } from "lucide-react"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface BookingSidebarProps {
   pricePerHour: number
@@ -29,7 +33,7 @@ const timeSlots = [
 ]
 
 export function BookingSidebar({ pricePerHour, capacity, itemName, onBooking }: BookingSidebarProps) {
-  const [date, setDate] = useState("")
+  const [date, setDate] = useState<Date | undefined>(undefined)
   const [time, setTime] = useState("")
   const [duration, setDuration] = useState(1)
   const [participants, setParticipants] = useState(1)
@@ -55,16 +59,29 @@ export function BookingSidebar({ pricePerHour, capacity, itemName, onBooking }: 
 
       <div className="space-y-3">
         <label className="text-xs font-semibold text-foreground">Select date</label>
-        <div className="relative">
-          <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="h-10 w-full rounded-full border border-border bg-muted pl-10 pr-3 text-xs outline-none focus:border-primary"
-            min={new Date().toISOString().split("T")[0]}
-          />
-        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "flex h-10 w-full items-center gap-2 rounded-full border border-border bg-muted px-3 text-xs outline-none transition-colors hover:bg-muted/80 focus:border-primary",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              {date ? format(date, "PPP") : "Pick a date"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {date && (
@@ -154,7 +171,7 @@ export function BookingSidebar({ pricePerHour, capacity, itemName, onBooking }: 
 
       <button
         type="button"
-        onClick={() => onBooking?.(date, time, duration, participants)}
+        onClick={() => onBooking?.(date ? format(date, "yyyy-MM-dd") : "", time, duration, participants)}
         disabled={!date || !time}
         className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
       >

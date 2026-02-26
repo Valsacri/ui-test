@@ -1,20 +1,21 @@
 import axios from 'axios';
+import { STORAGE_KEYS, AUTH_COOKIE_NAME, API_TIMEOUT_MS, DEFAULT_API_BASE_URL } from './constants';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL;
 
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 15000,
+    timeout: API_TIMEOUT_MS,
 });
 
 // Request interceptor: attach JWT token
 apiClient.interceptors.request.use(
     (config) => {
         if (typeof window !== 'undefined') {
-            const token = localStorage.getItem('auth_token');
+            const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -62,7 +63,7 @@ apiClient.interceptors.response.use(
             isRefreshing = true;
 
             if (typeof window !== 'undefined') {
-                const refreshToken = localStorage.getItem('refresh_token');
+                const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
                 if (refreshToken) {
                     try {
                         // Use raw axios to bypass interceptors for refresh call
@@ -70,9 +71,9 @@ apiClient.interceptors.response.use(
 
                         const { accessToken, refreshToken: newRefreshToken } = response.data;
 
-                        localStorage.setItem('auth_token', accessToken);
+                        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
                         if (newRefreshToken) {
-                            localStorage.setItem('refresh_token', newRefreshToken);
+                            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
                         }
 
                         apiClient.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
@@ -84,9 +85,10 @@ apiClient.interceptors.response.use(
                     } catch (refreshError) {
                         processQueue(refreshError, null);
 
-                        localStorage.removeItem('auth_token');
-                        localStorage.removeItem('refresh_token');
-                        localStorage.removeItem('user');
+                        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+                        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+                        localStorage.removeItem(STORAGE_KEYS.USER);
+                        document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0`;
                         window.dispatchEvent(new CustomEvent('auth:logout'));
 
                         return Promise.reject(refreshError);
@@ -98,9 +100,10 @@ apiClient.interceptors.response.use(
 
             // If no refresh token or not browser env, logout
             if (typeof window !== 'undefined') {
-                localStorage.removeItem('auth_token');
-                localStorage.removeItem('refresh_token');
-                localStorage.removeItem('user');
+                localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+                localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+                localStorage.removeItem(STORAGE_KEYS.USER);
+                document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0`;
                 window.dispatchEvent(new CustomEvent('auth:logout'));
             }
         }

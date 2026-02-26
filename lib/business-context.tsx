@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { businessesService } from "@/lib/services/businesses"
+import { STORAGE_KEYS, DEFAULT_API_BASE_URL } from "@/lib/constants"
 
 interface BusinessItem {
     id: string
@@ -39,7 +40,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
 
     // Hydrate state from localStorage on mount
     useEffect(() => {
-        const storedId = localStorage.getItem("activeBusinessId")
+        const storedId = localStorage.getItem(STORAGE_KEYS.ACTIVE_BUSINESS_ID)
         if (storedId) {
             setActiveBusinessId(storedId)
         }
@@ -55,7 +56,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
                 type: (b.bio && b.bio.length > 60) ? b.bio.slice(0, 60) + "…" : (b.bio || "Business"),
                 emoji: undefined,
                 avatar: b.avatar
-                    ? (b.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"}${b.avatar}` : b.avatar)
+                    ? (b.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL}${b.avatar}` : b.avatar)
                     : undefined,
                 location: [b.city, b.state].filter(Boolean).join(", ") || b.address || "",
                 rating: b.rating || 0,
@@ -68,7 +69,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     const switchBusiness = useCallback(
         (bizId: string) => {
             setActiveBusinessId(bizId)
-            localStorage.setItem("activeBusinessId", bizId)
+            localStorage.setItem(STORAGE_KEYS.ACTIVE_BUSINESS_ID, bizId)
             router.push("/business/dashboard")
         },
         [router]
@@ -76,7 +77,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
 
     const switchToUser = useCallback(() => {
         setActiveBusinessId(null)
-        localStorage.removeItem("activeBusinessId")
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_BUSINESS_ID)
         router.push("/")
     }, [router])
 

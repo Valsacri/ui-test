@@ -15,13 +15,15 @@ import {
   Mail,
 } from "lucide-react"
 import { toast } from "sonner"
-import { businessesService, activitiesService, servicesService } from "@/lib/services"
+import { businessesService, activitiesService, servicesService, authService } from "@/lib/services"
 import { userService } from "@/lib/services/user"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 
@@ -40,71 +42,82 @@ const reviewsData = [
 ]
 
 export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPageProps) {
-  const [business, setBusiness] = useState<any>(null)
-  const [activities, setActivities] = useState<any[]>([])
-  const [services, setServices] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("Overview")
   const [following, setFollowing] = useState(false)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        const [businessData, activitiesData, servicesData] = await Promise.all([
-          businessesService.getById(businessId),
-          activitiesService.getAll({ organizerId: businessId }),
-          servicesService.getAll({ providerId: businessId })
-        ])
-        setBusiness(businessData)
+  const { data: business, isLoading: loadingBiz } = useSWR(
+    businessId ? `/businesses/${businessId}` : null,
+    () => businessesService.getById(businessId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-        if (Array.isArray(activitiesData)) {
-          const mappedActivities = activitiesData.map((a: any) => ({
-            id: a.id,
-            title: a.name,
-            sport: a.sportId || "Sport",
-            date: new Date(a.startDateTime).toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }),
-            time: `${new Date(a.startDateTime).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' })}`,
-            location: a.location || a.city || "TBD",
-            price: a.pricePerPerson || 0,
-            currency: "USD",
-            spots: (a.maxParticipants || 0) - (a.currentParticipants || 0),
-            totalSpots: a.maxParticipants || 0,
-            image: a.image || "/images/sports-placeholder.jpg", // Fallback
-            rating: a.rating || 0,
-            reviews: a.reviewCount || 0,
-            organizer: a.organizerName || "Organizer",
-            organizerAvatar: businessData.avatar || "",
-            tags: a.tags || []
-          }))
-          setActivities(mappedActivities)
-        }
+  const { data: activitiesRaw = [] } = useSWR(
+    businessId ? `/activities?organizerId=${businessId}` : null,
+    () => activitiesService.getAll({ organizerId: businessId }),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-        if (Array.isArray(servicesData)) {
-          const mappedServices = servicesData.map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            provider: s.providerName || "Provider",
-            providerAvatar: s.providerAvatar || businessData.avatar,
-            duration: s.duration || "1h",
-            price: s.price || 0,
-            currency: s.currency || "USD",
-            rating: s.rating || 0,
-            reviews: s.reviews || 0,
-            image: s.image,
-            category: s.category || "Service",
-            verified: s.verified || false
-          }))
-          setServices(mappedServices)
+  const { data: servicesRaw = [] } = useSWR(
+    businessId ? `/services?providerId=${businessId}` : null,
+    () => servicesService.getAll({ providerId: businessId }),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const loading = loadingBiz
+
+  const activities = Array.isArray(activitiesRaw)
+    ? activitiesRaw.map((a: any) => {
+      // Same parseDate as /activities page so date/time display matches exactly
+      const parseDate = (d: any) => {
+        if (d == null) return null
+        if (Array.isArray(d)) {
+          return new Date(d[0], d[1] - 1, d[2], d[3] ?? 0, d[4] ?? 0)
         }
-      } catch (error) {
-        console.error("Failed to fetch business details", error)
-      } finally {
-        setLoading(false)
+        return new Date(d)
       }
-    }
-    if (businessId) fetchData()
-  }, [businessId])
+      const startDt = parseDate(a.startDateTime)
+      const isValidDate = startDt && !Number.isNaN(startDt.getTime())
+      return {
+        id: a.id,
+        title: a.name,
+        sport: a.sportName || a.sportId || "Sport",
+        date: isValidDate
+          ? startDt!.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' })
+          : "Date TBA",
+        time: isValidDate
+          ? startDt!.toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit' })
+          : "TBD",
+        location: a.location || a.city || a.address || "TBD",
+        price: a.pricePerPerson ?? 0,
+        currency: a.currency || "USD",
+        spots: Math.max(0, (a.maxParticipants || 0) - (a.currentParticipants || 0)),
+        totalSpots: a.maxParticipants || 0,
+        image: a.coverImage || a.eventPoster || (Array.isArray(a.imageUrls) && a.imageUrls[0]) || "/placeholder.svg",
+        rating: a.rating ?? 0,
+        reviews: a.reviewCount ?? 0,
+        organizer: a.organizerName || "Organizer",
+        organizerAvatar: a.organizerAvatar || business?.avatar || "",
+        tags: Array.isArray(a.tags) ? a.tags : []
+      }
+    })
+    : []
+
+  const services = Array.isArray(servicesRaw)
+    ? servicesRaw.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      provider: s.providerName || "Provider",
+      providerAvatar: s.providerAvatar || business?.avatar,
+      duration: s.duration || "1h",
+      price: s.price || 0,
+      currency: s.currency || "USD",
+      rating: s.rating || 0,
+      reviews: s.reviews || 0,
+      image: s.image,
+      category: s.category || "Service",
+      verified: s.verified || false
+    }))
+    : []
 
   const relatedActivities = activities.slice(0, 3)
   const relatedServices = services.slice(0, 2)
@@ -160,11 +173,12 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
 
       {/* Hero Image */}
       <div className="relative h-56 overflow-hidden rounded-2xl md:h-72">
-        <img
+        <Image
           src={businessDisplay.image || "/placeholder.svg"}
           alt={businessDisplay.name}
-          className="h-full w-full object-cover"
-          crossOrigin="anonymous"
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 66vw"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
         <div className="absolute right-4 top-4 flex gap-2">
@@ -215,11 +229,13 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           <button
             type="button"
             onClick={async () => {
+              const me = authService.getCurrentUser()?.id
+              if (!me) return
               const prev = following
               setFollowing(!prev)
               try {
-                if (prev) await userService.unfollowUser(businessId)
-                else await userService.followUser(businessId)
+                if (prev) await userService.unfollowUser(me, businessId)
+                else await userService.followUser(me, businessId)
               } catch {
                 setFollowing(prev)
                 toast.error(prev ? "Failed to unfollow" : "Failed to follow")

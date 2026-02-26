@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import Image from "next/image"
 import { Package, Truck, Shield } from "lucide-react"
 
 interface ProductOrderSidebarProps {
@@ -33,7 +34,7 @@ export function ProductOrderSidebar({
     <aside className="sticky top-20 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-lg">
       <div className="flex gap-3">
         <div className="h-16 w-16 overflow-hidden rounded-xl bg-muted">
-          <img src={productImage} alt={productName} className="h-full w-full object-cover" />
+          <img src={productImage} alt={productName} className="h-full w-full object-cover" crossOrigin="anonymous" />
         </div>
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground">{productName}</p>

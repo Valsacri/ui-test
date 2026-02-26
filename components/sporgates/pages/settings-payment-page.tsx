@@ -1,8 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, CreditCard, Plus, MoreHorizontal, Trash2, Star, Shield } from "lucide-react"
+import useSWR from "swr"
+import { ArrowLeft, CreditCard, Plus, Trash2, Star, Shield } from "lucide-react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { authService, userService } from "@/lib/services"
+import { ErrorState } from "@/components/sporgates/ux/error-state"
 
 interface SettingsPaymentPageProps {
   onBack: () => void
@@ -14,15 +18,53 @@ const cardColors: Record<string, string> = {
   paypal: "from-[#003C66] to-[#FC8936]",
 }
 
-// Inline placeholder data — no payment methods API exists yet
-const paymentMethods = [
-  { id: "pm1", type: "visa", last4: "4242", expiry: "12/26", email: null, isDefault: true },
-  { id: "pm2", type: "mastercard", last4: "8888", expiry: "03/27", email: null, isDefault: false },
-  { id: "pm3", type: "paypal", last4: "", expiry: null, email: "user@email.com", isDefault: false },
-]
+function formatExpiry(month: number, year: number) {
+  return `${String(month).padStart(2, "0")}/${String(year).slice(-2)}`
+}
 
 export function SettingsPaymentPage({ onBack }: SettingsPaymentPageProps) {
   const [showAddCard, setShowAddCard] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null)
+
+  const user = authService.getCurrentUser()
+  const userId = user?.id
+
+  const { data: paymentMethods = [], error, isLoading, mutate } = useSWR(
+    userId ? `/users/${userId}/payment-methods` : null,
+    () => userService.getPaymentMethods(userId!),
+    { revalidateOnFocus: false }
+  )
+
+  const handleDelete = async (methodId: string) => {
+    if (!userId) return
+    setDeletingId(methodId)
+    try {
+      await userService.deletePaymentMethod(userId, methodId)
+      toast.success("Payment method removed")
+      mutate()
+    } catch {
+      toast.error("Failed to remove payment method")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleSetDefault = async (methodId: string) => {
+    if (!userId) return
+    setSettingDefaultId(methodId)
+    try {
+      await userService.setDefaultPaymentMethod(userId, methodId)
+      toast.success("Default payment method updated")
+      mutate()
+    } catch {
+      toast.error("Failed to set default payment method")
+    } finally {
+      setSettingDefaultId(null)
+    }
+  }
+
+  const cardKey = (m: { brand?: string; type: string }) => (m.brand || m.type || "").toLowerCase()
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -35,6 +77,16 @@ export function SettingsPaymentPage({ onBack }: SettingsPaymentPageProps) {
         Back to Settings
       </button>
 
+      {!userId && (
+        <p className="text-sm text-muted-foreground">Sign in to manage payment methods.</p>
+      )}
+
+      {userId && error && (
+        <ErrorState message="Failed to load payment methods" onRetry={() => mutate()} />
+      )}
+
+      {userId && !error && (
+      <>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Payment Methods</h1>
@@ -52,10 +104,15 @@ export function SettingsPaymentPage({ onBack }: SettingsPaymentPageProps) {
 
       {/* Payment Cards */}
       <div className="space-y-4">
-        {paymentMethods.map((method) => (
+        {isLoading && (
+          <p className="text-sm text-muted-foreground">Loading payment methods…</p>
+        )}
+        {!isLoading && paymentMethods.length === 0 && (
+          <p className="text-sm text-muted-foreground">No payment methods saved. Add a card to get started.</p>
+        )}
+        {!isLoading && paymentMethods.map((method) => (
           <div key={method.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-            {/* Card Visual */}
-            <div className={cn("relative p-5 text-white bg-gradient-to-br", cardColors[method.type] || cardColors.visa)}>
+            <div className={cn("relative p-5 text-white bg-gradient-to-br", cardColors[cardKey(method)] || cardColors.visa)}>
               <div className="absolute right-4 top-4">
                 {method.isDefault && (
                   <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold backdrop-blur-sm">
@@ -68,13 +125,13 @@ export function SettingsPaymentPage({ onBack }: SettingsPaymentPageProps) {
                 {"•••• •••• ••••"} {method.last4}
               </p>
               <div className="flex items-center justify-between text-xs text-white/70">
-                <span className="uppercase">{method.type}</span>
-                {method.expiry && <span>Expires {method.expiry}</span>}
-                {method.email && <span>{method.email}</span>}
+                <span className="uppercase">{method.brand || method.type}</span>
+                {method.expiryMonth != null && method.expiryYear != null && (
+                  <span>Expires {formatExpiry(method.expiryMonth, method.expiryYear)}</span>
+                )}
               </div>
             </div>
 
-            {/* Card Actions */}
             <div className="flex items-center justify-between px-5 py-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Shield className="h-3.5 w-3.5" />
@@ -84,18 +141,22 @@ export function SettingsPaymentPage({ onBack }: SettingsPaymentPageProps) {
                 {!method.isDefault && (
                   <button
                     type="button"
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10"
+                    disabled={settingDefaultId === method.id}
+                    onClick={() => handleSetDefault(method.id)}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
                   >
                     <Star className="h-3 w-3" />
-                    Set Default
+                    {settingDefaultId === method.id ? "Setting…" : "Set Default"}
                   </button>
                 )}
                 <button
                   type="button"
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/10"
+                  disabled={deletingId === method.id}
+                  onClick={() => handleDelete(method.id)}
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                 >
                   <Trash2 className="h-3 w-3" />
-                  Remove
+                  {deletingId === method.id ? "Removing…" : "Remove"}
                 </button>
               </div>
             </div>
@@ -171,6 +232,8 @@ export function SettingsPaymentPage({ onBack }: SettingsPaymentPageProps) {
           </p>
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

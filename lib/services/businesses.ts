@@ -54,6 +54,11 @@ export const businessesService = {
         return response.data;
     },
 
+    getAnalytics: async (businessId: string) => {
+        const response = await apiClient.get(`/v1/businesses/${businessId}/analytics`);
+        return response.data;
+    },
+
     addStaff: async (businessId: string, staffUserId: string) => {
         const response = await apiClient.post(`/v1/businesses/${businessId}/staff/${staffUserId}`);
         return response.data;

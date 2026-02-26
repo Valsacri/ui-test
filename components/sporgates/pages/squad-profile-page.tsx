@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import {
   ArrowLeft,
   Users,
@@ -34,33 +36,46 @@ const highlights = [
 ]
 
 export function SquadProfilePage({ squadId, onNavigate }: SquadProfilePageProps) {
-  const [squad, setSquad] = useState<any>(null)
-  const [relatedActivities, setRelatedActivities] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("Overview")
   const [isMember, setIsMember] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
+  const { data: squad, error: squadError, isLoading: squadLoading, mutate: mutateSquad } = useSWR(
+    squadId ? `/squads/${squadId}/profile` : null,
+    () => squadService.getById(squadId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-    Promise.allSettled([
-      squadService.getById(squadId),
-      activitiesService.getAll(),
-    ]).then(([squadResult, activitiesResult]) => {
-      if (cancelled) return
-      if (squadResult.status === "fulfilled") setSquad(squadResult.value)
-      if (activitiesResult.status === "fulfilled" && Array.isArray(activitiesResult.value)) {
-        setRelatedActivities(activitiesResult.value.slice(0, 3))
-      }
-      setIsLoading(false)
-    })
+  const { data: actRaw = [], isLoading: actLoading } = useSWR(
+    squadId ? `/activities/squad-profile/${squadId}` : null,
+    () => activitiesService.getAll(),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
 
-    return () => { cancelled = true }
-  }, [squadId])
+  const isLoading = squadLoading
+  const relatedActivities = Array.isArray(actRaw) ? actRaw.slice(0, 3) : []
 
   if (isLoading) {
     return <ProfileSkeleton />
+  }
+
+  if (squadError) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <button
+          type="button"
+          onClick={() => onNavigate("community")}
+          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Community
+        </button>
+        <ErrorState
+          title="Couldn't load squad"
+          message={squadError?.message || "Something went wrong. Please try again."}
+          onRetry={() => mutateSquad()}
+        />
+      </div>
+    )
   }
 
   if (!squad) {
@@ -74,10 +89,11 @@ export function SquadProfilePage({ squadId, onNavigate }: SquadProfilePageProps)
           <ArrowLeft className="h-4 w-4" />
           Back to Community
         </button>
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Users className="mb-3 h-12 w-12 text-muted-foreground/40" />
-          <h3 className="text-sm font-semibold text-foreground">Squad not found</h3>
-        </div>
+        <ErrorState
+          title="Squad not found"
+          message="The squad you're looking for doesn't exist or is currently unavailable."
+          onRetry={() => onNavigate("community")}
+        />
       </div>
     )
   }
@@ -265,11 +281,12 @@ export function SquadProfilePage({ squadId, onNavigate }: SquadProfilePageProps)
                 className="flex w-full items-center gap-4 rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:shadow-md"
               >
                 {activity.image && (
-                  <img
+                  <Image
                     src={activity.image}
                     alt={activity.title}
-                    className="h-14 w-14 rounded-xl object-cover"
-                    crossOrigin="anonymous"
+                    width={56}
+                    height={56}
+                    className="rounded-xl object-cover"
                   />
                 )}
                 <div className="flex-1">

@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import useSWR from "swr"
+import Image from "next/image"
 import { ArrowLeft, Star, MapPin, Clock, BadgeCheck, ShoppingBag, Package, Wrench } from "lucide-react"
 import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
@@ -8,6 +10,7 @@ import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { businessesService } from "@/lib/services/businesses"
 import { marketplaceService } from "@/lib/services/marketplace"
+import { servicesService } from "@/lib/services/services"
 
 interface StoreDetailPageProps {
   businessId: string
@@ -15,30 +18,28 @@ interface StoreDetailPageProps {
 }
 
 export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps) {
-  const [business, setBusiness] = useState<any>(null)
-  const [products, setProducts] = useState<any[]>([])
-  const [services, setServices] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState("Products")
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      try {
-        const [bizData, prodData] = await Promise.allSettled([
-          businessesService.getById(businessId),
-          marketplaceService.getAll(),
-        ])
-        if (bizData.status === "fulfilled") setBusiness(bizData.value)
-        if (prodData.status === "fulfilled") setProducts(Array.isArray(prodData.value) ? prodData.value : [])
-      } catch (error) {
-        console.error("Failed to load store data", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
-  }, [businessId])
+  const { data: business, isLoading: loadingBiz } = useSWR(
+    businessId ? `/businesses/${businessId}` : null,
+    () => businessesService.getById(businessId),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const { data: products = [] } = useSWR(
+    businessId ? `/businesses/${businessId}/products` : null,
+    () => marketplaceService.getAll({ sellerId: businessId }),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const { data: servicesData = [] } = useSWR(
+    businessId ? `/businesses/${businessId}/services` : null,
+    () => servicesService.getAll({ providerId: businessId }),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+  const services: any[] = Array.isArray(servicesData) ? servicesData : []
+
+  const loading = loadingBiz
 
   if (loading) {
     return <DetailPageSkeleton />
@@ -46,11 +47,21 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
 
   if (!business) {
     return (
-      <ErrorState
-        title="Business not found"
-        message="The business you're looking for doesn't exist."
-        onRetry={() => onNavigate("businesses")}
-      />
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <button
+          type="button"
+          onClick={() => onNavigate("businesses")}
+          className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Businesses
+        </button>
+        <ErrorState
+          title="Business not found"
+          message="The business you're looking for doesn't exist or is currently unavailable."
+          onRetry={() => onNavigate("businesses")}
+        />
+      </div>
     )
   }
 
@@ -67,11 +78,12 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
 
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="relative h-40">
-          <img
+          <Image
             src={business.coverImage || business.image || "/placeholder.svg"}
             alt={business.name || "Business"}
-            className="h-full w-full object-cover"
-            crossOrigin="anonymous"
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 66vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
@@ -140,11 +152,12 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
                 className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
               >
                 <div className="relative h-40 overflow-hidden">
-                  <img
+                  <Image
                     src={product.image || product.coverImage || "/placeholder.svg"}
                     alt={product.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    crossOrigin="anonymous"
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                   {product.originalPrice && (
                     <div className="absolute right-3 top-3 rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-white">
@@ -190,11 +203,12 @@ export function StoreDetailPage({ businessId, onNavigate }: StoreDetailPageProps
                 className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:shadow-lg"
               >
                 <div className="flex items-center gap-4">
-                  <img
+                  <Image
                     src={service.image || "/placeholder.svg"}
                     alt={service.name}
-                    className="h-16 w-16 rounded-xl object-cover"
-                    crossOrigin="anonymous"
+                    width={64}
+                    height={64}
+                    className="rounded-xl object-cover"
                   />
                   <div className="flex-1">
                     <h3 className="text-sm font-bold text-foreground">{service.name}</h3>

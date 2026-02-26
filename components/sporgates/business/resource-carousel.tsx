@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
@@ -81,7 +82,7 @@ export function ResourceCarousel({
                   )}
                 >
                   <div className="h-24 w-full overflow-hidden rounded-xl bg-muted">
-                    <img src={resource.image} alt={resource.name} className="h-full w-full object-cover" />
+                    <Image src={resource.image} alt={resource.name} fill className="object-cover" />
                   </div>
                   <div className="flex-1">
                     <p className="line-clamp-2 text-sm font-semibold text-foreground">{resource.name}</p>
