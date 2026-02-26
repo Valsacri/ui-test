@@ -32,6 +32,20 @@ interface CommunityPageProps {
   onNavigate: (page: PageRoute, id?: string) => void
 }
 
+interface CommunityPerson {
+  id: string
+  name: string
+  avatar: string
+  location: string
+  bio: string
+  sports: string[]
+  level: string
+  activities: number
+  mutualConnections: number
+  isConnected: boolean
+  sport: string
+}
+
 const levelColors: Record<string, string> = {
   Expert: "bg-violet-100 text-violet-700",
   Advanced: "bg-amber-100 text-amber-700",
@@ -342,7 +356,7 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filteredPeople.map((person) => (
+                {filteredPeople.map((person: CommunityPerson) => (
                   <div
                     key={person.id}
                     className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-lg hover:border-primary/40"

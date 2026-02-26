@@ -252,7 +252,7 @@ export function TopBar({
             className="h-10 w-full rounded-full border border-border bg-muted pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
           />
         </form>
-        {showSearchDropdown && searchSuggestions && (
+        {showSearchDropdown && searchSuggestions ? (
           <div
             className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-auto rounded-xl border border-border bg-card py-2 shadow-lg"
             role="listbox"
@@ -281,7 +281,7 @@ export function TopBar({
               ))
             })()}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Right actions */}

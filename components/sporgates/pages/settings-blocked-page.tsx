@@ -12,6 +12,13 @@ interface SettingsBlockedPageProps {
   onBack: () => void
 }
 
+interface BlockedUserItem {
+  id: string
+  name: string
+  avatar: string
+  blockedDate: string
+}
+
 export function SettingsBlockedPage({ onBack }: SettingsBlockedPageProps) {
   const [query, setQuery] = useState("")
   const [unblockTarget, setUnblockTarget] = useState<string | null>(null)
@@ -32,13 +39,13 @@ export function SettingsBlockedPage({ onBack }: SettingsBlockedPageProps) {
     blockedDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "",
   }))
 
-  const filteredUsers = blockedUsers.filter((u) =>
+  const filteredUsers = blockedUsers.filter((u: BlockedUserItem) =>
     u.name.toLowerCase().includes(query.toLowerCase())
   )
 
   const unblock = async (id: string) => {
     if (!userId) return
-    const target = blockedUsers.find((u) => u.id === id)
+    const target = blockedUsers.find((u: BlockedUserItem) => u.id === id)
     try {
       await userService.unblockUser(userId, id)
       toast.success(`${target?.name || "User"} has been unblocked`)
@@ -129,7 +136,7 @@ export function SettingsBlockedPage({ onBack }: SettingsBlockedPageProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredUsers.map((user) => (
+          {filteredUsers.map((user: BlockedUserItem) => (
             <div
               key={user.id}
               className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm"
