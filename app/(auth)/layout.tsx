@@ -1,8 +1,10 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { AUTH_COOKIE_NAME } from "@/lib/constants"
+
+const ONBOARDING_PATHS = ["/choose-sports", "/set-goals", "/onboarding-confirmation"]
 
 export default function AuthLayout({
     children,
@@ -10,18 +12,23 @@ export default function AuthLayout({
     children: React.ReactNode
 }) {
     const router = useRouter()
+    const pathname = usePathname()
     const [ready, setReady] = useState(false)
 
     useEffect(() => {
         const token = localStorage.getItem("auth_token")
-        if (token) {
-            // Sync auth cookie so middleware allows the next request (avoids redirect loop)
+        const isOnboarding = pathname && ONBOARDING_PATHS.some((p) => pathname.startsWith(p))
+        if (token && !isOnboarding) {
             document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
             router.replace("/")
         } else {
+            // Set auth cookie whenever user has token (including onboarding) so "Go to Home" works
+            if (token) {
+                document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
+            }
             setReady(true)
         }
-    }, [router])
+    }, [router, pathname])
 
     if (!ready) {
         return (

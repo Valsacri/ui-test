@@ -3,6 +3,8 @@
 import Image from "next/image"
 import { Star, Clock, BadgeCheck } from "lucide-react"
 
+const isImageUrl = (v: string) => typeof v === "string" && (v.startsWith("http") || v.startsWith("/"))
+
 interface ServiceCardProps {
   service: {
     id: string
@@ -43,11 +45,23 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
       <div className="p-4">
         <h3 className="mb-1.5 text-sm font-bold text-foreground">{service.name}</h3>
         <div className="mb-2 flex items-center gap-2">
-          <div className="gradient-primary flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold text-white">
-            {service.providerAvatar}
-          </div>
-          <span className="text-xs text-muted-foreground">{service.provider}</span>
-          {service.verified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
+          {isImageUrl(service.providerAvatar) ? (
+            <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-muted">
+              <Image
+                src={service.providerAvatar}
+                alt={service.provider}
+                fill
+                className="object-cover"
+                sizes="24px"
+              />
+            </div>
+          ) : (
+            <div className="gradient-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white">
+              {service.providerAvatar || "?"}
+            </div>
+          )}
+          <span className="text-xs font-medium text-foreground">{service.provider}</span>
+          {service.verified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" />}
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">

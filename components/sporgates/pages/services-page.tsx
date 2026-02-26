@@ -4,6 +4,8 @@ import { useState, useMemo } from "react"
 import useSWR from "swr"
 import { Search, Wrench } from "lucide-react"
 import { fetcher } from "@/lib/fetcher"
+import { mapService } from "@/lib/mappers/explore-mappers"
+import type { ServiceListingDto } from "@/lib/types/explore"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
@@ -22,10 +24,12 @@ export function ServicesPage({ onNavigate }: ServicesPageProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [visibleCount, setVisibleCount] = useState(9)
 
-  const { data: services = [], error, isLoading, mutate } = useSWR<any[]>('/v1/services', fetcher, {
+  const { data: rawServices = [], error, isLoading, mutate } = useSWR<ServiceListingDto[]>('/v1/services', fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 10000,
   })
+
+  const services = useMemo(() => rawServices.map(mapService), [rawServices])
 
   const filteredServices = useMemo(() => {
     let result = services.filter((service) => {

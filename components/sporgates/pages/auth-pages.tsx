@@ -18,10 +18,13 @@ import {
   Flag,
   Trophy,
   Clock,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { authService } from "@/lib/services"
+import { AUTH_COOKIE_NAME } from "@/lib/constants"
 import { userService } from "@/lib/services/user"
 import { sportService } from "@/lib/services/sport"
 import { getApiErrorMessage, isApiError } from "@/lib/api-errors"
@@ -59,12 +62,13 @@ interface AuthPageProps {
 
 export function AuthPages({ page, onNavigate }: AuthPageProps) {
   const [showPassword, setShowPassword] = useState(false)
-  const [selectedSports, setSelectedSports] = useState<Array<{ id: string; level: string }>>([])
+  const [selectedSports, setSelectedSports] = useState<Array<{ id: string; level: string; yearsOfExperience?: number }>>([])
   const [selectedGoals, setSelectedGoals] = useState<string[]>([])
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sports, setSports] = useState<any[]>([])
+  const [sportsLoading, setSportsLoading] = useState(false)
   const [verificationCode, setVerificationCode] = useState<string[]>(Array(6).fill(""))
   const [resendCooldown, setResendCooldown] = useState(0)
   const [verifySuccess, setVerifySuccess] = useState(false)
@@ -104,9 +108,15 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   // Fetch sports from API for the onboarding flow
   useEffect(() => {
     if (page === "choose-sports") {
-      sportService.getAll().then((data: any) => {
-        setSports(Array.isArray(data) ? data : [])
-      }).catch(() => { })
+      setSportsLoading(true)
+      sportService
+        .getAll()
+        .then((data: any) => {
+          const list = Array.isArray(data) ? data : data?.content ?? []
+          setSports(list)
+        })
+        .catch(() => setSports([]))
+        .finally(() => setSportsLoading(false))
     }
   }, [page])
 
@@ -181,13 +191,20 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
         if (existing) {
           return prev.filter((item) => item.id !== sportName)
         }
-        return [...prev, { id: sportName, level: experienceLevels[0]?.id ?? "beginner" }]
+        return [...prev, { id: sportName, level: experienceLevels[0]?.id ?? "beginner", yearsOfExperience: 0 }]
       })
     }
 
     const handleLevelChange = (sportName: string, levelId: string) => {
       setSelectedSports((prev) =>
         prev.map((item) => (item.id === sportName ? { ...item, level: levelId } : item))
+      )
+    }
+
+    const handleYearsChange = (sportName: string, value: string) => {
+      const years = Math.max(0, parseInt(value, 10) || 0)
+      setSelectedSports((prev) =>
+        prev.map((item) => (item.id === sportName ? { ...item, yearsOfExperience: years } : item))
       )
     }
 
@@ -227,6 +244,22 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             </p>
           </div>
 
+          {sportsLoading ? (
+            <div className="mt-10 flex justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : sportsList.length === 0 ? (
+            <div className="mt-10 rounded-2xl border border-border bg-card p-8 text-center">
+              <p className="text-sm text-muted-foreground">No sports available right now. You can continue and add them later from your profile.</p>
+              <button
+                type="button"
+                onClick={() => onNavigate("set-goals")}
+                className="mt-4 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Continue
+              </button>
+            </div>
+          ) : (
           <div className="mt-8 grid gap-4">
             {sportsList.map((sport) => {
               const selected = selectedSports.find((item) => item.id === sport)
@@ -258,7 +291,37 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
                   </div>
 
                   {selected && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-medium text-muted-foreground">Years of experience:</span>
+                      <div className="inline-flex h-6 items-center rounded-full border border-border bg-muted">
+                        <button
+                          type="button"
+                          onClick={() => handleYearsChange(sport, String(Math.max(0, (selected.yearsOfExperience ?? 0) - 1)))}
+                          className="flex h-6 w-5 items-center justify-center rounded-l-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                          aria-label="Subtract year"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                        <input
+                          id={`years-${sport}`}
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={selected.yearsOfExperience ?? ""}
+                          onChange={(e) => handleYearsChange(sport, e.target.value)}
+                          placeholder="0"
+                          className="h-6 w-8 border-0 bg-transparent p-0 text-center text-[11px] font-semibold text-foreground outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleYearsChange(sport, String(Math.max(0, (selected.yearsOfExperience ?? 0) + 1)))}
+                          className="flex h-6 w-5 items-center justify-center rounded-r-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                          aria-label="Add year"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <span className="text-[11px] font-medium text-muted-foreground">Level:</span>
                       {experienceLevels.map((level) => (
                         <button
                           key={level.id}
@@ -280,35 +343,38 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               )
             })}
           </div>
+          )}
         </div>
 
-        <div className="sticky bottom-0 border-t border-border bg-background/95 p-4 backdrop-blur">
-          <div className="mx-auto max-w-2xl">
-            <button
-              type="button"
-              onClick={async () => {
-                const userId = getUserId()
-                if (userId) {
-                  setLoading(true)
-                  setError(null)
-                  try {
-                    const prefs = selectedSports.map((s) => {
-                      const sport = sports.find((sp: any) => sp.name === s.id)
-                      return {
-                        sportId: sport?.id || s.id,
-                        sportName: s.id,
-                        skillLevel: skillLevelMap[s.level] || "BEGINNER",
-                      }
-                    })
-                    await userService.updateSportsPreferences(userId, prefs)
-                  } catch (err: unknown) {
-                    console.error("Failed to save sports preferences", err)
-                  } finally {
-                    setLoading(false)
+        {!sportsLoading && sportsList.length > 0 && (
+          <div className="sticky bottom-0 border-t border-border bg-background/95 p-4 backdrop-blur">
+            <div className="mx-auto max-w-2xl">
+              <button
+                type="button"
+                onClick={async () => {
+                  const userId = getUserId()
+                  if (userId) {
+                    setLoading(true)
+                    setError(null)
+                    try {
+                      const prefs = selectedSports.map((s) => {
+                        const sport = sports.find((sp: any) => sp.name === s.id)
+                        return {
+                          sportId: sport?.id || s.id,
+                          sportName: s.id,
+                          skillLevel: skillLevelMap[s.level] || "BEGINNER",
+                          yearsOfExperience: Math.max(0, s.yearsOfExperience ?? 0),
+                        }
+                      })
+                      await userService.updateSportsPreferences(userId, prefs)
+                    } catch (err: unknown) {
+                      console.error("Failed to save sports preferences", err)
+                    } finally {
+                      setLoading(false)
+                    }
                   }
-                }
-                onNavigate("set-goals")
-              }}
+                  onNavigate("set-goals")
+                }}
               disabled={selectedSports.length === 0 || loading}
               className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
             >
@@ -316,6 +382,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             </button>
           </div>
         </div>
+        )}
       </div>
     )
   }
@@ -808,7 +875,12 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
           </p>
           <button
             type="button"
-            onClick={() => onNavigate("home")}
+            onClick={() => {
+              if (authService.getToken()) {
+                document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
+              }
+              onNavigate("home")
+            }}
             className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
           >
             Go to Home

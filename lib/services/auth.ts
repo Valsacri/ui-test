@@ -81,9 +81,13 @@ export const authService = {
         return !!authService.getToken();
     },
 
-    verifyEmail: async (email: string, code: string): Promise<string> => {
-        const response = await apiClient.post('/auth/verify-email', { email, code });
-        return response.data;
+    verifyEmail: async (email: string, code: string): Promise<AuthResponse> => {
+        const response = await apiClient.post<AuthResponse>('/auth/verify-email', { email, code });
+        const data = response.data;
+        if (data?.accessToken) {
+            authService._saveTokens(data);
+        }
+        return data;
     },
 
     resendVerification: async (email: string): Promise<string> => {

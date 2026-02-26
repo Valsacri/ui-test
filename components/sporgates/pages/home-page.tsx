@@ -7,6 +7,8 @@ import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { activitiesService, postsService, servicesService, facilitiesService, userService, feedService } from "@/lib/services"
 import { authService } from "@/lib/services"
 import type { FeedItem } from "@/lib/services/feed"
+import { mapFacility, mapService } from "@/lib/mappers/explore-mappers"
+import type { FacilityCardData, ServiceCardData } from "@/lib/types/explore"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { PostCard } from "@/components/sporgates/cards/post-card"
@@ -23,8 +25,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([])
   const [activities, setActivities] = useState<any[]>([])
   const [posts, setPosts] = useState<any[]>([])
-  const [services, setServices] = useState<any[]>([])
-  const [facilities, setFacilities] = useState<any[]>([])
+  const [services, setServices] = useState<ServiceCardData[]>([])
+  const [facilities, setFacilities] = useState<FacilityCardData[]>([])
   const [userProfile, setUserProfile] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<Error | null>(null)
@@ -75,24 +77,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
         }
 
         if (servicesData.status === "fulfilled" && Array.isArray(servicesData.value)) {
-          setServices(servicesData.value)
+          setServices(servicesData.value.map((s: any) => mapService(s)))
         }
 
         if (facilitiesData.status === "fulfilled" && Array.isArray(facilitiesData.value)) {
-          setFacilities(facilitiesData.value.map((f: any) => ({
-            id: f.id,
-            name: f.name,
-            type: f.type || "Sports Facility",
-            rating: f.rating || 0,
-            reviews: f.reviewCount || 0,
-            location: f.address || f.city || "TBD",
-            price: f.pricePerHour || 0,
-            currency: f.currency || "USD",
-            image: f.coverImage || "/placeholder.svg",
-            amenities: f.amenities || [],
-            sports: f.sports || [],
-            verified: f.verified || false,
-          })))
+          setFacilities(facilitiesData.value.map((f: any) => mapFacility(f)))
         }
 
         // Fetch user profile and personalized feed
