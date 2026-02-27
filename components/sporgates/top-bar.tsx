@@ -613,8 +613,8 @@ export function TopBar({
             className="flex items-center gap-1.5 rounded-full p-1 transition-colors hover:bg-muted"
           >
             <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
-              {isAvatarImageUrl(userProfilePicture) ? (
-                <Image src={resolvePostImageUrl(userProfilePicture)!} alt={user ? `${user.firstName} ${user.lastName}` : "User"} fill className="object-cover" sizes="32px" />
+              {isAvatarImageUrl(userProfilePicture ?? undefined) ? (
+                <Image src={resolvePostImageUrl(userProfilePicture ?? undefined)!} alt={user ? `${user.firstName} ${user.lastName}` : "User"} fill className="object-cover" sizes="32px" />
               ) : (
                 <div className="gradient-primary flex h-full w-full items-center justify-center text-xs font-bold text-white">
                   {(user?.firstName?.[0] || "U").toUpperCase()}
@@ -642,8 +642,8 @@ export function TopBar({
                 )}
               >
                 <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
-                  {isAvatarImageUrl(userProfilePicture) ? (
-                    <Image src={resolvePostImageUrl(userProfilePicture)!} alt={user ? `${user.firstName} ${user.lastName}` : "User"} fill className="object-cover" sizes="36px" />
+                  {isAvatarImageUrl(userProfilePicture ?? undefined) ? (
+                    <Image src={resolvePostImageUrl(userProfilePicture ?? undefined)!} alt={user ? `${user.firstName} ${user.lastName}` : "User"} fill className="object-cover" sizes="36px" />
                   ) : (
                     <div className="gradient-primary flex h-full w-full items-center justify-center text-xs font-bold text-white">
                       {(user?.firstName?.[0] || "U").toUpperCase()}

@@ -76,7 +76,7 @@ export function NotificationsPage() {
         type: mapType(n.type),
         title: String(n.title || ""),
         message: String(n.message || ""),
-        time: formatFeedTime(n.createdAt),
+        time: formatFeedTime(n.createdAt as string | number[] | undefined),
         read: Boolean(n.read),
         userName: String(n.senderName || n.referenceType || "Sporgates"),
         userAvatar: String(n.senderName || n.referenceType || "SG").substring(0, 2).toUpperCase(),
