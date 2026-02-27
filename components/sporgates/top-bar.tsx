@@ -20,12 +20,14 @@ import React, { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { authService } from "@/lib/services/auth"
+import { userService } from "@/lib/services/user"
 import { searchService } from "@/lib/services/search"
 import { messagesService } from "@/lib/services/messages"
 import { notificationsService } from "@/lib/services/notifications"
-import { cn } from "@/lib/utils"
+import { cn, resolvePostImageUrl, isAvatarImageUrl, formatFeedTime } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
 import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
+import { PostPopupSheet } from "@/components/sporgates/post-popup-sheet"
 
 // Inline defaults — no BE endpoints for topbar goals/conversations/notifications preview
 const goals = [
@@ -90,13 +92,25 @@ export function TopBar({
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [conversations, setConversations] = useState<Array<{ id: string; name: string; avatar: string; lastMessage: string; time: string; unread: number; online?: boolean }>>([])
   const [conversationsLoading, setConversationsLoading] = useState(false)
-  const [notificationsList, setNotificationsList] = useState<Array<{ id: string; type: string; title: string; message: string; time: string; read: boolean }>>([])
+  const [notificationsList, setNotificationsList] = useState<Array<{
+    id: string
+    type: string
+    title: string
+    message: string
+    time: string
+    read: boolean
+    postId: string | null
+    referenceId: string | null
+    referenceType: string | null
+  }>>([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [postPopupState, setPostPopupState] = useState<{ postId: string; openComments: boolean } | null>(null)
 
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const [user, setUser] = useState<{ id?: string; firstName?: string; lastName?: string; email?: string } | null>(null)
+  const [userProfilePicture, setUserProfilePicture] = useState<string | null>(null)
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser()
@@ -104,6 +118,16 @@ export function TopBar({
       setUser(currentUser)
     }
   }, [])
+
+  useEffect(() => {
+    if (!user?.id) {
+      setUserProfilePicture(null)
+      return
+    }
+    userService.getUserById(user.id).then((data: { profilePicture?: string | null }) => {
+      setUserProfilePicture(data?.profilePicture ?? null)
+    }).catch(() => setUserProfilePicture(null))
+  }, [user?.id])
 
   useEffect(() => {
     if (!showMessages || !user?.id) return
@@ -131,14 +155,20 @@ export function TopBar({
     notificationsService.getByUser(user.id)
       .then((data: any) => {
         const list = Array.isArray(data) ? data : (data?.content ?? [])
-        setNotificationsList(list.slice(0, 15).map((n: any) => ({
-          id: String(n.id),
-          type: n.type || "system",
-          title: String(n.title || ""),
-          message: String(n.message || ""),
-          time: n.createdAt ? formatTimeAgo(String(n.createdAt)) : "",
-          read: Boolean(n.read),
-        })))
+        setNotificationsList(list.slice(0, 15).map((n: any) => {
+          const postId = n.postId != null ? String(n.postId) : (n.referenceType === "post" && n.referenceId ? String(n.referenceId) : null)
+          return {
+            id: String(n.id),
+            type: n.type || "system",
+            title: String(n.title || ""),
+            message: String(n.message || ""),
+            time: formatFeedTime(n.createdAt),
+            read: Boolean(n.read),
+            postId,
+            referenceId: n.referenceId != null ? String(n.referenceId) : null,
+            referenceType: n.referenceType != null ? String(n.referenceType) : null,
+          }
+        }))
       })
       .catch(() => setNotificationsList([]))
       .finally(() => setNotificationsLoading(false))
@@ -508,13 +538,26 @@ export function TopBar({
                 ) : (
                   notificationsList.map((notif) => {
                     const Icon = notifTypeIcons[notif.type] || Bell
+                    const postIdToOpen = notif.postId ?? (notif.referenceType === "post" && notif.referenceId ? notif.referenceId : null)
+                    const isCommentNotification = ["POST_COMMENT", "COMMENT_REPLY", "COMMENT_LIKE"].includes(String(notif.type).toUpperCase())
                     return (
                       <button
                         type="button"
                         key={notif.id}
                         onClick={() => {
                           closeAll()
-                          onNavigate("notifications")
+                          if (postIdToOpen) {
+                            setPostPopupState({ postId: postIdToOpen, openComments: isCommentNotification })
+                            if (!notif.read) {
+                              notificationsService.markAsRead(notif.id).then(() => {
+                                setNotificationsList((prev) =>
+                                  prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
+                                )
+                              }).catch(() => {})
+                            }
+                          } else {
+                            onNavigate("notifications")
+                          }
                         }}
                         className={cn(
                           "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted",
@@ -569,8 +612,14 @@ export function TopBar({
             }}
             className="flex items-center gap-1.5 rounded-full p-1 transition-colors hover:bg-muted"
           >
-            <div className="gradient-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white">
-              {(user?.firstName?.[0] || "U").toUpperCase()}
+            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
+              {isAvatarImageUrl(userProfilePicture) ? (
+                <Image src={resolvePostImageUrl(userProfilePicture)!} alt={user ? `${user.firstName} ${user.lastName}` : "User"} fill className="object-cover" sizes="32px" />
+              ) : (
+                <div className="gradient-primary flex h-full w-full items-center justify-center text-xs font-bold text-white">
+                  {(user?.firstName?.[0] || "U").toUpperCase()}
+                </div>
+              )}
             </div>
             <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground md:block" />
           </button>
@@ -592,8 +641,14 @@ export function TopBar({
                   !isBusinessMode && "bg-primary/5"
                 )}
               >
-                <div className="gradient-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
-                  {(user?.firstName?.[0] || "U").toUpperCase()}
+                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted">
+                  {isAvatarImageUrl(userProfilePicture) ? (
+                    <Image src={resolvePostImageUrl(userProfilePicture)!} alt={user ? `${user.firstName} ${user.lastName}` : "User"} fill className="object-cover" sizes="36px" />
+                  ) : (
+                    <div className="gradient-primary flex h-full w-full items-center justify-center text-xs font-bold text-white">
+                      {(user?.firstName?.[0] || "U").toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-semibold text-foreground">{user ? `${user.firstName} ${user.lastName}` : "User"}</p>
@@ -700,6 +755,13 @@ export function TopBar({
         confirmLabel="Sign Out"
         variant="danger"
         onConfirm={handleLogout}
+      />
+
+      <PostPopupSheet
+        postId={postPopupState?.postId ?? null}
+        open={!!postPopupState}
+        onOpenChange={(open) => !open && setPostPopupState(null)}
+        openComments={postPopupState?.openComments}
       />
     </header>
   )

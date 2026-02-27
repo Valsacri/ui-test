@@ -31,6 +31,22 @@ export const userService = {
         return response.data;
     },
 
+    /** Upload profile picture; returns { url }. Then call updateProfile(id, { profilePicture: url }). */
+    uploadProfileImage: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/v1/upload/user/avatar', formData);
+        return response.data as { url: string; message?: string };
+    },
+
+    /** Upload cover image; returns { url }. Then call updateProfile(id, { coverImage: url }). */
+    uploadCoverImage: async (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await apiClient.post('/v1/upload/user/cover', formData);
+        return response.data as { url: string; message?: string };
+    },
+
     updateSportsPreferences: async (id: string, sportsPreferences: Array<{ sportId: string; sportName: string; skillLevel: string; yearsOfExperience?: number }>) => {
         const response = await apiClient.put(`/v1/users/${id}/sports-preferences`, { sportsPreferences });
         return response.data;

@@ -17,16 +17,26 @@ export interface FeedItem {
     activityStatus?: string;
 }
 
+export interface FeedPage {
+    content: FeedItem[];
+    totalElements: number;
+    totalPages: number;
+    number: number;
+    size: number;
+    first: boolean;
+    last: boolean;
+}
+
 export const feedService = {
-    /** Personalized feed for the authenticated user (GET /v1/feeds/{userId}) */
-    getFeed: async (userId: string) => {
-        const response = await apiClient.get(`/v1/feeds/${userId}`);
-        return response.data as FeedItem[];
+    /** Personalized feed (paginated). Default page=0, size=20. */
+    getFeed: async (userId: string, page = 0, size = 20) => {
+        const response = await apiClient.get(`/v1/feeds/${userId}`, { params: { page, size } });
+        return response.data as FeedPage;
     },
 
-    /** Public feed (GET /v1/feeds/public) */
-    getPublicFeed: async () => {
-        const response = await apiClient.get('/v1/feeds/public');
-        return response.data as FeedItem[];
+    /** Public feed (paginated). Default page=0, size=20. */
+    getPublicFeed: async (page = 0, size = 20) => {
+        const response = await apiClient.get('/v1/feeds/public', { params: { page, size } });
+        return response.data as FeedPage;
     },
 };
