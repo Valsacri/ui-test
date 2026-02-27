@@ -16,6 +16,7 @@ export type PageRoute =
   | "jobs"
   | "job-detail"
   | "community"
+  | "post-detail"
   | "messages"
   | "conversation"
   | "notifications"

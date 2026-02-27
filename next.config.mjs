@@ -11,6 +11,18 @@ const nextConfig = {
         pathname: '/api/uploads/**',
       },
       {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8080',
+        pathname: '/upload/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8080',
+        pathname: '/uploads/**',
+      },
+      {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },

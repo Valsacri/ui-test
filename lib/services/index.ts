@@ -10,6 +10,7 @@ export { marketplaceService } from './marketplace';
 export { servicesService } from './services';
 export { jobsService } from './jobs';
 export { postsService } from './posts';
+export { commentsService } from './comments';
 export { walletService } from './wallet';
 export { bookingService } from './booking';
 export { squadService } from './squad';

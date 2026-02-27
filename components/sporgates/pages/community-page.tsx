@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react"
 import useSWR from "swr"
-import Image from "next/image"
 import {
   Heart,
   MessageCircle,
@@ -20,6 +19,10 @@ import {
 import { fetcher } from "@/lib/fetcher"
 import { userService } from "@/lib/services/user"
 import { Stories } from "@/components/sporgates/stories"
+import { PostCard } from "@/components/sporgates/cards/post-card"
+import { resolvePostImageUrl, formatFeedTime } from "@/lib/utils"
+import type { PostCardData } from "@/lib/types/post"
+import { authService } from "@/lib/services"
 import { PullToRefresh } from "@/components/sporgates/ux/pull-to-refresh"
 import { FeedSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { EmptyState } from "@/components/sporgates/ux/empty-state"
@@ -72,10 +75,15 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [groupFilter, setGroupFilter] = useState<"all" | "mine">("all")
 
-  const { data: posts = [], mutate: mutatePosts, isLoading: postsLoading, error: postsError } = useSWR<any[]>('/v1/posts', fetcher, {
+  const { data: postsRaw, mutate: mutatePosts, isLoading: postsLoading, error: postsError } = useSWR<{ content?: unknown[] } | unknown[]>('/v1/posts?page=0&size=20', fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 10000,
   })
+  const posts = useMemo(() => {
+    if (!postsRaw) return []
+    if (Array.isArray(postsRaw)) return postsRaw
+    return (postsRaw as { content?: unknown[] }).content ?? []
+  }, [postsRaw])
 
   const { data: squads = [], mutate: mutateSquads, isLoading: squadsLoading, error: squadsError } = useSWR<any[]>('/v1/squads/search?query=', fetcher, {
     revalidateOnFocus: false,
@@ -86,6 +94,13 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
     activeTab === "People" ? '/v1/users/browse' : null,
     () => userService.browseUsers({ size: 50 }),
     { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const currentUser = authService.getCurrentUser()
+  const { data: currentUserProfile } = useSWR(
+    currentUser?.id ? `/v1/users/${currentUser.id}` : null,
+    () => (currentUser?.id ? userService.getUserById(currentUser.id) : null),
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
   )
 
   const peopleList = Array.isArray(peopleRaw) ? peopleRaw : (peopleRaw?.content ?? [])
@@ -209,50 +224,28 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
                 />
               </div>
             ) : (
-              posts.map((post) => (
-                <div key={post.id} className="rounded-2xl border border-border bg-card shadow-sm">
-                  <div className="flex items-center gap-3 p-4 pb-2">
-                    <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white">
-                      {post.authorAvatar}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">{post.author}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{post.time}</span>
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                          {post.sport}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="px-4 pb-3">
-                    <p className="text-sm text-foreground leading-relaxed">{post.content}</p>
-                  </div>
-                  {post.image && (
-                    <Image
-                      src={post.image}
-                      alt=""
-                      width={600}
-                      height={300}
-                      className="w-full object-cover"
-                    />
-                  )}
-                  <div className="flex items-center gap-6 border-t border-border px-4 py-3">
-                    <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-secondary transition-colors">
-                      <Heart className="h-4 w-4" />
-                      {post.likes}
-                    </button>
-                    <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                      <MessageCircle className="h-4 w-4" />
-                      {post.comments}
-                    </button>
-                    <button type="button" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-                      <Share2 className="h-4 w-4" />
-                      {post.shares}
-                    </button>
-                  </div>
-                </div>
-              ))
+              posts.map((p: any) => {
+                const post: PostCardData = {
+                  id: p.id,
+                  author: p.authorName ?? p.author ?? "User",
+                  authorAvatar: p.authorAvatar ?? "?",
+                  time: formatFeedTime(p.createdAt),
+                  content: p.content ?? "",
+                  image: resolvePostImageUrl(p.image) || p.image,
+                  likes: p.likes ?? 0,
+                  comments: p.comments ?? 0,
+                  shares: p.shares ?? 0,
+                  liked: p.likedByCurrentUser ?? false,
+                  saved: p.savedByCurrentUser ?? false,
+                  sport: p.sport,
+                }
+                const u = currentUser
+                const avatarUrl = currentUserProfile?.profilePicture ? resolvePostImageUrl(currentUserProfile.profilePicture) : null
+                const currentUserForComment = u
+                  ? { id: u.id, authorName: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "User", authorAvatar: avatarUrl || (u.firstName?.[0] ?? "") + (u.lastName?.[0] ?? "") || (u.username?.[0] ?? "?").toUpperCase() }
+                  : null
+                return <PostCard key={p.id} post={post} userId={u?.id} currentUser={currentUserForComment} />
+              })
             )}
           </div>
         )}

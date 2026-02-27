@@ -7,6 +7,10 @@ import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { activitiesService, postsService, servicesService, facilitiesService, userService, feedService } from "@/lib/services"
 import { authService } from "@/lib/services"
 import type { FeedItem } from "@/lib/services/feed"
+import { FeedComposer } from "@/components/sporgates/feed-composer"
+import { resolvePostImageUrl, formatFeedTime } from "@/lib/utils"
+import type { PostCardData } from "@/lib/types/post"
+import { toast } from "sonner"
 import { mapFacility, mapService } from "@/lib/mappers/explore-mappers"
 import type { FacilityCardData, ServiceCardData } from "@/lib/types/explore"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
@@ -30,10 +34,18 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<Error | null>(null)
+  const currentUser = authService.getCurrentUser()
+  const userId = currentUser?.id
+  const initials = (currentUser?.firstName?.[0] ?? "") + (currentUser?.lastName?.[0] ?? "") || (currentUser?.username?.[0] ?? "?").toUpperCase()
+  const currentUserForComment = currentUser
+    ? {
+        id: currentUser.id,
+        authorName: [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ") || currentUser.username || "User",
+        authorAvatar: (userProfile?.profilePicture ? resolvePostImageUrl(userProfile.profilePicture) : null) || initials,
+      }
+    : null
 
   const fetchData = async () => {
-    const currentUser = authService.getCurrentUser()
-    const userId = currentUser?.id
     setIsLoading(true)
     setLoadError(null)
     try {
@@ -72,8 +84,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
           }))
         }
 
-        if (postsData.status === "fulfilled" && Array.isArray(postsData.value)) {
-          setPosts(postsData.value)
+        if (postsData.status === "fulfilled" && postsData.value) {
+          const postsPage = postsData.value as { content?: unknown[] }
+          setPosts(Array.isArray(postsPage.content) ? postsPage.content : [])
         }
 
         if (servicesData.status === "fulfilled" && Array.isArray(servicesData.value)) {
@@ -84,15 +97,15 @@ export function HomePage({ onNavigate }: HomePageProps) {
           setFacilities(facilitiesData.value.map((f: any) => mapFacility(f)))
         }
 
-        // Fetch user profile and personalized feed
+        // Fetch user profile and personalized feed (paginated)
         if (userId) {
           try {
             const [userData, feedData] = await Promise.all([
               userService.getUserById(userId),
-              feedService.getFeed(userId),
+              feedService.getFeed(userId, 0, 20),
             ])
             if (userData) setUserProfile(userData)
-            if (Array.isArray(feedData)) setFeedItems(feedData)
+            if (feedData?.content) setFeedItems(feedData.content)
           } catch { /* User profile / feed fetch is non-critical */ }
         }
       } catch (err) {
@@ -225,8 +238,48 @@ export function HomePage({ onNavigate }: HomePageProps) {
       </div>
 
       {/* Social Feed */}
+      <div>
+        {userProfile && (
+          <div className="mb-4">
+            <FeedComposer
+              userDisplayName={userName}
+              userAvatar={userProfile.profilePicture ? resolvePostImageUrl(userProfile.profilePicture) : (userProfile.firstName?.[0] ?? "") + (userProfile.lastName?.[0] ?? "")}
+              placeholder="What's on your mind?"
+              onSubmit={async (payload) => {
+                const currentUser = authService.getCurrentUser()
+                if (!currentUser?.id) throw new Error("You must be logged in to post")
+                const name = [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ") || currentUser.username || "User"
+                const avatar = (userProfile?.profilePicture ? resolvePostImageUrl(userProfile.profilePicture) : null) || (currentUser.firstName?.[0] ?? "") + (currentUser.lastName?.[0] ?? "") || (currentUser.username?.[0] ?? "?").toUpperCase()
+                const created = await postsService.create({
+                  authorId: currentUser.id,
+                  authorName: name,
+                  authorAvatar: avatar,
+                  content: payload.content,
+                  image: payload.image,
+                  sport: payload.sport,
+                }) as { id: string; authorName?: string; authorAvatar?: string; content?: string; image?: string; likes?: number; comments?: number; shares?: number; sport?: string; createdAt?: string }
+                const newFeedItem: FeedItem = {
+                  id: created.id,
+                  type: "post",
+                  summary: created.content,
+                  authorName: created.authorName ?? name,
+                  authorAvatar: created.authorAvatar ?? avatar,
+                  image: created.image,
+                  likes: created.likes ?? 0,
+                  comments: created.comments ?? 0,
+                  shares: created.shares ?? 0,
+                  sport: created.sport,
+                  createdAt: created.createdAt,
+                }
+                setFeedItems((prev) => [newFeedItem, ...prev])
+              }}
+              onSuccess={() => toast.success("Post shared")}
+            />
+          </div>
+        )}
+
       {(posts.length > 0 || showFeedApi) && (
-        <div>
+        <>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-foreground">Community Feed</h2>
             <div className="flex items-center gap-2">
@@ -251,21 +304,30 @@ export function HomePage({ onNavigate }: HomePageProps) {
           </div>
           <div className="space-y-4">
             {showFeedApi
-              ? forYouFeedItems.map((item) => {
+                ? forYouFeedItems.map((item) => {
                   if (item.type === "post") {
-                    const post = {
+                    const post: PostCardData = {
                       id: item.id,
                       author: item.authorName ?? "User",
                       authorAvatar: item.authorAvatar ?? "?",
-                      time: item.createdAt ?? "",
+                      time: formatFeedTime(item.createdAt),
                       content: item.summary ?? "",
-                      image: item.image,
+                      image: resolvePostImageUrl(item.image) || item.image,
                       likes: item.likes ?? 0,
                       comments: item.comments ?? 0,
                       shares: item.shares ?? 0,
+                      liked: false,
+                      saved: false,
                       sport: item.sport,
                     }
-                    return <PostCard key={item.id} post={post} />
+                    return (
+                      <PostCard
+                        key={item.id}
+                        post={post}
+                        userId={userId}
+                        currentUser={currentUserForComment}
+                      />
+                    )
                   }
                   if (item.type === "activity") {
                     const activity = {
@@ -304,12 +366,34 @@ export function HomePage({ onNavigate }: HomePageProps) {
                     </div>
                   )
                 })
-              : displayedPosts.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
+              : displayedPosts.map((p: any) => {
+                  const post: PostCardData = {
+                    id: p.id,
+                    author: p.authorName ?? p.author ?? "User",
+                    authorAvatar: p.authorAvatar ?? "?",
+                    time: formatFeedTime(p.createdAt),
+                    content: p.content ?? "",
+                    image: resolvePostImageUrl(p.image) || p.image,
+                    likes: p.likes ?? 0,
+                    comments: p.comments ?? 0,
+                    shares: p.shares ?? 0,
+                    liked: p.likedByCurrentUser ?? false,
+                    saved: p.savedByCurrentUser ?? false,
+                    sport: p.sport,
+                  }
+                  return (
+                    <PostCard
+                      key={p.id}
+                      post={post}
+                      userId={userId}
+                      currentUser={currentUserForComment}
+                    />
+                  )
+                })}
           </div>
-        </div>
+        </>
       )}
+      </div>
 
       {/* Featured Activities */}
       {activities.length > 0 && (

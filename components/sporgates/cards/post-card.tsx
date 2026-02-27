@@ -2,45 +2,81 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { MoreHorizontal } from "lucide-react"
+import { cn, resolvePostImageUrl, isAvatarImageUrl } from "@/lib/utils"
+import { PostActionBar } from "@/components/sporgates/post-action-bar"
+import { PostCommentsInline } from "@/components/sporgates/post-comments-inline"
+import { usePostActions } from "@/hooks/use-post-actions"
+import type { PostCardData } from "@/lib/types/post"
 
-interface Post {
-  id: string
-  author: string
-  authorAvatar: string
-  time: string
-  content: string
-  image?: string
-  likes: number
-  comments: number
-  shares: number
-  liked?: boolean
-  saved?: boolean
-  sport?: string
+export interface PostCardProps {
+  post: PostCardData
+  userId?: string
+  /** For inline comment form; when absent, comments section is hidden. */
+  currentUser?: { id: string; authorName: string; authorAvatar: string } | null
+  onCountChange?: (count: number) => void
+  /** When true, comments section is expanded by default (e.g. when opened from a comment notification). */
+  initialShowComments?: boolean
+  className?: string
 }
 
-interface PostCardProps {
-  post: Post
-}
-
-export function PostCard({ post }: PostCardProps) {
-  const [liked, setLiked] = useState(post.liked || false)
-  const [saved, setSaved] = useState(post.saved || false)
-  const [likeCount, setLikeCount] = useState(post.likes)
-
-  const toggleLike = () => {
-    setLiked((prev) => !prev)
-    setLikeCount((prev) => (liked ? prev - 1 : prev + 1))
+/**
+ * Single post in the feed. Inline comment input and list under the action bar.
+ */
+export function PostCard({ post, userId, currentUser, onCountChange, initialShowComments, className }: PostCardProps) {
+  const [commentCount, setCommentCount] = useState(post.comments ?? 0)
+  const [showComments, setShowComments] = useState(initialShowComments ?? false)
+  const handleCountChange = (count: number) => {
+    setCommentCount(count)
+    onCountChange?.(count)
   }
+  const toggleComments = () => setShowComments((prev) => !prev)
+
+  const {
+    liked,
+    likeCount,
+    saved,
+    shareCount,
+    loading,
+    handleLike,
+    handleSave,
+    handleShare,
+  } = usePostActions({
+    postId: post.id,
+    userId,
+    initialPost: {
+      likedByCurrentUser: post.liked,
+      savedByCurrentUser: post.saved,
+      likes: post.likes,
+      shares: post.shares,
+      content: post.content,
+    },
+  })
 
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md">
-      {/* Post Header */}
+    <div
+      className={cn(
+        "rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md",
+        className
+      )}
+    >
+      {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-3">
-          <div className="gradient-primary flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white">
-            {post.authorAvatar}
+          <div className="relative h-10 w-10 shrink-0 rounded-full overflow-hidden bg-muted">
+            {isAvatarImageUrl(post.authorAvatar) ? (
+              <Image
+                src={resolvePostImageUrl(post.authorAvatar)}
+                alt={post.author}
+                fill
+                className="object-cover"
+                sizes="40px"
+              />
+            ) : (
+              <div className="gradient-primary flex h-full w-full items-center justify-center text-xs font-bold text-white">
+                {post.authorAvatar}
+              </div>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -57,17 +93,18 @@ export function PostCard({ post }: PostCardProps) {
         <button
           type="button"
           className="rounded-full p-1.5 transition-colors hover:bg-muted"
+          aria-label="More options"
         >
           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
 
-      {/* Post Content */}
+      {/* Content */}
       <div className="px-4 py-3">
         <p className="text-sm leading-relaxed text-foreground">{post.content}</p>
       </div>
 
-      {/* Post Image */}
+      {/* Image */}
       {post.image && (
         <div className="relative overflow-hidden">
           <Image
@@ -80,54 +117,32 @@ export function PostCard({ post }: PostCardProps) {
         </div>
       )}
 
-      {/* Engagement Stats */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-2 text-[11px] text-muted-foreground">
-        <span>{likeCount} likes</span>
-        <div className="flex gap-3">
-          <span>{post.comments} comments</span>
-          <span>{post.shares} shares</span>
-        </div>
-      </div>
+      {/* Actions */}
+      <PostActionBar
+        likeCount={likeCount}
+        liked={liked}
+        commentCount={commentCount}
+        shareCount={shareCount}
+        saved={saved}
+        loading={loading}
+        onLike={handleLike}
+        onComment={toggleComments}
+        onShare={handleShare}
+        onSave={handleSave}
+        readOnly={!userId}
+        commentsExpanded={showComments}
+      />
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between px-2 py-1">
-        <button
-          type="button"
-          onClick={toggleLike}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
-            liked ? "text-red-500" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Heart className={cn("h-4 w-4", liked && "fill-red-500")} />
-          Like
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <MessageCircle className="h-4 w-4" />
-          Comment
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <Share2 className="h-4 w-4" />
-          Share
-        </button>
-        <button
-          type="button"
-          onClick={() => setSaved((prev) => !prev)}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
-            saved ? "text-secondary" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Bookmark className={cn("h-4 w-4", saved && "fill-secondary")} />
-          Save
-        </button>
-      </div>
+      {/* Inline comments: show/hide when Comment is clicked */}
+      {showComments && (
+        <PostCommentsInline
+          postId={post.id}
+          commentCount={commentCount}
+          onCountChange={handleCountChange}
+          currentUser={currentUser ?? null}
+          initialLoad={initialShowComments ?? false}
+        />
+      )}
     </div>
   )
 }

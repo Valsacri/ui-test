@@ -16,12 +16,14 @@ import {
   CalendarDays,
   ChevronRight,
   Loader2,
+  Camera,
+  ImagePlus,
 } from "lucide-react"
 import { userService, authService, activitiesService, postsService } from "@/lib/services"
 import type { PageRoute } from "@/lib/navigation"
 import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
-import { cn } from "@/lib/utils"
+import { cn, parseBackendDate } from "@/lib/utils"
 
 interface ProfilePageProps {
   onNavigate: (page: PageRoute) => void
@@ -59,6 +61,8 @@ const weeklyData = [
   { day: "Sun", hours: 1.5 },
 ]
 
+const apiBase = typeof process !== "undefined" ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api") : ""
+
 const defaultProfile = {
   name: "Athlete",
   username: "@athlete",
@@ -66,6 +70,8 @@ const defaultProfile = {
   location: "Unknown",
   memberSince: "2025",
   avatar: "A",
+  profilePicture: null as string | null,
+  coverImage: null as string | null,
   followers: 0,
   following: 0,
   activitiesJoined: 0,
@@ -81,12 +87,14 @@ const goals = [
 
 export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const maxHours = Math.max(...weeklyData.map((d) => d.hours))
 
   const user = authService.getCurrentUser()
   const userId = user?.id
 
-  const { data: userData, error: userError, isLoading: userLoading } = useSWR(
+  const { data: userData, error: userError, isLoading: userLoading, mutate: mutateUser } = useSWR(
     userId ? `/users/${userId}` : null,
     () => userService.getUserById(userId!),
     { revalidateOnFocus: false, dedupingInterval: 10000 }
@@ -114,12 +122,51 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
       bio: userData.bio || defaultProfile.bio,
       location: userData.location || defaultProfile.location,
       avatar: userData.firstName?.charAt(0) || defaultProfile.avatar,
+      profilePicture: userData.profilePicture || null,
+      coverImage: userData.coverImage || null,
       username: userData.username ? `@${userData.username}` : defaultProfile.username,
       followers: userData.followersCount ?? defaultProfile.followers,
       following: userData.followingCount ?? defaultProfile.following,
       favoriteSports: userData.sportsPreferences?.map((s: any) => s.sportName) || defaultProfile.favoriteSports,
     } : {}),
   }
+
+  const resolveImageUrl = (path: string | null | undefined) => {
+    if (!path) return null
+    if (path.startsWith("http")) return path
+    return path.startsWith("/") ? `${apiBase}${path}` : path
+  }
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+    e.target.value = ""
+    setUploadingCover(true)
+    try {
+      const { url } = await userService.uploadCoverImage(file)
+      await userService.updateProfile(userId, { coverImage: url })
+      await mutateUser()
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+    e.target.value = ""
+    setUploadingAvatar(true)
+    try {
+      const { url } = await userService.uploadProfileImage(file)
+      await userService.updateProfile(userId, { profilePicture: url })
+      await mutateUser()
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const coverImageUrl = resolveImageUrl(userProfile.coverImage)
+  const profilePictureUrl = resolveImageUrl(userProfile.profilePicture)
 
   const parseDate = (d: any) => Array.isArray(d) ? new Date(d[0], d[1] - 1, d[2], d[3] || 0, d[4] || 0) : new Date(d)
   const activities = Array.isArray(actData)
@@ -156,11 +203,46 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
     <div className="space-y-6 pb-20 lg:pb-0">
       {/* Profile Header */}
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="gradient-primary h-32" />
+        {/* Cover */}
+        <div className="relative h-32 bg-muted">
+          {coverImageUrl ? (
+            <Image src={coverImageUrl} alt="Cover" fill className="object-cover" sizes="800px" unoptimized />
+          ) : (
+            <div className="gradient-primary h-full w-full" />
+          )}
+          <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100">
+            <input type="file" accept="image/*" className="sr-only" onChange={handleCoverUpload} disabled={uploadingCover} />
+            {uploadingCover ? (
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
+            ) : (
+              <span className="flex items-center gap-2 rounded-full bg-black/50 px-4 py-2 text-sm font-medium text-white">
+                <ImagePlus className="h-4 w-4" /> Change cover
+              </span>
+            )}
+          </label>
+        </div>
         <div className="px-6 pb-6 pt-6">
           <div className="-mt-12 flex items-end gap-4">
-            <div className="gradient-primary flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card text-2xl font-bold text-white shadow-lg">
-              {userProfile.avatar}
+            {/* Avatar */}
+            <div className="relative group">
+              <div className={cn(
+                "relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-card text-2xl font-bold text-white shadow-lg",
+                !profilePictureUrl && "gradient-primary"
+              )}>
+                {profilePictureUrl ? (
+                  <Image src={profilePictureUrl} alt={userProfile.name} fill className="object-cover" sizes="96px" unoptimized />
+                ) : (
+                  userProfile.avatar
+                )}
+              </div>
+              <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-2xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
+                {uploadingAvatar ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                ) : (
+                  <Camera className="h-6 w-6 text-white" />
+                )}
+              </label>
             </div>
             <div className="flex-1 pb-1">
               <div className="flex items-center gap-2">
@@ -356,7 +438,7 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
                   >
                     <p className="text-sm text-foreground line-clamp-2">{post.content || post.text || post.body}</p>
                     <p className="mt-1 text-[10px] text-muted-foreground">
-                      {post.createdAt ? new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}
+                      {post.createdAt ? (() => { const d = parseBackendDate(post.createdAt as string | number[]); return d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""; })() : ""}
                       {(post.likesCount ?? post.likeCount) != null && ` · ${post.likesCount ?? post.likeCount} likes`}
                     </p>
                   </div>

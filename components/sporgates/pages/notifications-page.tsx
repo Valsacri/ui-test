@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import useSWR from "swr"
 import {
   Bell,
@@ -11,12 +11,14 @@ import {
   UserPlus,
   MessageCircle,
   CheckCheck,
+  Mail,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, formatFeedTime } from "@/lib/utils"
 import { notificationsService, authService } from "@/lib/services"
 import { NotificationSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { toast } from "sonner"
+import { useAppRouter, getPath } from "@/lib/route-map"
 
 interface Notification {
   id: string
@@ -27,6 +29,10 @@ interface Notification {
   read: boolean
   userName: string
   userAvatar: string
+  /** Post to open when notification is clicked (backend postId or referenceId for type "post"). */
+  postId: string | null
+  referenceId: string | null
+  referenceType: string | null
 }
 
 const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -49,42 +55,34 @@ const typeColors: Record<string, string> = {
   follow: "text-emerald-500",
 }
 
-function formatTimeAgo(dateStr: string): string {
-  try {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMin = Math.floor(diffMs / 60_000)
-    if (diffMin < 1) return "Just now"
-    if (diffMin < 60) return `${diffMin}m ago`
-    const diffHrs = Math.floor(diffMin / 60)
-    if (diffHrs < 24) return `${diffHrs}h ago`
-    const diffDays = Math.floor(diffHrs / 24)
-    if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString()
-  } catch {
-    return dateStr || ""
-  }
-}
-
 export function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
   const user = authService.getCurrentUser()
+  const { navigate, router } = useAppRouter()
 
   const { data: rawNotifications, error, isLoading, mutate: mutateNotifications } = useSWR(
     user?.id ? `/notifications/user/${user.id}` : null,
     async (url: string) => {
       const data = await notificationsService.getByUser(user!.id)
       const list = Array.isArray(data) ? data : (data?.content || [])
+      const mapType = (t: unknown): Notification["type"] => {
+        const s = String(t ?? "").toUpperCase()
+        if (s === "POST_LIKE") return "social"
+        if (s === "POST_COMMENT" || s === "COMMENT_REPLY" || s === "COMMENT_LIKE") return "comment"
+        return (t as Notification["type"]) || "system"
+      }
       return list.map((n: Record<string, unknown>) => ({
         id: String(n.id),
-        type: (n.type as Notification["type"]) || "system",
+        type: mapType(n.type),
         title: String(n.title || ""),
         message: String(n.message || ""),
-        time: n.createdAt ? formatTimeAgo(String(n.createdAt)) : "",
+        time: formatFeedTime(n.createdAt),
         read: Boolean(n.read),
         userName: String(n.senderName || n.referenceType || "Sporgates"),
         userAvatar: String(n.senderName || n.referenceType || "SG").substring(0, 2).toUpperCase(),
+        postId: n.postId != null ? String(n.postId) : (n.referenceType === "post" && n.referenceId ? String(n.referenceId) : null),
+        referenceId: n.referenceId != null ? String(n.referenceId) : null,
+        referenceType: n.referenceType != null ? String(n.referenceType) : null,
       }))
     },
     { revalidateOnFocus: false, dedupingInterval: 10000 }
@@ -114,15 +112,49 @@ export function NotificationsPage() {
   }
 
   const handleToggleRead = (id: string) => {
-    // Optimistic update
+    const notif = notifications.find((n) => n.id === id)
+    const newRead = notif ? !notif.read : true
     mutateNotifications(
-      notifications.map((n: Notification) => (n.id === id ? { ...n, read: !n.read } : n)),
+      notifications.map((n: Notification) => (n.id === id ? { ...n, read: newRead } : n)),
       false
     )
-    notificationsService.markAsRead(id).catch(() => {
-      toast.error("Failed to update notification")
-      mutateNotifications() // revert on failure
-    })
+    if (newRead) {
+      notificationsService.markAsRead(id).catch(() => {
+        toast.error("Failed to mark as read")
+        mutateNotifications()
+      })
+    } else {
+      notificationsService.markAsUnread(id).catch(() => {
+        toast.error("Failed to mark as unread")
+        mutateNotifications()
+      })
+    }
+  }
+
+  const handleMarkUnread = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    handleToggleRead(id)
+  }
+
+  const handleNotificationClick = (notif: Notification) => {
+    const postIdToOpen = notif.postId ?? (notif.referenceType === "post" && notif.referenceId ? notif.referenceId : null)
+    if (postIdToOpen) {
+      const openComments = notif.type === "comment"
+      if (openComments) {
+        router.push(getPath("post-detail", postIdToOpen) + "?comments=1")
+      } else {
+        navigate("post-detail", postIdToOpen)
+      }
+      if (!notif.read) {
+        mutateNotifications(
+          notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
+          false
+        )
+        notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
+      }
+    } else {
+      handleToggleRead(notif.id)
+    }
   }
 
   if (isLoading) {
@@ -208,10 +240,8 @@ export function NotificationsPage() {
             const Icon = typeIcons[notif.type] || Bell
             const iconColor = typeColors[notif.type] || "text-muted-foreground"
             return (
-              <button
-                type="button"
+              <div
                 key={notif.id}
-                onClick={() => handleToggleRead(notif.id)}
                 className={cn(
                   "flex w-full items-start gap-4 rounded-2xl border bg-card p-4 text-left transition-all hover:shadow-md",
                   !notif.read
@@ -219,39 +249,57 @@ export function NotificationsPage() {
                     : "border-border"
                 )}
               >
-                {/* Avatar with icon overlay */}
-                <div className="relative shrink-0">
-                  <div
-                    className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white",
-                      !notif.read ? "gradient-primary" : "bg-muted text-muted-foreground"
-                    )}
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-start gap-4 text-left"
+                  onClick={() => handleNotificationClick(notif)}
+                >
+                  {/* Avatar with icon overlay */}
+                  <div className="relative shrink-0">
+                    <div
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white",
+                        !notif.read ? "gradient-primary" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {!notif.read ? (
+                        <span className="text-white">{notif.userAvatar}</span>
+                      ) : (
+                        <span>{notif.userAvatar}</span>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card">
+                      <Icon className={cn("h-3 w-3", iconColor)} />
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm">
+                      <span className="font-semibold text-foreground">{notif.userName}</span>{" "}
+                      <span className="text-muted-foreground">{notif.message}</span>
+                    </p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{notif.time}</p>
+                  </div>
+
+                  {/* Unread dot */}
+                  {!notif.read && (
+                    <div className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
+                  )}
+                </button>
+
+                {/* Mark unread for read items */}
+                {notif.read && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleMarkUnread(e, notif.id)}
+                    className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    title="Mark as unread"
                   >
-                    {!notif.read ? (
-                      <span className="text-white">{notif.userAvatar}</span>
-                    ) : (
-                      <span>{notif.userAvatar}</span>
-                    )}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card">
-                    <Icon className={cn("h-3 w-3", iconColor)} />
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm">
-                    <span className="font-semibold text-foreground">{notif.userName}</span>{" "}
-                    <span className="text-muted-foreground">{notif.message}</span>
-                  </p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">{notif.time}</p>
-                </div>
-
-                {/* Unread dot */}
-                {!notif.read && (
-                  <div className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
+                    <Mail className="h-4 w-4" />
+                  </button>
                 )}
-              </button>
+              </div>
             )
           })
         )}

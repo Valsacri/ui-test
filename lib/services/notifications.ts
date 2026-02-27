@@ -80,6 +80,11 @@ export const notificationsService = {
         return response.data;
     },
 
+    markAsUnread: async (id: string) => {
+        const response = await apiClient.put(`/v1/notifications/${id}/unread`);
+        return response.data;
+    },
+
     markAllAsRead: async (userId: string) => {
         const response = await apiClient.put(`/v1/notifications/user/${userId}/read-all`);
         return response.data;

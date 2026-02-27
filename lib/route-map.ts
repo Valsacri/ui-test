@@ -30,6 +30,7 @@ const routeMap: Record<PageRoute, string> = {
     conversation: "/messages/[id]",
     notifications: "/notifications",
     community: "/community",
+    "post-detail": "/post/[id]",
     "squad-detail": "/community/squads/[id]",
     "squad-profile": "/community/squads/[id]/profile",
     "squad-dashboard": "/community/squads/dashboard",
