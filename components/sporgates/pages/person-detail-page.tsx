@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import useSWR from "swr"
 import Image from "next/image"
 import { ArrowLeft, Users, MapPin, Trophy, Calendar, BadgeCheck, Star, MessageCircle } from "lucide-react"
@@ -24,6 +24,7 @@ const achievements = [
 
 export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps) {
   const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(true)
 
   const { data: person, isLoading } = useSWR(
     personId ? `/users/${personId}` : null,
@@ -45,6 +46,22 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
 
   const relatedActivities = Array.isArray(allActivities) ? allActivities.slice(0, 3) : []
   const relatedSquads = Array.isArray(allSquads) ? allSquads.slice(0, 2) : []
+
+  // Check real follow status
+  useEffect(() => {
+    const me = authService.getCurrentUser()?.id
+    if (!me || !personId) {
+      setFollowLoading(false)
+      return
+    }
+    userService.getUserById(me)
+      .then((userData: any) => {
+        const followingList = userData?.following ?? []
+        setIsFollowing(followingList.includes(personId))
+      })
+      .catch(() => { })
+      .finally(() => setFollowLoading(false))
+  }, [personId])
 
   if (isLoading) {
     return <ProfileSkeleton />
@@ -75,7 +92,7 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
       </button>
 
       <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="gradient-primary h-28" />
+        <div className="gradient-primary h-40" />
         <div className="px-6 pb-6">
           <div className="-mt-10 flex flex-col gap-4 md:flex-row md:items-end">
             <div className="gradient-primary flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-card text-2xl font-bold text-white shadow-lg">

@@ -3,6 +3,8 @@
  * Single source of truth for API contracts and UI props.
  */
 
+export type PostVisibility = 'PUBLIC' | 'FOLLOWERS_ONLY' | 'PRIVATE'
+
 export interface Post {
   id: string
   authorId?: string
@@ -10,6 +12,8 @@ export interface Post {
   authorAvatar?: string
   content?: string
   image?: string
+  images?: string[]
+  visibility?: PostVisibility
   likes?: number
   comments?: number
   shares?: number
@@ -33,19 +37,23 @@ export interface Comment {
   replies?: Comment[]
 }
 
+/**
+ * Payload for creating a new post.
+ * Author info is resolved server-side from JWT — no authorId/Name/Avatar needed.
+ */
 export interface CreatePostPayload {
-  authorId: string
-  authorName?: string
-  authorAvatar?: string
   content: string
   image?: string
+  images?: string[]
   sport?: string
+  visibility?: PostVisibility
 }
 
+/**
+ * Payload for creating a comment.
+ * Author info is resolved server-side from JWT.
+ */
 export interface CreateCommentPayload {
-  authorId: string
-  authorName?: string
-  authorAvatar?: string
   text: string
   /** When set, creates a reply to this comment. */
   parentCommentId?: string | null
@@ -79,10 +87,12 @@ export interface PostCardData {
   time: string
   content: string
   image?: string
+  images?: string[]
   likes: number
   comments: number
   shares: number
   liked?: boolean
   saved?: boolean
   sport?: string
+  visibility?: PostVisibility
 }

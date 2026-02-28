@@ -72,7 +72,7 @@ export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: Expl
   }
 
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:block">
+    <aside className="hidden w-80 shrink-0 border-r border-border bg-card lg:block">
       <div className="sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto p-4">
         <nav className="space-y-1">
           {mainItems.map((item) => (

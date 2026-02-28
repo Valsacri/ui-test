@@ -29,6 +29,7 @@ import { EmptyState } from "@/components/sporgates/ux/empty-state"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { PageRoute } from "@/lib/navigation"
+import { usePostModal } from "@/lib/post-modal-context"
 import { cn } from "@/lib/utils"
 
 interface CommunityPageProps {
@@ -70,6 +71,7 @@ const communityGroups: any[] = [
 ]
 
 export function CommunityPage({ onNavigate }: CommunityPageProps) {
+  const { openPost } = usePostModal()
   const [activeTab, setActiveTab] = useState("Feed")
   const [newPost, setNewPost] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -244,7 +246,23 @@ export function CommunityPage({ onNavigate }: CommunityPageProps) {
                 const currentUserForComment = u
                   ? { id: u.id, authorName: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || "User", authorAvatar: avatarUrl || (u.firstName?.[0] ?? "") + (u.lastName?.[0] ?? "") || (u.username?.[0] ?? "?").toUpperCase() }
                   : null
-                return <PostCard key={p.id} post={post} userId={u?.id} currentUser={currentUserForComment} />
+                return (
+                  <div
+                    key={p.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openPost(p.id)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return
+                      const tag = (e.target as HTMLElement).tagName
+                      if (tag === "INPUT" || tag === "TEXTAREA") return
+                      openPost(p.id)
+                    }}
+                    className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
+                  >
+                    <PostCard post={post} userId={u?.id} currentUser={currentUserForComment} />
+                  </div>
+                )
               })
             )}
           </div>

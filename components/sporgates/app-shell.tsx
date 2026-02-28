@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { businessesService } from "@/lib/services/businesses"
 import { authService } from "@/lib/services/auth"
-import { notificationsService } from "@/lib/services/notifications"
+import { notificationsService, subscribeToNotificationStream } from "@/lib/services/notifications"
 import { messagesService } from "@/lib/services/messages"
 import type { PageRoute } from "@/lib/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
@@ -140,11 +140,20 @@ export function AppShell() {
           setUnreadNotifications(count)
         })
         .catch(() => { })
+
+      const stream = subscribeToNotificationStream?.(user.id, () => {
+        setUnreadNotifications(prev => prev + 1)
+      })
+
       messagesService.getUnreadCount(user.id)
         .then((data: { unreadCount?: number }) => {
           setUnreadMessages(data?.unreadCount ?? 0)
         })
         .catch(() => { })
+
+      return () => {
+        stream?.disconnect?.()
+      }
     }
   }, [])
 
@@ -186,7 +195,7 @@ export function AppShell() {
   const renderPage = () => {
     switch (currentPage) {
       case "home":
-        return <HomePage onNavigate={navigate} />
+        return <HomePage />
       case "explore":
         return <ExplorePage onNavigate={navigate} />
       case "activities":
@@ -335,7 +344,7 @@ export function AppShell() {
       case "onboarding-confirmation":
         return <AuthPages page={currentPage} onNavigate={navigate} />
       default:
-        return <HomePage onNavigate={navigate} />
+        return <HomePage />
     }
   }
 
@@ -361,6 +370,7 @@ export function AppShell() {
         onCreateNewBusiness={createNewBusiness}
         unreadMessages={unreadMessages}
         unreadNotifications={unreadNotifications}
+        onUnreadNotificationsChange={setUnreadNotifications}
       />
       <div className="flex">
         {showSidebars && (

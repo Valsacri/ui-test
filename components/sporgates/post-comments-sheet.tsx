@@ -49,9 +49,6 @@ export function PostCommentsSheet({
   const handleSubmit = async (text: string) => {
     if (!currentUser?.id || !text.trim()) return
     const payload: CreateCommentPayload = {
-      authorId: currentUser.id,
-      authorName: currentUser.authorName,
-      authorAvatar: currentUser.authorAvatar,
       text: text.trim(),
     }
     await addComment(payload)

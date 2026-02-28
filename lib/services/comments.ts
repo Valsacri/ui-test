@@ -8,10 +8,10 @@ export const commentsService = {
     postId: string,
     page = 0,
     size = COMMENTS_PAGE_SIZE,
-    currentUserId?: string | null
+    _currentUserId?: string | null // DEPRECATED — backend extracts from JWT
   ): Promise<CommentsPage> => {
     const { data } = await apiClient.get<CommentsPage>(`/v1/posts/${postId}/comments`, {
-      params: { page, size, ...(currentUserId ? { currentUserId } : {}) },
+      params: { page, size },
     });
     return data;
   },
@@ -21,11 +21,10 @@ export const commentsService = {
     return data;
   },
 
-  toggleLike: async (postId: string, commentId: string, userId: string): Promise<Comment> => {
+  toggleLike: async (postId: string, commentId: string, _userId?: string): Promise<Comment> => {
+    // userId no longer sent — backend extracts from JWT
     const { data } = await apiClient.post<Comment>(
-      `/v1/posts/${postId}/comments/${commentId}/like`,
-      null,
-      { params: { userId } }
+      `/v1/posts/${postId}/comments/${commentId}/like`
     );
     return data;
   },

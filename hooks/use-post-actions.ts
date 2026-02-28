@@ -14,7 +14,6 @@ export interface UsePostActionsOptions {
 
 /**
  * Encapsulates like, share, and save actions with optimistic updates and rollback on error.
- * CTO-level: single responsibility, clear error handling, minimal re-renders.
  */
 export function usePostActions({
   postId,
@@ -37,7 +36,7 @@ export function usePostActions({
     setLikeCount((c) => (liked ? c - 1 : c + 1))
     setLoading((l) => ({ ...l, like: true }))
     try {
-      const updated = await postsService.toggleLike(postId, userId)
+      const updated = await postsService.toggleLike(postId)
       onUpdate?.({ likedByCurrentUser: updated.likedByCurrentUser, likes: updated.likes })
       setLiked(!!updated.likedByCurrentUser)
       setLikeCount(updated.likes ?? 0)
@@ -56,13 +55,9 @@ export function usePostActions({
     setSaved((s) => !s)
     setLoading((l) => ({ ...l, save: true }))
     try {
-      if (saved) {
-        await postsService.unsave(userId, postId)
-        onUpdate?.({ savedByCurrentUser: false })
-      } else {
-        await postsService.save(userId, postId)
-        onUpdate?.({ savedByCurrentUser: true })
-      }
+      const updated = await postsService.toggleSave(postId)
+      setSaved(!!updated.savedByCurrentUser)
+      onUpdate?.({ savedByCurrentUser: updated.savedByCurrentUser })
     } catch (err) {
       setSaved(prevSaved)
       onError?.('save', err instanceof Error ? err : new Error('Save failed'))
@@ -77,7 +72,7 @@ export function usePostActions({
     setShareCount((c) => c + 1)
     setLoading((l) => ({ ...l, share: true }))
     try {
-      const updated = await postsService.recordShare(postId, userId)
+      const updated = await postsService.recordShare(postId)
       onUpdate?.({ shares: updated.shares })
       setShareCount(updated.shares ?? prevShareCount + 1)
       if (typeof navigator !== 'undefined' && navigator.share) {

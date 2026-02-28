@@ -1,12 +1,13 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ImageIcon, Send, X, Loader2 } from "lucide-react"
+import { ImageIcon, Send, X, Loader2, Globe, Users, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { postsService } from "@/lib/services/posts"
 import Image from "next/image"
 import { cn, resolvePostImageUrl, isAvatarImageUrl } from "@/lib/utils"
+import type { PostVisibility } from "@/lib/types/post"
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
 const MAX_FILE_SIZE_MB = 10
@@ -14,8 +15,16 @@ const MAX_FILE_SIZE_MB = 10
 export interface FeedComposerPayload {
   content: string
   image?: string
+  images?: string[]
   sport?: string
+  visibility?: PostVisibility
 }
+
+const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
+  { value: 'PUBLIC', label: 'Public', icon: Globe },
+  { value: 'FOLLOWERS_ONLY', label: 'Followers', icon: Users },
+  { value: 'PRIVATE', label: 'Private', icon: Lock },
+]
 
 interface FeedComposerProps {
   userDisplayName: string
@@ -36,8 +45,9 @@ export function FeedComposer({
 }: FeedComposerProps) {
   const [expanded, setExpanded] = useState(false)
   const [content, setContent] = useState("")
-  const [imageUrl, setImageUrl] = useState("")
+  const [imageUrls, setImageUrls] = useState<string[]>([])
   const [sport, setSport] = useState("")
+  const [visibility, setVisibility] = useState<PostVisibility>('PUBLIC')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,11 +62,13 @@ export function FeedComposer({
     try {
       await onSubmit({
         content: content.trim(),
-        image: imageUrl.trim() || undefined,
+        image: imageUrls[0] || undefined,
+        images: imageUrls.length > 0 ? imageUrls : undefined,
         sport: sport.trim() || undefined,
+        visibility,
       })
       setContent("")
-      setImageUrl("")
+      setImageUrls([])
       setSport("")
       setExpanded(false)
       onSuccess?.()
@@ -139,23 +151,26 @@ export function FeedComposer({
             ref={fileInputRef}
             type="file"
             accept={ACCEPTED_IMAGE_TYPES.join(",")}
+            multiple
             className="hidden"
             onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-                setError("Please choose a JPEG, PNG, GIF or WebP image.")
-                return
-              }
-              if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-                setError(`Image must be under ${MAX_FILE_SIZE_MB}MB.`)
-                return
+              const files = Array.from(e.target.files || [])
+              if (files.length === 0) return
+              for (const file of files) {
+                if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+                  setError("Please choose JPEG, PNG, GIF or WebP images.")
+                  return
+                }
+                if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+                  setError(`Each image must be under ${MAX_FILE_SIZE_MB}MB.`)
+                  return
+                }
               }
               setError(null)
               setUploading(true)
               try {
-                const { url } = await postsService.uploadMedia(file)
-                setImageUrl(url)
+                const { urls } = await postsService.uploadMedia(files)
+                setImageUrls((prev) => [...prev, ...urls])
               } catch (err) {
                 setError(err instanceof Error ? err.message : "Upload failed.")
               } finally {
@@ -176,24 +191,28 @@ export function FeedComposer({
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
               {uploading ? "Uploading..." : "Photo"}
             </Button>
-            {imageUrl && (
-              <div className="relative inline-block">
-                <div className="relative h-14 w-14 rounded-lg overflow-hidden border border-border bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={resolvePostImageUrl(imageUrl)}
-                    alt="Upload"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="absolute -top-1 -right-1 rounded-full bg-destructive text-destructive-foreground p-0.5"
-                  onClick={() => setImageUrl("")}
-                  aria-label="Remove image"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+            {imageUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {imageUrls.map((url, idx) => (
+                  <div key={url} className="relative inline-block">
+                    <div className="relative h-14 w-14 rounded-lg overflow-hidden border border-border bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolvePostImageUrl(url)}
+                        alt={`Upload ${idx + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="absolute -top-1 -right-1 rounded-full bg-destructive text-destructive-foreground p-0.5"
+                      onClick={() => setImageUrls((prev) => prev.filter((_, i) => i !== idx))}
+                      aria-label="Remove image"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
             <input
@@ -204,6 +223,31 @@ export function FeedComposer({
               className="h-8 w-24 rounded-md border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-primary"
               disabled={isSubmitting}
             />
+            {/* Visibility selector */}
+            <div className="ml-auto flex items-center gap-1 rounded-lg border border-border bg-background px-1">
+              {VISIBILITY_OPTIONS.map((opt) => {
+                const Icon = opt.icon
+                const active = visibility === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setVisibility(opt.value)}
+                    disabled={isSubmitting}
+                    className={cn(
+                      "flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title={opt.label}
+                  >
+                    <Icon className="h-3 w-3" />
+                    <span className="hidden sm:inline">{opt.label}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {error && (

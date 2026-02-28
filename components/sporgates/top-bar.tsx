@@ -27,7 +27,7 @@ import { notificationsService } from "@/lib/services/notifications"
 import { cn, resolvePostImageUrl, isAvatarImageUrl, formatFeedTime } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
 import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
-import { PostPopupSheet } from "@/components/sporgates/post-popup-sheet"
+import { usePostModal } from "@/lib/post-modal-context"
 
 // Inline defaults — no BE endpoints for topbar goals/conversations/notifications preview
 const goals = [
@@ -65,6 +65,7 @@ interface TopBarProps {
   onCreateNewBusiness: () => void
   unreadMessages: number
   unreadNotifications: number
+  onUnreadNotificationsChange?: (updater: number | ((prev: number) => number)) => void
 }
 
 export function TopBar({
@@ -77,6 +78,7 @@ export function TopBar({
   onCreateNewBusiness,
   unreadMessages,
   unreadNotifications,
+  onUnreadNotificationsChange,
 }: TopBarProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showWallet, setShowWallet] = useState(false)
@@ -104,7 +106,7 @@ export function TopBar({
     referenceType: string | null
   }>>([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
-  const [postPopupState, setPostPopupState] = useState<{ postId: string; openComments: boolean } | null>(null)
+  const { openPost } = usePostModal()
 
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -156,7 +158,7 @@ export function TopBar({
       .then((data: any) => {
         const list = Array.isArray(data) ? data : (data?.content ?? [])
         setNotificationsList(list.slice(0, 15).map((n: any) => {
-          const postId = n.postId != null ? String(n.postId) : (n.referenceType === "post" && n.referenceId ? String(n.referenceId) : null)
+          const postId = n.postId != null ? String(n.postId) : (n.referenceType?.toLowerCase() === "post" && n.referenceId ? String(n.referenceId) : null)
           return {
             id: String(n.id),
             type: n.type || "system",
@@ -238,7 +240,7 @@ export function TopBar({
       .then(() => {
         router.push(`/explore?q=${encodeURIComponent(q)}`)
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setIsSearching(false))
   }, [searchQuery, router])
 
@@ -303,7 +305,7 @@ export function TopBar({
                   onClick={() => {
                     setSearchQuery(item.text)
                     setShowSearchDropdown(false)
-                    searchService.search({ query: item.text }).then(() => router.push(`/explore?q=${encodeURIComponent(item.text)}`)).catch(() => {})
+                    searchService.search({ query: item.text }).then(() => router.push(`/explore?q=${encodeURIComponent(item.text)}`)).catch(() => { })
                   }}
                 >
                   {item.text}
@@ -511,7 +513,8 @@ export function TopBar({
                       onClick={() => {
                         notificationsService.markAllAsRead(user.id!).then(() => {
                           setNotificationsList((prev) => prev.map((n) => ({ ...n, read: true })))
-                        }).catch(() => {})
+                          onUnreadNotificationsChange?.(0)
+                        }).catch(() => { })
                       }}
                       className="text-xs font-semibold text-secondary transition-colors hover:text-secondary/80"
                     >
@@ -537,8 +540,8 @@ export function TopBar({
                   </div>
                 ) : (
                   notificationsList.map((notif) => {
-                    const Icon = notifTypeIcons[notif.type] || Bell
-                    const postIdToOpen = notif.postId ?? (notif.referenceType === "post" && notif.referenceId ? notif.referenceId : null)
+                    const Icon = notifTypeIcons[notif.type.toLowerCase()] || Bell
+                    const postIdToOpen = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId ? notif.referenceId : null)
                     const isCommentNotification = ["POST_COMMENT", "COMMENT_REPLY", "COMMENT_LIKE"].includes(String(notif.type).toUpperCase())
                     return (
                       <button
@@ -546,15 +549,15 @@ export function TopBar({
                         key={notif.id}
                         onClick={() => {
                           closeAll()
+                          if (!notif.read) {
+                            setNotificationsList((prev) =>
+                              prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
+                            )
+                            onUnreadNotificationsChange?.((prev: number) => Math.max(0, prev - 1))
+                            notificationsService.markAsRead(notif.id).catch(() => { })
+                          }
                           if (postIdToOpen) {
-                            setPostPopupState({ postId: postIdToOpen, openComments: isCommentNotification })
-                            if (!notif.read) {
-                              notificationsService.markAsRead(notif.id).then(() => {
-                                setNotificationsList((prev) =>
-                                  prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
-                                )
-                              }).catch(() => {})
-                            }
+                            openPost(postIdToOpen, isCommentNotification)
                           } else {
                             onNavigate("notifications")
                           }
@@ -755,13 +758,6 @@ export function TopBar({
         confirmLabel="Sign Out"
         variant="danger"
         onConfirm={handleLogout}
-      />
-
-      <PostPopupSheet
-        postId={postPopupState?.postId ?? null}
-        open={!!postPopupState}
-        onOpenChange={(open) => !open && setPostPopupState(null)}
-        openComments={postPopupState?.openComments}
       />
     </header>
   )

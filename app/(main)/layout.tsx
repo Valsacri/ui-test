@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
@@ -15,6 +15,8 @@ import { notificationsService } from "@/lib/services/notifications"
 import { messagesService } from "@/lib/services/messages"
 import { authService } from "@/lib/services/auth"
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
+import { PostModalProvider } from "@/lib/post-modal-context"
+import { NotificationCountProvider } from "@/lib/notification-count-context"
 import type { PageRoute } from "@/lib/navigation"
 
 
@@ -133,6 +135,33 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
     const [unreadNotifications, setUnreadNotifications] = useState(0)
     const [unreadMessages, setUnreadMessages] = useState(0)
 
+    // Chrome (and other browsers) block audio not triggered by user gesture. Play a silent
+    // sound on first interaction to "unlock" the origin so notification sounds can play later.
+    const audioUnlockedRef = useRef(false)
+    const notificationAudioRef = useRef<HTMLAudioElement | null>(null)
+
+    useEffect(() => {
+        if (audioUnlockedRef.current) return
+        const unlock = () => {
+            if (audioUnlockedRef.current) return
+            audioUnlockedRef.current = true
+            try {
+                const audio = new Audio("/sound/notification.mp3")
+                notificationAudioRef.current = audio
+                audio.volume = 0
+                audio.play().catch(() => {})
+            } catch { /* ignore */ }
+            document.removeEventListener("click", unlock)
+            document.removeEventListener("keydown", unlock)
+        }
+        document.addEventListener("click", unlock, { once: true })
+        document.addEventListener("keydown", unlock, { once: true })
+        return () => {
+            document.removeEventListener("click", unlock)
+            document.removeEventListener("keydown", unlock)
+        }
+    }, [])
+
     const refetchNotificationCount = useCallback(() => {
         const u = authService.getCurrentUser()
         if (!u?.id) return
@@ -144,8 +173,33 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
             .catch(() => {})
     }, [])
 
+    const handleNewNotification = useCallback(() => {
+        try {
+            const audio = notificationAudioRef.current
+            if (audio) {
+                audio.volume = 0.6
+                audio.currentTime = 0
+                audio.play().catch(() => {})
+            } else {
+                const newAudio = new Audio("/sound/notification.mp3")
+                newAudio.volume = 0.6
+                newAudio.play().catch(() => {})
+            }
+        } catch { /* ignore */ }
+        refetchNotificationCount()
+    }, [refetchNotificationCount])
+
     const user = authService.getCurrentUser()
-    useNotificationStream(user?.id ?? null, refetchNotificationCount)
+    useNotificationStream(user?.id ?? null, handleNewNotification)
+
+    const onUnreadNotificationsChange = useCallback(
+        (updater: number | ((prev: number) => number)) => {
+            setUnreadNotifications((prev) =>
+                typeof updater === "function" ? updater(prev) : updater
+            )
+        },
+        []
+    )
 
     useEffect(() => {
         if (user?.id) {
@@ -164,6 +218,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
     }, [user?.id])
 
     return (
+        <PostModalProvider>
+        <NotificationCountProvider value={onUnreadNotificationsChange}>
         <div className="min-h-screen bg-background">
             <TopBar
                 onNavigate={navigate}
@@ -175,6 +231,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 onCreateNewBusiness={createNewBusiness}
                 unreadMessages={unreadMessages}
                 unreadNotifications={unreadNotifications}
+                onUnreadNotificationsChange={onUnreadNotificationsChange}
             />
             <div className="flex">
                 {showSidebars && (
@@ -184,11 +241,13 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                         isBusinessMode={isBusinessMode}
                     />
                 )}
-                <main className="min-w-0 flex-1 p-4 lg:p-6">
-                    <ErrorBoundary>
-                        {children}
-                    </ErrorBoundary>
-                </main>
+                <div className="min-w-0 flex-1 flex justify-center">
+                    <main className="w-full max-w-3xl p-6 lg:p-2">
+                        <ErrorBoundary>
+                            {children}
+                        </ErrorBoundary>
+                    </main>
+                </div>
                 {showRightSidebar && <FeedSidebar onNavigate={navigate} />}
             </div>
             <BottomNav
@@ -197,6 +256,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 isBusinessMode={isBusinessMode}
             />
         </div>
+        </NotificationCountProvider>
+        </PostModalProvider>
     )
 }
 

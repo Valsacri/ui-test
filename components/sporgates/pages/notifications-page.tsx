@@ -11,14 +11,14 @@ import {
   UserPlus,
   MessageCircle,
   CheckCheck,
-  Mail,
 } from "lucide-react"
 import { cn, formatFeedTime } from "@/lib/utils"
 import { notificationsService, authService } from "@/lib/services"
 import { NotificationSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { toast } from "sonner"
-import { useAppRouter, getPath } from "@/lib/route-map"
+import { usePostModal } from "@/lib/post-modal-context"
+import { useNotificationCountUpdate } from "@/lib/notification-count-context"
 
 interface Notification {
   id: string
@@ -58,7 +58,8 @@ const typeColors: Record<string, string> = {
 export function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
   const user = authService.getCurrentUser()
-  const { navigate, router } = useAppRouter()
+  const { openPost } = usePostModal()
+  const onUnreadNotificationsChange = useNotificationCountUpdate()
 
   const { data: rawNotifications, error, isLoading, mutate: mutateNotifications } = useSWR(
     user?.id ? `/notifications/user/${user.id}` : null,
@@ -80,7 +81,7 @@ export function NotificationsPage() {
         read: Boolean(n.read),
         userName: String(n.senderName || n.referenceType || "Sporgates"),
         userAvatar: String(n.senderName || n.referenceType || "SG").substring(0, 2).toUpperCase(),
-        postId: n.postId != null ? String(n.postId) : (n.referenceType === "post" && n.referenceId ? String(n.referenceId) : null),
+        postId: n.postId != null ? String(n.postId) : (String(n.referenceType || "").toLowerCase() === "post" && n.referenceId ? String(n.referenceId) : null),
         referenceId: n.referenceId != null ? String(n.referenceId) : null,
         referenceType: n.referenceType != null ? String(n.referenceType) : null,
       }))
@@ -100,6 +101,7 @@ export function NotificationsPage() {
       notifications.map((n: Notification) => ({ ...n, read: true })),
       false
     )
+    onUnreadNotificationsChange?.(0)
     if (user?.id) {
       try {
         await notificationsService.markAllAsRead(user.id)
@@ -111,49 +113,19 @@ export function NotificationsPage() {
     }
   }
 
-  const handleToggleRead = (id: string) => {
-    const notif = notifications.find((n) => n.id === id)
-    const newRead = notif ? !notif.read : true
-    mutateNotifications(
-      notifications.map((n: Notification) => (n.id === id ? { ...n, read: newRead } : n)),
-      false
-    )
-    if (newRead) {
-      notificationsService.markAsRead(id).catch(() => {
-        toast.error("Failed to mark as read")
-        mutateNotifications()
-      })
-    } else {
-      notificationsService.markAsUnread(id).catch(() => {
-        toast.error("Failed to mark as unread")
-        mutateNotifications()
-      })
-    }
-  }
-
-  const handleMarkUnread = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation()
-    handleToggleRead(id)
-  }
-
   const handleNotificationClick = (notif: Notification) => {
-    const postIdToOpen = notif.postId ?? (notif.referenceType === "post" && notif.referenceId ? notif.referenceId : null)
+    const postIdToOpen = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId ? notif.referenceId : null)
     if (postIdToOpen) {
       const openComments = notif.type === "comment"
-      if (openComments) {
-        router.push(getPath("post-detail", postIdToOpen) + "?comments=1")
-      } else {
-        navigate("post-detail", postIdToOpen)
-      }
+      openPost(postIdToOpen, openComments)
       if (!notif.read) {
         mutateNotifications(
           notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
           false
         )
+        onUnreadNotificationsChange?.((prev) => Math.max(0, prev - 1))
         notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
       }
-    } else {
-      handleToggleRead(notif.id)
     }
   }
 
@@ -239,67 +211,53 @@ export function NotificationsPage() {
           displayedNotifications.map((notif) => {
             const Icon = typeIcons[notif.type] || Bell
             const iconColor = typeColors[notif.type] || "text-muted-foreground"
+            const hasPost = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId)
             return (
-              <div
+              <button
                 key={notif.id}
+                type="button"
+                onClick={() => hasPost && handleNotificationClick(notif)}
                 className={cn(
-                  "flex w-full items-start gap-4 rounded-2xl border bg-card p-4 text-left transition-all hover:shadow-md",
+                  "flex w-full cursor-pointer items-start gap-4 rounded-2xl border bg-card p-4 text-left transition-all hover:shadow-md",
                   !notif.read
                     ? "border-l-4 border-l-secondary border-t-border border-r-border border-b-border"
-                    : "border-border"
+                    : "border-border",
+                  !hasPost && "cursor-default"
                 )}
               >
-                <button
-                  type="button"
-                  className="flex min-w-0 flex-1 items-start gap-4 text-left"
-                  onClick={() => handleNotificationClick(notif)}
-                >
-                  {/* Avatar with icon overlay */}
-                  <div className="relative shrink-0">
-                    <div
-                      className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white",
-                        !notif.read ? "gradient-primary" : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {!notif.read ? (
-                        <span className="text-white">{notif.userAvatar}</span>
-                      ) : (
-                        <span>{notif.userAvatar}</span>
-                      )}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card">
-                      <Icon className={cn("h-3 w-3", iconColor)} />
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm">
-                      <span className="font-semibold text-foreground">{notif.userName}</span>{" "}
-                      <span className="text-muted-foreground">{notif.message}</span>
-                    </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">{notif.time}</p>
-                  </div>
-
-                  {/* Unread dot */}
-                  {!notif.read && (
-                    <div className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
-                  )}
-                </button>
-
-                {/* Mark unread for read items */}
-                {notif.read && (
-                  <button
-                    type="button"
-                    onClick={(e) => handleMarkUnread(e, notif.id)}
-                    className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    title="Mark as unread"
+                {/* Avatar with icon overlay */}
+                <div className="relative shrink-0">
+                  <div
+                    className={cn(
+                      "flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white",
+                      !notif.read ? "gradient-primary" : "bg-muted text-muted-foreground"
+                    )}
                   >
-                    <Mail className="h-4 w-4" />
-                  </button>
+                    {!notif.read ? (
+                      <span className="text-white">{notif.userAvatar}</span>
+                    ) : (
+                      <span>{notif.userAvatar}</span>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card">
+                    <Icon className={cn("h-3 w-3", iconColor)} />
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm">
+                    <span className="font-semibold text-foreground">{notif.userName}</span>{" "}
+                    <span className="text-muted-foreground">{notif.message}</span>
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{notif.time}</p>
+                </div>
+
+                {/* Unread dot */}
+                {!notif.read && (
+                  <div className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
                 )}
-              </div>
+              </button>
             )
           })
         )}

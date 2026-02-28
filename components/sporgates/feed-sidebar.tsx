@@ -42,10 +42,10 @@ export function FeedSidebar({ onNavigate }: FeedSidebarProps) {
           facilitiesService.getAll(),
         ])
         if (actData.status === "fulfilled" && Array.isArray(actData.value)) {
-          setActivities(actData.value.map((a: any) => mapActivity(a)))
+          setActivities(actData.value.map(mapActivity))
         }
         if (facData.status === "fulfilled" && Array.isArray(facData.value)) {
-          setFacilities(facData.value.map((f: any) => mapFacility(f)))
+          setFacilities(facData.value.map(mapFacility))
         }
       } catch { } finally {
         setIsLoading(false)
@@ -58,7 +58,7 @@ export function FeedSidebar({ onNavigate }: FeedSidebarProps) {
   const topFacilities = facilities.slice(0, 2)
 
   return (
-    <aside className="hidden w-72 shrink-0 border-l border-border bg-card xl:block">
+    <aside className="hidden w-96 shrink-0 border-l border-border bg-card xl:block">
       <div className="sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto p-4">
         {/* Trending Activities */}
         <div className="mb-6">

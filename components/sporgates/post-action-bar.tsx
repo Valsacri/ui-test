@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,9 +23,9 @@ export interface PostActionBarProps {
 
 /**
  * Reusable action bar for a post: Like, Comment, Share, Save.
- * Respects loading state and read-only mode.
+ * Memoized + micro-animations on like/save.
  */
-export function PostActionBar({
+export const PostActionBar = React.memo(function PostActionBar({
   likeCount,
   liked,
   commentCount,
@@ -60,7 +61,13 @@ export function PostActionBar({
             )}
             aria-label={liked ? "Unlike" : "Like"}
           >
-            <Heart className={cn("h-4 w-4", liked && "fill-red-500")} />
+            <Heart
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                liked && "fill-red-500 scale-110",
+                !liked && "hover:scale-110"
+              )}
+            />
             Like
           </button>
         )}
@@ -99,11 +106,17 @@ export function PostActionBar({
             )}
             aria-label={saved ? "Unsave" : "Save"}
           >
-            <Bookmark className={cn("h-4 w-4", saved && "fill-secondary")} />
+            <Bookmark
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                saved && "fill-secondary scale-110",
+                !saved && "hover:scale-110"
+              )}
+            />
             Save
           </button>
         )}
       </div>
     </div>
   )
-}
+})

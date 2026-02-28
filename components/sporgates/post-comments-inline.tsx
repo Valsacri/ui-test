@@ -49,6 +49,8 @@ export function PostCommentsInline({
   const [replyingToId, setReplyingToId] = useState<string | null>(null)
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
   const [commentsLoaded, setCommentsLoaded] = useState(initialLoad)
+  /** When false, only first 5 comments are shown; "Show more" expands to show all loaded without fetching. */
+  const [showAllLoaded, setShowAllLoaded] = useState(false)
 
   useEffect(() => {
     if (initialLoad && postId) {
@@ -74,9 +76,6 @@ export function PostCommentsInline({
   const handleSubmit = async (text: string, parentCommentId?: string | null) => {
     if (!currentUser?.id || !text.trim()) return
     const payload: CreateCommentPayload = {
-      authorId: currentUser.id,
-      authorName: currentUser.authorName,
-      authorAvatar: currentUser.authorAvatar,
       text: text.trim(),
       parentCommentId: parentCommentId ?? undefined,
     }
@@ -92,7 +91,7 @@ export function PostCommentsInline({
   const showList = commentsLoaded
 
   return (
-    <div className="border-t border-border bg-muted/30 px-4 py-3">
+    <div className="border-t border-border bg-muted/30 px-3 sm:px-4 pt-3 pb-5">
       {currentUser && (
         <form
           onSubmit={async (e) => {
@@ -110,7 +109,7 @@ export function PostCommentsInline({
             name="comment"
             type="text"
             placeholder="Write a comment..."
-            className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="flex-1 min-h-[44px] rounded-full border border-border bg-background px-4 py-2.5 sm:py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             disabled={adding}
             maxLength={500}
           />
@@ -118,7 +117,7 @@ export function PostCommentsInline({
             type="submit"
             size="icon"
             variant="secondary"
-            className="shrink-0 rounded-full h-9 w-9"
+            className="shrink-0 rounded-full h-11 w-11 min-h-[44px] min-w-[44px] sm:h-9 sm:w-9 sm:min-h-0 sm:min-w-0 touch-manipulation"
             disabled={adding}
           >
             {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -153,7 +152,7 @@ export function PostCommentsInline({
             <p className="text-xs text-muted-foreground py-1">No comments yet.</p>
           ) : (
             <>
-              {comments.map((c) => (
+              {(showAllLoaded ? comments : comments.slice(0, 5)).map((c) => (
                 <CommentRow
                   key={c.id}
                   comment={c}
@@ -169,15 +168,25 @@ export function PostCommentsInline({
                   onToggleReplies={toggleReplies}
                 />
               ))}
-              {hasMore && (
+              {!showAllLoaded && comments.length > 5 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllLoaded(true)}
+                  className="min-h-[44px] py-2 text-xs text-muted-foreground -ml-2 touch-manipulation sm:min-h-0 sm:py-0 sm:h-7"
+                >
+                  Show more comments ({comments.length - 5})
+                </Button>
+              )}
+              {showAllLoaded && hasMore && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={loadMore}
                   disabled={loading}
-                  className="h-7 text-xs text-muted-foreground -ml-2"
+                  className="min-h-[44px] py-2 text-xs text-muted-foreground -ml-2 touch-manipulation sm:min-h-0 sm:py-0 sm:h-7"
                 >
-                  {loading ? "Loading..." : `View more`}
+                  {loading ? "Loading..." : totalElements > comments.length ? `Show more comments (${totalElements - comments.length})` : "Show more comments"}
                 </Button>
               )}
             </>
@@ -259,9 +268,8 @@ function CommentRow({
                   type="button"
                   onClick={() => onLike(comment.id)}
                   disabled={likingId === comment.id}
-                  className={`text-[10px] flex items-center gap-0.5 rounded hover:bg-muted px-1 py-0.5 ${
-                    comment.likedByCurrentUser ? "text-red-500" : "text-muted-foreground"
-                  }`}
+                  className={`text-[10px] flex items-center gap-0.5 rounded hover:bg-muted px-2 py-2 sm:px-1 sm:py-0.5 touch-manipulation -my-1 sm:my-0 ${comment.likedByCurrentUser ? "text-red-500" : "text-muted-foreground"
+                    }`}
                 >
                   {likingId === comment.id ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -275,7 +283,7 @@ function CommentRow({
                 <button
                   type="button"
                   onClick={() => setReplyingToId(showReplyInput ? null : comment.id)}
-                  className="text-[10px] text-muted-foreground hover:bg-muted rounded px-1 py-0.5 flex items-center gap-0.5"
+                  className="text-[10px] text-muted-foreground hover:bg-muted rounded px-2 py-2 sm:px-1 sm:py-0.5 flex items-center gap-0.5 touch-manipulation -my-1 sm:my-0"
                 >
                   <MessageCircle className="h-3 w-3" /> Reply
                 </button>
