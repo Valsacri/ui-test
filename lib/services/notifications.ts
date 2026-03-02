@@ -6,7 +6,7 @@ const getApiBaseUrl = () => typeof window !== 'undefined' && process.env.NEXT_PU
     : 'http://localhost:8080/api';
 
 /**
- * Subscribe to the notification SSE stream (real-time). Uses fetch + auth header.
+ * Subscribe to the notification SSE stream (real-time) with auto-reconnection.
  * Call the returned disconnect() on unmount.
  */
 export function subscribeToNotificationStream(
@@ -14,53 +14,91 @@ export function subscribeToNotificationStream(
     onNotification: () => void,
     onError?: (err: unknown) => void
 ): { disconnect: () => void } {
-    const token = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) : null;
-    if (!token) {
-        onError?.(new Error('No auth token'));
-        return { disconnect: () => {} };
-    }
-    const url = `${getApiBaseUrl()}/v1/notifications/user/${userId}/stream`;
-    const abort = new AbortController();
+    let aborted = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 50;
+    const RETRY_DELAY = 5000; // 5 seconds
 
-    fetch(url, {
-        signal: abort.signal,
-        headers: { Authorization: `Bearer ${token}` },
-    })
-        .then((res) => {
-            if (!res.ok) throw new Error(`SSE ${res.status}`);
-            const reader = res.body?.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-            if (!reader) return;
+    const connect = () => {
+        if (aborted) return;
 
-            const read = () => {
-                reader.read().then(({ done, value }) => {
-                    if (done) return;
-                    buffer += decoder.decode(value, { stream: true });
-                    const events = buffer.split(/\n\n+/);
-                    buffer = events.pop() ?? '';
-                    for (const raw of events) {
-                        let name = '';
-                        let data: string | null = null;
-                        for (const line of raw.split('\n')) {
-                            if (line.startsWith('event:')) name = line.slice(6).trim();
-                            if (line.startsWith('data:')) data = line.slice(5).trim();
-                        }
-                        if (name === 'notification' && data) onNotification();
-                    }
-                    read();
-                }).catch((err) => {
-                    if (err?.name !== 'AbortError') onError?.(err);
-                });
-            };
-            read();
+        const token = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) : null;
+        if (!token) {
+            onError?.(new Error('No auth token'));
+            return;
+        }
+
+        const url = `${getApiBaseUrl()}/v1/notifications/user/${userId}/stream`;
+        const abort = new AbortController();
+
+        fetch(url, {
+            signal: abort.signal,
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'text/event-stream',
+            },
         })
-        .catch((err) => {
-            if (err?.name !== 'AbortError') onError?.(err);
-        });
+            .then((res) => {
+                if (!res.ok) throw new Error(`SSE ${res.status}`);
+                retryCount = 0; // reset on successful connection
+                const reader = res.body?.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                if (!reader) return;
+
+                const read = () => {
+                    reader.read().then(({ done, value }) => {
+                        if (done) {
+                            // Stream ended — reconnect
+                            if (!aborted) setTimeout(connect, RETRY_DELAY);
+                            return;
+                        }
+                        buffer += decoder.decode(value, { stream: true });
+                        const events = buffer.split(/\n\n+/);
+                        buffer = events.pop() ?? '';
+                        for (const raw of events) {
+                            let name = '';
+                            let data: string | null = null;
+                            for (const line of raw.split('\n')) {
+                                if (line.startsWith('event:')) name = line.slice(6).trim();
+                                if (line.startsWith('data:')) data = line.slice(5).trim();
+                            }
+                            if (name === 'notification' && data) onNotification();
+                        }
+                        read();
+                    }).catch((err) => {
+                        if (err?.name !== 'AbortError' && !aborted) {
+                            // Connection lost — reconnect
+                            retryCount++;
+                            if (retryCount <= MAX_RETRIES) {
+                                setTimeout(connect, RETRY_DELAY);
+                            }
+                        }
+                    });
+                };
+                read();
+            })
+            .catch((err) => {
+                if (err?.name !== 'AbortError' && !aborted) {
+                    retryCount++;
+                    if (retryCount <= MAX_RETRIES) {
+                        setTimeout(connect, RETRY_DELAY);
+                    }
+                }
+            });
+
+        // Store abort for disconnect
+        currentAbort = abort;
+    };
+
+    let currentAbort: AbortController | null = null;
+    connect();
 
     return {
-        disconnect: () => abort.abort(),
+        disconnect: () => {
+            aborted = true;
+            currentAbort?.abort();
+        },
     };
 }
 

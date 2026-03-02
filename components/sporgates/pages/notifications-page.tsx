@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import useSWR from "swr"
 import {
   Bell,
@@ -9,26 +9,30 @@ import {
   Trophy,
   Settings,
   UserPlus,
+  UserCheck,
   MessageCircle,
   CheckCheck,
 } from "lucide-react"
-import { cn, formatFeedTime } from "@/lib/utils"
-import { notificationsService, authService } from "@/lib/services"
+import { cn, formatFeedTime, isAvatarImageUrl, resolvePostImageUrl } from "@/lib/utils"
+import Image from "next/image"
+import { notificationsService, authService, userService } from "@/lib/services"
 import { NotificationSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { toast } from "sonner"
 import { usePostModal } from "@/lib/post-modal-context"
 import { useNotificationCountUpdate } from "@/lib/notification-count-context"
+import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
 
 interface Notification {
   id: string
-  type: "activity" | "social" | "booking" | "achievement" | "system" | "comment" | "follow"
+  type: "activity" | "social" | "booking" | "achievement" | "system" | "comment" | "follow" | "follow_back"
   title: string
   message: string
   time: string
   read: boolean
   userName: string
   userAvatar: string
+  senderAvatar: string | null
   /** Post to open when notification is clicked (backend postId or referenceId for type "post"). */
   postId: string | null
   referenceId: string | null
@@ -43,6 +47,7 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   system: Settings,
   comment: MessageCircle,
   follow: UserPlus,
+  follow_back: UserCheck,
 }
 
 const typeColors: Record<string, string> = {
@@ -53,6 +58,7 @@ const typeColors: Record<string, string> = {
   system: "text-slate-500",
   comment: "text-sky-500",
   follow: "text-emerald-500",
+  follow_back: "text-emerald-500",
 }
 
 export function NotificationsPage() {
@@ -70,6 +76,8 @@ export function NotificationsPage() {
         const s = String(t ?? "").toUpperCase()
         if (s === "POST_LIKE") return "social"
         if (s === "POST_COMMENT" || s === "COMMENT_REPLY" || s === "COMMENT_LIKE") return "comment"
+        if (s === "NEW_FOLLOWER") return "follow"
+        if (s === "FOLLOW_BACK") return "follow_back"
         return (t as Notification["type"]) || "system"
       }
       return list.map((n: Record<string, unknown>) => ({
@@ -81,6 +89,7 @@ export function NotificationsPage() {
         read: Boolean(n.read),
         userName: String(n.senderName || n.referenceType || "Sporgates"),
         userAvatar: String(n.senderName || n.referenceType || "SG").substring(0, 2).toUpperCase(),
+        senderAvatar: typeof n.senderAvatar === "string" ? n.senderAvatar : null,
         postId: n.postId != null ? String(n.postId) : (String(n.referenceType || "").toLowerCase() === "post" && n.referenceId ? String(n.referenceId) : null),
         referenceId: n.referenceId != null ? String(n.referenceId) : null,
         referenceType: n.referenceType != null ? String(n.referenceType) : null,
@@ -90,6 +99,10 @@ export function NotificationsPage() {
   )
 
   const notifications: Notification[] = rawNotifications || []
+
+  // Live-refresh the list when a new SSE notification arrives
+  const handleSseNotification = useCallback(() => { mutateNotifications() }, [mutateNotifications])
+  useNotificationStream(user?.id ?? null, handleSseNotification)
 
   const unreadCount = notifications.filter((n) => !n.read).length
   const displayedNotifications =
@@ -126,6 +139,19 @@ export function NotificationsPage() {
         onUnreadNotificationsChange?.((prev) => Math.max(0, prev - 1))
         notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
       }
+    }
+  }
+
+  const [followedBackIds, setFollowedBackIds] = useState<Set<string>>(new Set())
+
+  const handleFollowBack = async (notif: Notification) => {
+    if (!user?.id || !notif.referenceId) return
+    try {
+      await userService.followUser(user.id, notif.referenceId)
+      setFollowedBackIds((prev) => new Set(prev).add(notif.referenceId!))
+      toast.success("Followed back!")
+    } catch {
+      toast.error("Failed to follow back")
     }
   }
 
@@ -213,9 +239,10 @@ export function NotificationsPage() {
             const iconColor = typeColors[notif.type] || "text-muted-foreground"
             const hasPost = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId)
             return (
-              <button
+              <div
                 key={notif.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => hasPost && handleNotificationClick(notif)}
                 className={cn(
                   "flex w-full cursor-pointer items-start gap-4 rounded-2xl border bg-card p-4 text-left transition-all hover:shadow-md",
@@ -229,17 +256,19 @@ export function NotificationsPage() {
                 <div className="relative shrink-0">
                   <div
                     className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white",
+                      "flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white overflow-hidden relative",
                       !notif.read ? "gradient-primary" : "bg-muted text-muted-foreground"
                     )}
                   >
-                    {!notif.read ? (
-                      <span className="text-white">{notif.userAvatar}</span>
+                    {notif.senderAvatar && isAvatarImageUrl(notif.senderAvatar) ? (
+                      <Image src={resolvePostImageUrl(notif.senderAvatar)!} alt={notif.userName} fill className="object-cover" sizes="44px" />
+                    ) : !notif.read ? (
+                      <span className="text-white relative z-10">{notif.userAvatar}</span>
                     ) : (
-                      <span>{notif.userAvatar}</span>
+                      <span className="relative z-10">{notif.userAvatar}</span>
                     )}
                   </div>
-                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card">
+                  <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card z-20">
                     <Icon className={cn("h-3 w-3", iconColor)} />
                   </div>
                 </div>
@@ -253,11 +282,39 @@ export function NotificationsPage() {
                   <p className="mt-1 text-[10px] text-muted-foreground">{notif.time}</p>
                 </div>
 
+                {/* Follow Back button for follow notifications */}
+                {notif.type === "follow" && notif.referenceType?.toUpperCase() === "USER" && notif.referenceId && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleFollowBack(notif) }}
+                    disabled={followedBackIds.has(notif.referenceId)}
+                    className={cn(
+                      "shrink-0 self-center rounded-full px-4 py-1.5 text-xs font-semibold transition-all",
+                      followedBackIds.has(notif.referenceId)
+                        ? "bg-muted text-muted-foreground cursor-default"
+                        : "gradient-primary text-white hover:shadow-md"
+                    )}
+                  >
+                    {followedBackIds.has(notif.referenceId) ? "Following" : "Follow Back"}
+                  </button>
+                )}
+
+                {/* Get in touch button for follow back notifications */}
+                {notif.type === "follow_back" && notif.referenceType?.toUpperCase() === "USER" && notif.referenceId && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toast.info("Messaging feature coming soon!") }}
+                    className="shrink-0 self-center rounded-full border border-border bg-card px-4 py-1.5 text-xs font-semibold text-foreground transition-all hover:bg-muted"
+                  >
+                    Get in touch
+                  </button>
+                )}
+
                 {/* Unread dot */}
-                {!notif.read && (
+                {!notif.read && notif.type !== "follow" && notif.type !== "follow_back" && (
                   <div className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-secondary" />
                 )}
-              </button>
+              </div>
             )
           })
         )}

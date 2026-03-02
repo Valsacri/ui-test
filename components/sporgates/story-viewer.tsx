@@ -56,7 +56,6 @@ export function StoryViewer({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [localStories, setLocalStories] = useState<StoryDto[]>(stories)
     const [showViewersPanel, setShowViewersPanel] = useState(false)
-    const [viewersTab, setViewersTab] = useState<'viewers' | 'likers'>('viewers')
     const [viewers, setViewers] = useState<{ id: string; name: string; avatar: string | null }[]>([])
     const [likers, setLikers] = useState<{ id: string; name: string; avatar: string | null }[]>([])
     const [loadingViewers, setLoadingViewers] = useState(false)
@@ -509,33 +508,20 @@ export function StoryViewer({
                         <div className="max-h-[60%] rounded-t-2xl bg-gray-900/95 backdrop-blur-xl">
                             {/* Header */}
                             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                                <div className="flex gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setViewersTab('viewers')}
-                                        className={cn(
-                                            "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                                            viewersTab === 'viewers'
-                                                ? "bg-blue-500 text-white"
-                                                : "text-white/60 hover:text-white"
-                                        )}
-                                    >
-                                        <Eye className="h-3.5 w-3.5" />
-                                        Viewers ({viewers.length})
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setViewersTab('likers')}
-                                        className={cn(
-                                            "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                                            viewersTab === 'likers'
-                                                ? "bg-red-500 text-white"
-                                                : "text-white/60 hover:text-white"
-                                        )}
-                                    >
-                                        <Heart className="h-3.5 w-3.5" />
-                                        Likes ({likers.length})
-                                    </button>
+                                <div className="flex items-center gap-2">
+                                    <Eye className="h-4 w-4 text-white/70" />
+                                    <span className="text-sm font-medium text-white">
+                                        {viewers.length} {viewers.length === 1 ? 'viewer' : 'viewers'}
+                                    </span>
+                                    {likers.length > 0 && (
+                                        <>
+                                            <span className="text-white/30">·</span>
+                                            <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" />
+                                            <span className="text-sm font-medium text-white">
+                                                {likers.length} {likers.length === 1 ? 'like' : 'likes'}
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
                                 <button
                                     type="button"
@@ -548,48 +534,53 @@ export function StoryViewer({
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
-                            {/* List */}
+                            {/* Combined list */}
                             <div className="overflow-y-auto" style={{ maxHeight: 'calc(60vh - 56px)' }}>
                                 {loadingViewers ? (
                                     <div className="flex items-center justify-center py-8">
                                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                                     </div>
-                                ) : (
-                                    <>
-                                        {(viewersTab === 'viewers' ? viewers : likers).length === 0 ? (
+                                ) : (() => {
+                                    const likerIds = new Set(likers.map((l) => l.id))
+                                    const nonLikerViewers = viewers.filter((v) => !likerIds.has(v.id))
+                                    const combined = [
+                                        ...likers.map((u) => ({ ...u, liked: true })),
+                                        ...nonLikerViewers.map((u) => ({ ...u, liked: false })),
+                                    ]
+                                    if (combined.length === 0) {
+                                        return (
                                             <div className="py-8 text-center text-sm text-white/40">
-                                                {viewersTab === 'viewers' ? 'No viewers yet' : 'No likes yet'}
+                                                No viewers yet
                                             </div>
-                                        ) : (
-                                            (viewersTab === 'viewers' ? viewers : likers).map((user) => (
-                                                <div
-                                                    key={user.id}
-                                                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5"
-                                                >
-                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-bold text-white">
-                                                        {user.avatar ? (
-                                                            <Image
-                                                                src={resolvePostImageUrl(user.avatar)}
-                                                                alt=""
-                                                                width={36}
-                                                                height={36}
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            user.name?.charAt(0) || '?'
-                                                        )}
-                                                    </div>
-                                                    <span className="text-sm font-medium text-white">
-                                                        {user.name}
-                                                    </span>
-                                                    {viewersTab === 'likers' && (
-                                                        <Heart className="ml-auto h-4 w-4 fill-red-500 text-red-500" />
-                                                    )}
-                                                </div>
-                                            ))
-                                        )}
-                                    </>
-                                )}
+                                        )
+                                    }
+                                    return combined.map((user) => (
+                                        <div
+                                            key={user.id}
+                                            className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5"
+                                        >
+                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-bold text-white">
+                                                {user.avatar ? (
+                                                    <Image
+                                                        src={resolvePostImageUrl(user.avatar)}
+                                                        alt=""
+                                                        width={36}
+                                                        height={36}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    user.name?.charAt(0) || '?'
+                                                )}
+                                            </div>
+                                            <span className="text-sm font-medium text-white">
+                                                {user.name}
+                                            </span>
+                                            {user.liked && (
+                                                <Heart className="ml-auto h-4 w-4 fill-red-500 text-red-500" />
+                                            )}
+                                        </div>
+                                    ))
+                                })()}
                             </div>
                         </div>
                     </div>

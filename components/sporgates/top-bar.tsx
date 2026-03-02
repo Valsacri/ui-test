@@ -104,6 +104,8 @@ export function TopBar({
     postId: string | null
     referenceId: string | null
     referenceType: string | null
+    senderName: string | null
+    senderAvatar: string | null
   }>>([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const { openPost } = usePostModal()
@@ -169,6 +171,8 @@ export function TopBar({
             postId,
             referenceId: n.referenceId != null ? String(n.referenceId) : null,
             referenceType: n.referenceType != null ? String(n.referenceType) : null,
+            senderName: n.senderName != null ? String(n.senderName) : null,
+            senderAvatar: n.senderAvatar != null ? String(n.senderAvatar) : null,
           }
         }))
       })
@@ -567,13 +571,26 @@ export function TopBar({
                           !notif.read && "bg-secondary/5"
                         )}
                       >
-                        <div
-                          className={cn(
-                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                            !notif.read ? "gradient-secondary text-white" : "bg-muted text-muted-foreground"
+                        <div className="relative shrink-0">
+                          <div
+                            className={cn(
+                              "flex h-10 w-10 items-center justify-center rounded-full overflow-hidden relative",
+                              !notif.read ? "gradient-secondary text-white" : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {notif.senderAvatar && isAvatarImageUrl(notif.senderAvatar) ? (
+                              <Image src={resolvePostImageUrl(notif.senderAvatar)!} alt={notif.senderName || ""} fill className="object-cover" sizes="40px" />
+                            ) : notif.senderName ? (
+                              <span className="text-white text-xs font-bold relative z-10">{notif.senderName.substring(0, 2).toUpperCase()}</span>
+                            ) : (
+                              <Icon className="h-5 w-5 relative z-10" />
+                            )}
+                          </div>
+                          {(notif.senderAvatar || notif.senderName) && (
+                            <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-card bg-card z-20">
+                              <Icon className="h-2 w-2 text-foreground" />
+                            </div>
                           )}
-                        >
-                          <Icon className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className={cn("text-sm", !notif.read ? "font-bold text-foreground" : "font-medium text-foreground")}>{notif.title}</p>

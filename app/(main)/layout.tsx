@@ -149,7 +149,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 const audio = new Audio("/sound/notification.mp3")
                 notificationAudioRef.current = audio
                 audio.volume = 0
-                audio.play().catch(() => {})
+                audio.play().catch(() => { })
             } catch { /* ignore */ }
             document.removeEventListener("click", unlock)
             document.removeEventListener("keydown", unlock)
@@ -170,7 +170,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 const count = typeof data === 'number' ? data : (data?.count ?? 0)
                 setUnreadNotifications(count)
             })
-            .catch(() => {})
+            .catch(() => { })
     }, [])
 
     const handleNewNotification = useCallback(() => {
@@ -179,11 +179,11 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
             if (audio) {
                 audio.volume = 0.6
                 audio.currentTime = 0
-                audio.play().catch(() => {})
+                audio.play().catch(() => { })
             } else {
                 const newAudio = new Audio("/sound/notification.mp3")
                 newAudio.volume = 0.6
-                newAudio.play().catch(() => {})
+                newAudio.play().catch(() => { })
             }
         } catch { /* ignore */ }
         refetchNotificationCount()
@@ -217,46 +217,77 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         }
     }, [user?.id])
 
+    // Polling fallback: refetch unread count every 15s in case SSE drops
+    const prevUnreadRef = useRef(0)
+    useEffect(() => {
+        if (!user?.id) return
+        const interval = setInterval(() => {
+            notificationsService.getUnreadCount(user.id)
+                .then((data) => {
+                    const count = typeof data === 'number' ? data : (data?.count ?? 0)
+                    if (count > prevUnreadRef.current) {
+                        // New notification(s) arrived  — play sound
+                        try {
+                            const audio = notificationAudioRef.current
+                            if (audio) {
+                                audio.volume = 0.6
+                                audio.currentTime = 0
+                                audio.play().catch(() => { })
+                            } else {
+                                const newAudio = new Audio("/sound/notification.mp3")
+                                newAudio.volume = 0.6
+                                newAudio.play().catch(() => { })
+                            }
+                        } catch { /* ignore */ }
+                    }
+                    prevUnreadRef.current = count
+                    setUnreadNotifications(count)
+                })
+                .catch(() => { })
+        }, 15000)
+        return () => clearInterval(interval)
+    }, [user?.id])
+
     return (
         <PostModalProvider>
-        <NotificationCountProvider value={onUnreadNotificationsChange}>
-        <div className="min-h-screen bg-background">
-            <TopBar
-                onNavigate={navigate}
-                isBusinessMode={isBusinessMode}
-                businesses={businesses}
-                activeBusinessId={activeBusinessId}
-                onSwitchBusiness={switchBusiness}
-                onSwitchToUser={switchToUser}
-                onCreateNewBusiness={createNewBusiness}
-                unreadMessages={unreadMessages}
-                unreadNotifications={unreadNotifications}
-                onUnreadNotificationsChange={onUnreadNotificationsChange}
-            />
-            <div className="flex">
-                {showSidebars && (
-                    <ExploreSidebar
+            <NotificationCountProvider value={onUnreadNotificationsChange}>
+                <div className="min-h-screen bg-background">
+                    <TopBar
+                        onNavigate={navigate}
+                        isBusinessMode={isBusinessMode}
+                        businesses={businesses}
+                        activeBusinessId={activeBusinessId}
+                        onSwitchBusiness={switchBusiness}
+                        onSwitchToUser={switchToUser}
+                        onCreateNewBusiness={createNewBusiness}
+                        unreadMessages={unreadMessages}
+                        unreadNotifications={unreadNotifications}
+                        onUnreadNotificationsChange={onUnreadNotificationsChange}
+                    />
+                    <div className="flex">
+                        {showSidebars && (
+                            <ExploreSidebar
+                                currentPage={currentPage}
+                                onNavigate={navigate}
+                                isBusinessMode={isBusinessMode}
+                            />
+                        )}
+                        <div className="min-w-0 flex-1 flex justify-center">
+                            <main className={`w-full ${currentPage === "home" ? "max-w-3xl" : "max-w-6xl"} p-6 lg:p-2`}>
+                                <ErrorBoundary>
+                                    {children}
+                                </ErrorBoundary>
+                            </main>
+                        </div>
+                        {showRightSidebar && <FeedSidebar onNavigate={navigate} />}
+                    </div>
+                    <BottomNav
                         currentPage={currentPage}
                         onNavigate={navigate}
                         isBusinessMode={isBusinessMode}
                     />
-                )}
-                <div className="min-w-0 flex-1 flex justify-center">
-                    <main className={`w-full ${currentPage === "home" ? "max-w-3xl" : "max-w-6xl"} p-6 lg:p-2`}>
-                        <ErrorBoundary>
-                            {children}
-                        </ErrorBoundary>
-                    </main>
                 </div>
-                {showRightSidebar && <FeedSidebar onNavigate={navigate} />}
-            </div>
-            <BottomNav
-                currentPage={currentPage}
-                onNavigate={navigate}
-                isBusinessMode={isBusinessMode}
-            />
-        </div>
-        </NotificationCountProvider>
+            </NotificationCountProvider>
         </PostModalProvider>
     )
 }

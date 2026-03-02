@@ -7,6 +7,7 @@ import { cn, resolvePostImageUrl } from "@/lib/utils"
 import { useStories } from "@/hooks/use-stories"
 import { StoryViewer } from "@/components/sporgates/story-viewer"
 import { AddStoryDialog } from "@/components/sporgates/add-story-dialog"
+import { StoryFeedSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { authService } from "@/lib/services/auth"
 import { userService } from "@/lib/services/user"
 import type { StoryFeedItem, StoryDto } from "@/lib/types/story"
@@ -139,11 +140,7 @@ export function Stories() {
   const otherItems = feedItems.filter((f) => f.userId !== currentUserId)
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <StoryFeedSkeleton count={6} />
   }
 
   return (

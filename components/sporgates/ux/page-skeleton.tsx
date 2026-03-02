@@ -195,6 +195,30 @@ export function FeedSkeleton({ count = 3 }: { count?: number }) {
     )
 }
 
+export function StorySkeleton() {
+    return (
+        <div className="relative flex h-[160px] w-[100px] shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card animate-pulse">
+            <Skeleton className="h-full w-full absolute inset-0 rounded-none" />
+            <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2">
+                <Skeleton className="h-10 w-10 rounded-full border-2 border-background" />
+            </div>
+            <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center">
+                <Skeleton className="h-3 w-16 bg-white/50" />
+            </div>
+        </div>
+    )
+}
+
+export function StoryFeedSkeleton({ count = 6 }: { count?: number }) {
+    return (
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {Array.from({ length: count }).map((_, i) => (
+                <StorySkeleton key={i} />
+            ))}
+        </div>
+    )
+}
+
 export function DashboardSkeleton() {
     return (
         <div className="space-y-6 animate-pulse">
