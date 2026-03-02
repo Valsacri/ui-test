@@ -1,196 +1,329 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Image from "next/image"
-import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
-
-interface Story {
-  id: string
-  name: string
-  avatar: string
-  image: string
-  isOwn?: boolean
-  viewed?: boolean
-}
-
-const storiesData: Story[] = [
-  {
-    id: "own",
-    name: "Your Story",
-    avatar: "JR",
-    image: "https://images.unsplash.com/photo-1461896836934-bd45ba9c646b?w=400&h=600&fit=crop",
-    isOwn: true,
-    viewed: false,
-  },
-  {
-    id: "1",
-    name: "Mike J.",
-    avatar: "MJ",
-    image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=600&fit=crop",
-    viewed: false,
-  },
-  {
-    id: "2",
-    name: "Sarah L.",
-    avatar: "SL",
-    image: "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400&h=600&fit=crop",
-    viewed: false,
-  },
-  {
-    id: "3",
-    name: "Alex C.",
-    avatar: "AC",
-    image: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=600&fit=crop",
-    viewed: true,
-  },
-  {
-    id: "4",
-    name: "Emily P.",
-    avatar: "EP",
-    image: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=400&h=600&fit=crop",
-    viewed: false,
-  },
-  {
-    id: "5",
-    name: "Carlos R.",
-    avatar: "CR",
-    image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=600&fit=crop",
-    viewed: true,
-  },
-  {
-    id: "6",
-    name: "Chelsea P.",
-    avatar: "CP",
-    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=600&fit=crop",
-    viewed: false,
-  },
-  {
-    id: "7",
-    name: "NYC Run",
-    avatar: "RC",
-    image: "https://images.unsplash.com/photo-1461896836934-bd45ba9c646b?w=400&h=600&fit=crop",
-    viewed: true,
-  },
-]
+import { Plus, Loader2 } from "lucide-react"
+import { cn, resolvePostImageUrl } from "@/lib/utils"
+import { useStories } from "@/hooks/use-stories"
+import { StoryViewer } from "@/components/sporgates/story-viewer"
+import { AddStoryDialog } from "@/components/sporgates/add-story-dialog"
+import { authService } from "@/lib/services/auth"
+import { userService } from "@/lib/services/user"
+import type { StoryFeedItem, StoryDto } from "@/lib/types/story"
 
 export function Stories() {
-  const [viewingStory, setViewingStory] = useState<Story | null>(null)
-  const [viewedStories, setViewedStories] = useState<Set<string>>(
-    new Set(storiesData.filter((s) => s.viewed).map((s) => s.id))
+  const {
+    feedItems,
+    isLoading,
+    refresh,
+    loadUserStories,
+    createStory,
+    deleteStory,
+    removeFeedStory,
+    toggleLike,
+    recordView,
+    sendReply,
+  } = useStories()
+
+  const [viewerState, setViewerState] = useState<{
+    stories: StoryDto[]
+    userId: string
+    userIndex: number
+  } | null>(null)
+  const [showAddDialog, setShowAddDialog] = useState(false)
+
+  const currentUser = authService.getCurrentUser()
+  const currentUserId = currentUser?.id
+  const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null)
+
+  // Fetch user profile to get profile picture (not stored in auth token)
+  useEffect(() => {
+    if (currentUserId) {
+      userService.getUserById(currentUserId).then((profile: any) => {
+        if (profile?.profilePicture) {
+          setCurrentUserAvatar(resolvePostImageUrl(profile.profilePicture))
+        }
+      }).catch(() => { })
+    }
+  }, [currentUserId])
+
+  // ─── Open viewer for a specific user ─────────────────────────────
+  const openViewer = useCallback(
+    async (feedItem: StoryFeedItem, index: number) => {
+      try {
+        const stories = await loadUserStories(feedItem.userId)
+        if (stories.length > 0) {
+          setViewerState({
+            stories,
+            userId: feedItem.userId,
+            userIndex: index,
+          })
+        }
+      } catch {
+        // Could show toast
+      }
+    },
+    [loadUserStories]
   )
 
-  const openStory = (story: Story) => {
-    if (story.isOwn) return
-    setViewingStory(story)
-    setViewedStories((prev) => new Set([...prev, story.id]))
+  // ─── Navigate between users in viewer ────────────────────────────
+  const goToNextUser = useCallback(async () => {
+    if (!viewerState) return
+    // Find next non-own user
+    const nonOwnItems = feedItems.filter((f) => f.userId !== currentUserId)
+    const currentNonOwnIndex = nonOwnItems.findIndex(
+      (f) => f.userId === viewerState.userId
+    )
+    if (currentNonOwnIndex < nonOwnItems.length - 1) {
+      const nextItem = nonOwnItems[currentNonOwnIndex + 1]
+      try {
+        const stories = await loadUserStories(nextItem.userId)
+        if (stories.length > 0) {
+          setViewerState({
+            stories,
+            userId: nextItem.userId,
+            userIndex: feedItems.indexOf(nextItem),
+          })
+        } else {
+          setViewerState(null)
+        }
+      } catch {
+        setViewerState(null)
+      }
+    } else {
+      setViewerState(null)
+    }
+  }, [viewerState, feedItems, currentUserId, loadUserStories])
+
+  const goToPrevUser = useCallback(async () => {
+    if (!viewerState) return
+    const nonOwnItems = feedItems.filter((f) => f.userId !== currentUserId)
+    const currentNonOwnIndex = nonOwnItems.findIndex(
+      (f) => f.userId === viewerState.userId
+    )
+    if (currentNonOwnIndex > 0) {
+      const prevItem = nonOwnItems[currentNonOwnIndex - 1]
+      try {
+        const stories = await loadUserStories(prevItem.userId)
+        if (stories.length > 0) {
+          setViewerState({
+            stories,
+            userId: prevItem.userId,
+            userIndex: feedItems.indexOf(prevItem),
+          })
+        }
+      } catch {
+        // stay on current
+      }
+    }
+  }, [viewerState, feedItems, currentUserId, loadUserStories])
+
+  // ─── Handle card click ───────────────────────────────────────────
+  const handleCardClick = (feedItem: StoryFeedItem, index: number) => {
+    if (feedItem.userId === currentUserId) {
+      // Own story: if they have stories, show viewer; else show add dialog
+      if (feedItem.storyCount > 0) {
+        openViewer(feedItem, index)
+      } else {
+        setShowAddDialog(true)
+      }
+    } else {
+      openViewer(feedItem, index)
+    }
   }
 
-  const closeStory = () => setViewingStory(null)
+  // ─── Build display list ──────────────────────────────────────────
+  // Always show "Add story" card first for current user
+  const hasOwnStories = currentUserId && feedItems.some((f) => f.userId === currentUserId)
+  const ownFeedItem = feedItems.find((f) => f.userId === currentUserId)
+  const otherItems = feedItems.filter((f) => f.userId !== currentUserId)
 
-  const navigateStory = (direction: "prev" | "next") => {
-    if (!viewingStory) return
-    const nonOwnStories = storiesData.filter((s) => !s.isOwn)
-    const currentIndex = nonOwnStories.findIndex((s) => s.id === viewingStory.id)
-    const nextIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1
-    if (nextIndex >= 0 && nextIndex < nonOwnStories.length) {
-      const nextStory = nonOwnStories[nextIndex]
-      setViewingStory(nextStory)
-      setViewedStories((prev) => new Set([...prev, nextStory.id]))
-    } else {
-      closeStory()
-    }
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
     <>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {storiesData.map((story) => (
+        {/* ── Fixed "Add Story" card ── Always opens create dialog */}
+        <button
+          type="button"
+          onClick={() => setShowAddDialog(true)}
+          className="relative flex h-[160px] w-[100px] shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card transition-transform active:scale-[0.98]"
+        >
+          {/* User photo as background (top portion) */}
+          <div className="relative h-[110px] w-full overflow-hidden">
+            {currentUserAvatar ? (
+              <Image
+                src={currentUserAvatar}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="100px"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600">
+                <span className="text-2xl font-bold text-white">
+                  {currentUser?.firstName?.charAt(0) || "?"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Blue plus circle at boundary */}
+          <div className="absolute left-1/2 top-[90px] z-10 -translate-x-1/2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-card bg-[#003C66] text-white shadow-md">
+              <Plus className="h-4 w-4 stroke-[3]" />
+            </div>
+          </div>
+
+          {/* Bottom label area */}
+          <div className="flex flex-1 items-end justify-center pb-2 pt-5">
+            <span className="text-[10px] font-semibold text-foreground">
+              Add Story
+            </span>
+          </div>
+        </button>
+
+        {/* ── User's own stories card ── Only shown when they have stories */}
+        {hasOwnStories && ownFeedItem && (
           <button
             type="button"
-            key={story.id}
-            onClick={() => openStory(story)}
-            className="flex shrink-0 flex-col items-center gap-1.5"
+            onClick={() => openViewer(ownFeedItem, 0)}
+            className="relative flex h-[160px] w-[100px] shrink-0 flex-col overflow-hidden rounded-xl transition-transform active:scale-[0.98]"
           >
-            <div
-              className={cn(
-                "relative flex h-16 w-16 items-center justify-center rounded-full p-[2.5px]",
-                story.isOwn
-                  ? "bg-muted"
-                  : viewedStories.has(story.id)
-                    ? "bg-border"
-                    : "bg-gradient-to-br from-[#003C66] to-[#FC8936]"
-              )}
-            >
-              <div className="gradient-primary flex h-full w-full items-center justify-center rounded-full border-2 border-card text-xs font-bold text-white">
-                {story.avatar}
-              </div>
-              {story.isOwn && (
-                <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-secondary text-white">
-                  <Plus className="h-3 w-3" />
+            {/\.(mp4|webm|mov)$/i.test(ownFeedItem.latestStoryImageUrl) ? (
+              <video
+                src={`${resolvePostImageUrl(ownFeedItem.latestStoryImageUrl)}#t=0.1`}
+                className="absolute inset-0 h-full w-full object-cover"
+                muted
+                playsInline
+                preload="auto"
+              />
+            ) : (
+              <Image
+                src={resolvePostImageUrl(ownFeedItem.latestStoryImageUrl)}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="100px"
+              />
+            )}
+            <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-blue-500 bg-background/60 p-[2.5px] shadow-[0_0_0_1px_rgba(59,130,246,0.5)]">
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-[10px] font-bold text-white">
+                  {currentUserAvatar ? (
+                    <Image
+                      src={currentUserAvatar}
+                      alt=""
+                      width={36}
+                      height={36}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    currentUser?.firstName?.charAt(0) || "?"
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-            <span className="w-16 truncate text-center text-[10px] font-medium text-foreground">
-              {story.name}
-            </span>
+            <div className="absolute inset-x-0 bottom-0 z-10 flex h-12 items-center justify-center">
+              <span className="truncate px-2 text-center text-xs font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                Your Story
+              </span>
+            </div>
+          </button>
+        )}
+
+        {/* ── Other users' story cards ── */}
+        {otherItems.map((item, i) => (
+          <button
+            type="button"
+            key={item.userId}
+            onClick={() => handleCardClick(item, i + 1)}
+            className="relative flex h-[160px] w-[100px] shrink-0 flex-col overflow-hidden rounded-xl transition-transform active:scale-[0.98]"
+          >
+            {/\.(mp4|webm|mov)$/i.test(item.latestStoryImageUrl) ? (
+              <video
+                src={`${resolvePostImageUrl(item.latestStoryImageUrl)}#t=0.1`}
+                className="absolute inset-0 h-full w-full object-cover"
+                muted
+                playsInline
+                preload="auto"
+              />
+            ) : (
+              <Image
+                src={resolvePostImageUrl(item.latestStoryImageUrl)}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="100px"
+              />
+            )}
+            <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2">
+              <div
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-full p-[2.5px]",
+                  item.allViewed
+                    ? "border-2 border-white/60 bg-background/60"
+                    : "border-2 border-blue-500 bg-background/60 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                )}
+              >
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-[10px] font-bold text-white">
+                  {item.userAvatar ? (
+                    <Image
+                      src={resolvePostImageUrl(item.userAvatar)}
+                      alt=""
+                      width={36}
+                      height={36}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    item.userName?.charAt(0) || "?"
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 z-10 flex h-12 items-center justify-center">
+              <span className="truncate px-2 text-center text-xs font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                {item.userName}
+              </span>
+            </div>
           </button>
         ))}
       </div>
 
-      {/* Story Viewer Overlay */}
-      {viewingStory && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground/90">
-          <button
-            type="button"
-            onClick={closeStory}
-            className="absolute right-4 top-4 z-10 rounded-full bg-card/20 p-2 text-white backdrop-blur-sm transition-colors hover:bg-card/40"
-          >
-            <X className="h-6 w-6" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateStory("prev")}
-            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-card/20 p-2 text-white backdrop-blur-sm transition-colors hover:bg-card/40"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateStory("next")}
-            className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-card/20 p-2 text-white backdrop-blur-sm transition-colors hover:bg-card/40"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
-
-          <div className="relative h-[80vh] w-full max-w-sm overflow-hidden rounded-2xl">
-            {/* Progress Bar */}
-            <div className="absolute left-3 right-3 top-3 z-10 h-1 overflow-hidden rounded-full bg-white/30">
-              <div className="h-full w-full animate-[storyProgress_5s_linear] rounded-full bg-white" />
-            </div>
-
-            {/* Story Header */}
-            <div className="absolute left-0 right-0 top-6 z-10 flex items-center gap-3 px-4">
-              <div className="gradient-primary flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-bold text-white">
-                {viewingStory.avatar}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">{viewingStory.name}</p>
-                <p className="text-[10px] text-white/70">2h ago</p>
-              </div>
-            </div>
-
-            <Image
-              src={viewingStory.image}
-              alt={viewingStory.name}
-              fill
-              className="object-cover"
-            />
-          </div>
-        </div>
+      {/* Story Viewer */}
+      {viewerState && (
+        <StoryViewer
+          stories={viewerState.stories}
+          currentUserId={currentUserId}
+          onClose={() => {
+            setViewerState(null)
+            refresh()
+          }}
+          onView={recordView}
+          onToggleLike={toggleLike}
+          onReply={sendReply}
+          onDelete={async (storyId) => {
+            await deleteStory(storyId)
+            // Instantly update the stories strip
+            removeFeedStory(viewerState.userId)
+          }}
+          onNextUser={goToNextUser}
+          onPrevUser={goToPrevUser}
+        />
       )}
+
+      {/* Add Story Dialog */}
+      <AddStoryDialog
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onCreateStory={createStory}
+      />
     </>
   )
 }

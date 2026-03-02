@@ -242,7 +242,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                     />
                 )}
                 <div className="min-w-0 flex-1 flex justify-center">
-                    <main className="w-full max-w-3xl p-6 lg:p-2">
+                    <main className={`w-full ${currentPage === "home" ? "max-w-3xl" : "max-w-6xl"} p-6 lg:p-2`}>
                         <ErrorBoundary>
                             {children}
                         </ErrorBoundary>

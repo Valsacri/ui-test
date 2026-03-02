@@ -18,3 +18,4 @@ export { searchService } from './search';
 export { sportService } from './sport';
 export { leagueService } from './league';
 export { feedService } from './feed';
+export { storiesService } from './stories';
