@@ -29,4 +29,6 @@ export const PUBLIC_ROUTES = [
 
 // ── API Config ────────────────────────────────────────────
 export const API_TIMEOUT_MS = 15000
+/** Story media upload (larger files); slightly longer than default API timeout */
+export const STORY_UPLOAD_TIMEOUT_MS = 60 * 1000 // 1 minute
 export const DEFAULT_API_BASE_URL = 'http://localhost:8080/api'

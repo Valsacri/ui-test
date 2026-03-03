@@ -300,7 +300,7 @@ export function Stories() {
           currentUserId={currentUserId}
           onClose={() => {
             setViewerState(null)
-            refresh()
+            refresh({ silent: true })
           }}
           onView={recordView}
           onToggleLike={toggleLike}

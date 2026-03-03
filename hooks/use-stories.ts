@@ -11,8 +11,8 @@ export interface UseStoriesReturn {
     isLoading: boolean
     /** Error from most recent load */
     error: Error | null
-    /** Refresh the stories feed */
-    refresh: () => Promise<void>
+    /** Refresh the stories feed. Pass { silent: true } to refetch without showing the loading skeleton. */
+    refresh: (opts?: { silent?: boolean }) => Promise<void>
     /** Load stories for a specific user */
     loadUserStories: (userId: string) => Promise<StoryDto[]>
     /** Create a story (upload file then create) */
@@ -38,16 +38,19 @@ export function useStories(): UseStoriesReturn {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<Error | null>(null)
 
-    const refresh = useCallback(async () => {
+    const refresh = useCallback(async (opts?: { silent?: boolean }) => {
+        const silent = opts?.silent === true
         try {
-            setIsLoading(true)
-            setError(null)
+            if (!silent) {
+                setIsLoading(true)
+                setError(null)
+            }
             const items = await storiesService.getFeed()
             setFeedItems(items)
         } catch (err) {
-            setError(err instanceof Error ? err : new Error('Failed to load stories'))
+            if (!silent) setError(err instanceof Error ? err : new Error('Failed to load stories'))
         } finally {
-            setIsLoading(false)
+            if (!silent) setIsLoading(false)
         }
     }, [])
 
@@ -56,17 +59,19 @@ export function useStories(): UseStoriesReturn {
     }, [])
 
     const createStory = useCallback(async (file: File) => {
-        // Determine media type from file
-        const mediaType = file.type.startsWith('video/') ? 'VIDEO' as const : 'IMAGE' as const
+        const mediaType = file.type.startsWith('video/') ? ('VIDEO' as const) : ('IMAGE' as const)
 
-        // Upload file
-        const mediaUrl = await storiesService.uploadMedia(file)
+        const result = await storiesService.uploadMedia(file)
+        if (!result.url) {
+            throw new Error('Upload did not return URL')
+        }
 
-        // Create story
-        await storiesService.create({ mediaUrl, mediaType })
-
-        // Refresh feed to show new story
-        await refresh()
+        await storiesService.create({
+            mediaUrl: result.url,
+            mediaType,
+            durationSeconds: result.durationSeconds,
+        })
+        await refresh({ silent: true })
     }, [refresh])
 
     const deleteStory = useCallback(async (storyId: string) => {

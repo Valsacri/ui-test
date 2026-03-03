@@ -16,6 +16,7 @@ import { messagesService } from "@/lib/services/messages"
 import { authService } from "@/lib/services/auth"
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
 import { PostModalProvider } from "@/lib/post-modal-context"
+import { StoryModalProvider } from "@/lib/story-modal-context"
 import { NotificationCountProvider } from "@/lib/notification-count-context"
 import type { PageRoute } from "@/lib/navigation"
 
@@ -250,7 +251,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
 
     return (
         <PostModalProvider>
-            <NotificationCountProvider value={onUnreadNotificationsChange}>
+            <StoryModalProvider>
+                <NotificationCountProvider value={onUnreadNotificationsChange}>
                 <div className="min-h-screen bg-background">
                     <TopBar
                         onNavigate={navigate}
@@ -287,7 +289,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                         isBusinessMode={isBusinessMode}
                     />
                 </div>
-            </NotificationCountProvider>
+                </NotificationCountProvider>
+            </StoryModalProvider>
         </PostModalProvider>
     )
 }

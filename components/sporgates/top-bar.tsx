@@ -4,6 +4,7 @@ import {
   Search,
   Bell,
   MessageCircle,
+  MessageSquare,
   Wallet,
   ChevronDown,
   Target,
@@ -28,6 +29,7 @@ import { cn, resolvePostImageUrl, isAvatarImageUrl, formatFeedTime } from "@/lib
 import type { PageRoute } from "@/lib/navigation"
 import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
 import { usePostModal } from "@/lib/post-modal-context"
+import { useStoryModal } from "@/lib/story-modal-context"
 
 // Inline defaults — no BE endpoints for topbar goals/conversations/notifications preview
 const goals = [
@@ -50,6 +52,11 @@ type Business = {
 const notifTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   activity: CalendarDays,
   social: Heart,
+  post_like: Heart,
+  comment_like: Heart,
+  comment: MessageSquare,
+  post_comment: MessageSquare,
+  comment_reply: MessageSquare,
   booking: CalendarDays,
   achievement: Trophy,
   system: Settings,
@@ -109,6 +116,7 @@ export function TopBar({
   }>>([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const { openPost } = usePostModal()
+  const { openStory } = useStoryModal()
 
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -161,9 +169,14 @@ export function TopBar({
         const list = Array.isArray(data) ? data : (data?.content ?? [])
         setNotificationsList(list.slice(0, 15).map((n: any) => {
           const postId = n.postId != null ? String(n.postId) : (n.referenceType?.toLowerCase() === "post" && n.referenceId ? String(n.referenceId) : null)
+          const senderName = n.senderName ?? n.sender_name
+          const senderAvatar = n.senderAvatar ?? n.sender_avatar
+          const rawType = String(n.type || "").toUpperCase()
+          const titleStr = String(n.title || "").toLowerCase()
+          const type = rawType === "SOCIAL" ? (titleStr.includes("comment") ? "comment" : "social") : (n.type || "system")
           return {
             id: String(n.id),
-            type: n.type || "system",
+            type,
             title: String(n.title || ""),
             message: String(n.message || ""),
             time: formatFeedTime(n.createdAt),
@@ -171,8 +184,8 @@ export function TopBar({
             postId,
             referenceId: n.referenceId != null ? String(n.referenceId) : null,
             referenceType: n.referenceType != null ? String(n.referenceType) : null,
-            senderName: n.senderName != null ? String(n.senderName) : null,
-            senderAvatar: n.senderAvatar != null ? String(n.senderAvatar) : null,
+            senderName: senderName != null && String(senderName).trim() !== "" ? String(senderName) : null,
+            senderAvatar: senderAvatar != null && String(senderAvatar).trim() !== "" ? String(senderAvatar) : null,
           }
         }))
       })
@@ -547,6 +560,7 @@ export function TopBar({
                     const Icon = notifTypeIcons[notif.type.toLowerCase()] || Bell
                     const postIdToOpen = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId ? notif.referenceId : null)
                     const isCommentNotification = ["POST_COMMENT", "COMMENT_REPLY", "COMMENT_LIKE"].includes(String(notif.type).toUpperCase())
+                    const isStoryNotification = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
                     return (
                       <button
                         type="button"
@@ -562,6 +576,8 @@ export function TopBar({
                           }
                           if (postIdToOpen) {
                             openPost(postIdToOpen, isCommentNotification)
+                          } else if (isStoryNotification) {
+                            openStory(user!.id, notif.referenceId!)
                           } else {
                             onNavigate("notifications")
                           }
@@ -572,19 +588,33 @@ export function TopBar({
                         )}
                       >
                         <div className="relative shrink-0">
-                          <div
-                            className={cn(
-                              "flex h-10 w-10 items-center justify-center rounded-full overflow-hidden relative",
-                              !notif.read ? "gradient-secondary text-white" : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            {notif.senderAvatar && isAvatarImageUrl(notif.senderAvatar) ? (
-                              <Image src={resolvePostImageUrl(notif.senderAvatar)!} alt={notif.senderName || ""} fill className="object-cover" sizes="40px" />
-                            ) : notif.senderName ? (
-                              <span className="text-white text-xs font-bold relative z-10">{notif.senderName.substring(0, 2).toUpperCase()}</span>
-                            ) : (
-                              <Icon className="h-5 w-5 relative z-10" />
-                            )}
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full overflow-hidden relative bg-muted">
+                            {notif.senderAvatar ? (
+                              <Image
+                                src={resolvePostImageUrl(notif.senderAvatar)}
+                                alt={notif.senderName || "User"}
+                                fill
+                                className="object-cover z-10"
+                                sizes="40px"
+                                onError={(e) => { e.currentTarget.style.display = "none" }}
+                              />
+                            ) : null}
+                            <span
+                              className={cn(
+                                "absolute inset-0 flex items-center justify-center text-xs font-bold",
+                                notif.senderAvatar ? "z-0 bg-muted text-muted-foreground" : "z-10",
+                                !notif.senderAvatar && !notif.read && "gradient-secondary text-white",
+                                !notif.senderAvatar && notif.read && "text-muted-foreground"
+                              )}
+                              aria-hidden={!!notif.senderAvatar}
+                            >
+                              {notif.senderName ? notif.senderName.substring(0, 2).toUpperCase() : ""}
+                            </span>
+                            {!notif.senderAvatar && !notif.senderName ? (
+                              <span className="absolute inset-0 flex items-center justify-center z-10">
+                                <Icon className={cn("h-5 w-5", !notif.read ? "text-white" : "text-muted-foreground")} />
+                              </span>
+                            ) : null}
                           </div>
                           {(notif.senderAvatar || notif.senderName) && (
                             <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-card bg-card z-20">

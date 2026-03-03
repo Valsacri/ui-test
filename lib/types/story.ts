@@ -13,6 +13,8 @@ export interface StoryDto {
   authorAvatar?: string
   mediaUrl: string
   mediaType: StoryMediaType
+  /** Duration in seconds for VIDEO stories. Absent for IMAGE stories. */
+  durationSeconds?: number
   expiresAt: string
   viewCount: number
   likeCount: number
@@ -56,6 +58,8 @@ export interface StoryRepliesPage {
 export interface CreateStoryPayload {
   mediaUrl: string
   mediaType?: StoryMediaType
+  /** Duration in seconds returned from the upload endpoint after video processing. */
+  durationSeconds?: number
 }
 
 /** Payload for creating a story reply. */

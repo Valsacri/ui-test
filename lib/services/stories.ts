@@ -1,4 +1,5 @@
 import apiClient from '../api';
+import { STORY_UPLOAD_TIMEOUT_MS } from '../constants';
 import type {
     StoryDto,
     StoryFeedItem,
@@ -60,14 +61,21 @@ export const storiesService = {
         return data;
     },
 
-    /** Upload a media file for a story. Returns the URL. */
-    uploadMedia: async (file: File): Promise<string> => {
+    /**
+     * Upload story media. Returns { url, durationSeconds? } for images and videos (video max 30s).
+     */
+    uploadMedia: async (file: File): Promise<{ url: string; durationSeconds?: number }> => {
         const formData = new FormData();
         formData.append('file', file);
-        const { data } = await apiClient.post<{ url: string }>('/v1/stories/upload-media', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return data.url;
+        const { data } = await apiClient.post<{ url: string; durationSeconds?: number }>(
+            '/v1/stories/upload-media',
+            formData,
+            {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: STORY_UPLOAD_TIMEOUT_MS,
+            },
+        );
+        return { url: data.url, durationSeconds: data.durationSeconds };
     },
 
     /** Get list of users who viewed a story. */

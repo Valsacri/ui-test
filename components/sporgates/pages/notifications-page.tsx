@@ -10,16 +10,17 @@ import {
   Settings,
   UserPlus,
   UserCheck,
-  MessageCircle,
+  MessageSquare,
   CheckCheck,
 } from "lucide-react"
-import { cn, formatFeedTime, isAvatarImageUrl, resolvePostImageUrl } from "@/lib/utils"
+import { cn, formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
 import Image from "next/image"
 import { notificationsService, authService, userService } from "@/lib/services"
 import { NotificationSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { toast } from "sonner"
 import { usePostModal } from "@/lib/post-modal-context"
+import { useStoryModal } from "@/lib/story-modal-context"
 import { useNotificationCountUpdate } from "@/lib/notification-count-context"
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
 
@@ -45,7 +46,7 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   booking: CalendarDays,
   achievement: Trophy,
   system: Settings,
-  comment: MessageCircle,
+  comment: MessageSquare,
   follow: UserPlus,
   follow_back: UserCheck,
 }
@@ -65,6 +66,7 @@ export function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
   const user = authService.getCurrentUser()
   const { openPost } = usePostModal()
+  const { openStory } = useStoryModal()
   const onUnreadNotificationsChange = useNotificationCountUpdate()
 
   const { data: rawNotifications, error, isLoading, mutate: mutateNotifications } = useSWR(
@@ -72,24 +74,26 @@ export function NotificationsPage() {
     async (url: string) => {
       const data = await notificationsService.getByUser(user!.id)
       const list = Array.isArray(data) ? data : (data?.content || [])
-      const mapType = (t: unknown): Notification["type"] => {
+      const mapType = (t: unknown, title?: unknown): Notification["type"] => {
         const s = String(t ?? "").toUpperCase()
-        if (s === "POST_LIKE") return "social"
-        if (s === "POST_COMMENT" || s === "COMMENT_REPLY" || s === "COMMENT_LIKE") return "comment"
+        const titleStr = String(title ?? "").toLowerCase()
+        if (s === "POST_COMMENT" || s === "COMMENT_REPLY") return "comment"
+        if (s === "SOCIAL") return titleStr.includes("comment") ? "comment" : "social"
+        if (s === "POST_LIKE" || s === "COMMENT_LIKE") return "social"
         if (s === "NEW_FOLLOWER") return "follow"
         if (s === "FOLLOW_BACK") return "follow_back"
         return (t as Notification["type"]) || "system"
       }
       return list.map((n: Record<string, unknown>) => ({
         id: String(n.id),
-        type: mapType(n.type),
+        type: mapType(n.type, n.title),
         title: String(n.title || ""),
         message: String(n.message || ""),
         time: formatFeedTime(n.createdAt as string | number[] | undefined),
         read: Boolean(n.read),
-        userName: String(n.senderName || n.referenceType || "Sporgates"),
-        userAvatar: String(n.senderName || n.referenceType || "SG").substring(0, 2).toUpperCase(),
-        senderAvatar: typeof n.senderAvatar === "string" ? n.senderAvatar : null,
+        userName: String(n.senderName ?? n.sender_name ?? n.referenceType ?? "Sporgates"),
+        userAvatar: String(n.senderName ?? n.sender_name ?? n.referenceType ?? "SG").substring(0, 2).toUpperCase(),
+        senderAvatar: [n.senderAvatar, (n as Record<string, unknown>).sender_avatar].find((v): v is string => typeof v === "string" && v.length > 0) ?? null,
         postId: n.postId != null ? String(n.postId) : (String(n.referenceType || "").toLowerCase() === "post" && n.referenceId ? String(n.referenceId) : null),
         referenceId: n.referenceId != null ? String(n.referenceId) : null,
         referenceType: n.referenceType != null ? String(n.referenceType) : null,
@@ -131,6 +135,20 @@ export function NotificationsPage() {
     if (postIdToOpen) {
       const openComments = notif.type === "comment"
       openPost(postIdToOpen, openComments)
+      if (!notif.read) {
+        mutateNotifications(
+          notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
+          false
+        )
+        onUnreadNotificationsChange?.((prev) => Math.max(0, prev - 1))
+        notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
+      }
+      return
+    }
+    // "Liked your story" — open story viewer (recipient is the story author)
+    const isStoryNotification = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
+    if (isStoryNotification) {
+      openStory(user.id, notif.referenceId)
       if (!notif.read) {
         mutateNotifications(
           notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
@@ -238,35 +256,46 @@ export function NotificationsPage() {
             const Icon = typeIcons[notif.type] || Bell
             const iconColor = typeColors[notif.type] || "text-muted-foreground"
             const hasPost = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId)
+            const hasStory = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
+            const isClickable = hasPost || hasStory
             return (
               <div
                 key={notif.id}
                 role="button"
                 tabIndex={0}
-                onClick={() => hasPost && handleNotificationClick(notif)}
+                onClick={() => isClickable && handleNotificationClick(notif)}
                 className={cn(
-                  "flex w-full cursor-pointer items-start gap-4 rounded-2xl border bg-card p-4 text-left transition-all hover:shadow-md",
+                  "flex w-full items-start gap-4 rounded-2xl border bg-card p-4 text-left transition-all hover:shadow-md",
                   !notif.read
                     ? "border-l-4 border-l-secondary border-t-border border-r-border border-b-border"
                     : "border-border",
-                  !hasPost && "cursor-default"
+                  isClickable ? "cursor-pointer" : "cursor-default"
                 )}
               >
-                {/* Avatar with icon overlay */}
+                {/* Avatar: concerned user's profile image (e.g. "Red kaz started following you") */}
                 <div className="relative shrink-0">
-                  <div
-                    className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white overflow-hidden relative",
-                      !notif.read ? "gradient-primary" : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {notif.senderAvatar && isAvatarImageUrl(notif.senderAvatar) ? (
-                      <Image src={resolvePostImageUrl(notif.senderAvatar)!} alt={notif.userName} fill className="object-cover" sizes="44px" />
-                    ) : !notif.read ? (
-                      <span className="text-white relative z-10">{notif.userAvatar}</span>
-                    ) : (
-                      <span className="relative z-10">{notif.userAvatar}</span>
-                    )}
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold overflow-hidden relative bg-muted">
+                    {notif.senderAvatar ? (
+                      <Image
+                        src={resolvePostImageUrl(notif.senderAvatar)}
+                        alt={notif.userName}
+                        fill
+                        className="object-cover z-10"
+                        sizes="44px"
+                        onError={(e) => { e.currentTarget.style.display = "none" }}
+                      />
+                    ) : null}
+                    <span
+                      className={cn(
+                        "absolute inset-0 flex items-center justify-center",
+                        !notif.senderAvatar && !notif.read && "gradient-primary text-white z-10",
+                        !notif.senderAvatar && notif.read && "text-muted-foreground z-10",
+                        notif.senderAvatar && "z-0 bg-muted text-muted-foreground"
+                      )}
+                      aria-hidden={!!notif.senderAvatar}
+                    >
+                      {notif.userAvatar}
+                    </span>
                   </div>
                   <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-card z-20">
                     <Icon className={cn("h-3 w-3", iconColor)} />

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef } from "react"
 import Image from "next/image"
-import { X, Upload, Loader2, ImagePlus, AlertTriangle } from "lucide-react"
+import { X, Upload, Loader2, ImagePlus } from "lucide-react"
 
 interface AddStoryDialogProps {
     open: boolean
@@ -12,7 +12,7 @@ interface AddStoryDialogProps {
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024 // 50MB
-const MAX_VIDEO_DURATION = 60 // seconds
+const MAX_VIDEO_DURATION_SEC = 30
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"
 
 export function AddStoryDialog({ open, onClose, onCreateStory }: AddStoryDialogProps) {
@@ -44,15 +44,15 @@ export function AddStoryDialog({ open, onClose, onCreateStory }: AddStoryDialogP
 
         const url = URL.createObjectURL(file)
 
-        // Validate video duration
         if (isVideo) {
             const metadataUrl = URL.createObjectURL(file)
             const video = document.createElement("video")
             video.preload = "metadata"
             video.onloadedmetadata = () => {
                 URL.revokeObjectURL(metadataUrl)
-                if (video.duration > MAX_VIDEO_DURATION) {
-                    setError(`Video must be ${MAX_VIDEO_DURATION} seconds or less. This video is ${Math.ceil(video.duration)}s.`)
+                const durationSec = video.duration
+                if (durationSec > MAX_VIDEO_DURATION_SEC) {
+                    setError(`Video must be ${MAX_VIDEO_DURATION_SEC} seconds or less. Yours is ${Math.ceil(durationSec)}s.`)
                     URL.revokeObjectURL(url)
                     return
                 }
@@ -80,8 +80,15 @@ export function AddStoryDialog({ open, onClose, onCreateStory }: AddStoryDialogP
             setError(null)
             await onCreateStory(selectedFile)
             handleClose()
-        } catch {
-            setError("Failed to create story. Please try again.")
+        } catch (err: unknown) {
+            const msg =
+                err && typeof err === "object" && "response" in err &&
+                err.response && typeof err.response === "object" && "data" in err.response &&
+                err.response.data && typeof err.response.data === "object" && "error" in err.response.data &&
+                typeof (err.response.data as { error: string }).error === "string"
+                    ? (err.response.data as { error: string }).error
+                    : "Failed to create story. Please try again."
+            setError(msg)
         } finally {
             setIsUploading(false)
         }
@@ -131,7 +138,7 @@ export function AddStoryDialog({ open, onClose, onCreateStory }: AddStoryDialogP
                                     Choose a photo or video
                                 </p>
                                 <p className="mt-1 text-xs text-white/50">
-                                    JPEG, PNG, GIF, WebP, MP4, or WebM · Max 60s for video
+                                    JPEG, PNG, GIF, WebP, MP4, or WebM · Video max {MAX_VIDEO_DURATION_SEC}s
                                 </p>
                             </div>
                         </button>

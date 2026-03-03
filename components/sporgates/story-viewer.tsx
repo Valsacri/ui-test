@@ -33,7 +33,16 @@ interface StoryViewerProps {
     onPrevUser?: () => void
 }
 
-const STORY_DURATION_MS = 5000
+/** Photo display time (Instagram uses 7s); video stories use actual video duration */
+const IMAGE_STORY_DURATION_MS = 7000
+
+/** Format seconds as M:SS for video time display */
+function formatStoryTime(seconds: number): string {
+    if (!Number.isFinite(seconds) || seconds < 0) return "0:00"
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    return `${m}:${s.toString().padStart(2, "0")}`
+}
 
 export function StoryViewer({
     stories,
@@ -59,6 +68,8 @@ export function StoryViewer({
     const [viewers, setViewers] = useState<{ id: string; name: string; avatar: string | null }[]>([])
     const [likers, setLikers] = useState<{ id: string; name: string; avatar: string | null }[]>([])
     const [loadingViewers, setLoadingViewers] = useState(false)
+    /** Current playback time in seconds for video stories (for time display) */
+    const [videoCurrentTimeSec, setVideoCurrentTimeSec] = useState(0)
 
     const progressRef = useRef(0)
     const menuRef = useRef<HTMLDivElement>(null)
@@ -81,6 +92,8 @@ export function StoryViewer({
     const currentStory = localStories[currentIndex]
     const isOwner = currentUserId && currentStory?.authorId === currentUserId
     const isVideo = currentStory?.mediaType === "VIDEO"
+    /** Backend-provided duration for video stories; used for progress and time display */
+    const videoDurationSec = currentStory?.durationSeconds ?? null
 
     // ─── Navigation ──────────────────────────────────────────────────
     const goNext = useCallback(() => {
@@ -118,33 +131,83 @@ export function StoryViewer({
         }
     }, [currentStory?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ─── Progress animation (interval-based for reliability) ─────────
+    // ─── Progress animation: dual strategy for IMAGE vs VIDEO ────────
     useEffect(() => {
         progressRef.current = 0
         setProgress(0)
+        setVideoCurrentTimeSec(0)
 
-        const TICK_MS = 50 // Update every 50ms
-        const INCREMENT = (TICK_MS / STORY_DURATION_MS) * 100
+        const storyIsVideo = localStories[currentIndex]?.mediaType === 'VIDEO'
 
-        const intervalId = setInterval(() => {
-            if (isPausedRef.current) return
+        if (storyIsVideo) {
+            // VIDEO: progress and advance are driven only by the actual <video> element.
+            // We advance to the next story only on video 'ended', so the story never
+            // cuts off before the video finishes. Progress bar uses video.currentTime / video.duration
+            // (or durationSeconds from API as fallback when duration not yet loaded).
+            let rafId: number
 
-            progressRef.current += INCREMENT
-
-            if (progressRef.current >= 100) {
-                progressRef.current = 100
-                setProgress(100)
-                clearInterval(intervalId)
-                // Use setTimeout to avoid state update during render
-                setTimeout(() => goNextRef.current(), 0)
-                return
+            const tick = () => {
+                const v = videoRef.current
+                if (!v) {
+                    rafId = requestAnimationFrame(tick)
+                    return
+                }
+                if (v.ended) {
+                    setProgress(100)
+                    progressRef.current = 100
+                    setTimeout(() => goNextRef.current(), 0)
+                    return
+                }
+                const duration = v.duration > 0 ? v.duration : (videoDurationSec ?? 0)
+                if (duration > 0) {
+                    const pct = Math.min(100, (v.currentTime / duration) * 100)
+                    progressRef.current = pct
+                    setProgress(pct)
+                    setVideoCurrentTimeSec(v.currentTime)
+                }
+                rafId = requestAnimationFrame(tick)
             }
 
-            setProgress(progressRef.current)
-        }, TICK_MS)
+            const handleEnded = () => {
+                cancelAnimationFrame(rafId)
+                setProgress(100)
+                progressRef.current = 100
+                setTimeout(() => goNextRef.current(), 0)
+            }
 
-        return () => {
-            clearInterval(intervalId)
+            const videoEl = videoRef.current
+            rafId = requestAnimationFrame(tick)
+            videoEl?.addEventListener("ended", handleEnded)
+
+            return () => {
+                cancelAnimationFrame(rafId)
+                videoEl?.removeEventListener("ended", handleEnded)
+            }
+        } else {
+            // IMAGE strategy: unchanged interval-based timer
+            const TICK_MS = 50
+            const INCREMENT = (TICK_MS / IMAGE_STORY_DURATION_MS) * 100
+
+            const intervalId = setInterval(() => {
+                if (isPausedRef.current) return
+
+                progressRef.current += INCREMENT
+
+                if (progressRef.current >= 100) {
+                    progressRef.current = 100
+                    setProgress(100)
+                    clearInterval(intervalId)
+                    // Use setTimeout to avoid state update during render
+                    setTimeout(() => goNextRef.current(), 0)
+                    return
+                }
+
+                setProgress(progressRef.current)
+            }, TICK_MS)
+
+            return () => {
+                clearInterval(intervalId)
+            }
         }
     }, [currentIndex]) // Only restart when story changes
 
