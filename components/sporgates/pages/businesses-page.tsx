@@ -43,7 +43,7 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
         : b.avatar
           ? (b.avatar.startsWith("/") ? `${apiUrl}${b.avatar}` : b.avatar)
           : "",
-      followers: b.followers || 0,
+      followers: b.followersCount ?? b.followers ?? 0,
       activities: b.activities || 0,
       verified: !!b.verifiedAt,
     }))

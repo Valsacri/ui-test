@@ -15,6 +15,7 @@ import { notificationsService } from "@/lib/services/notifications"
 import { messagesService } from "@/lib/services/messages"
 import { authService } from "@/lib/services/auth"
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
+import { mutate as swrMutate } from "swr"
 import { PostModalProvider } from "@/lib/post-modal-context"
 import { StoryModalProvider } from "@/lib/story-modal-context"
 import { NotificationCountProvider } from "@/lib/notification-count-context"
@@ -60,6 +61,7 @@ function pathnameToPageRoute(pathname: string): PageRoute {
         return `settings-${sub}` as PageRoute
     }
     if (p === "/business" || p === "/business/dashboard") return "business-dashboard"
+    if (p === "/business/feed") return "business-feed"
     if (p === "/business/activities") return "business-activities"
     if (p === "/business/customers") return "business-customers"
     if (p === "/business/team") return "business-team"
@@ -188,6 +190,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
             }
         } catch { /* ignore */ }
         refetchNotificationCount()
+        const u = authService.getCurrentUser()
+        if (u?.id) swrMutate(`/notifications/user/${u.id}`)
     }, [refetchNotificationCount])
 
     const user = authService.getCurrentUser()
@@ -275,7 +279,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                             />
                         )}
                         <div className="min-w-0 flex-1 flex justify-center">
-                            <main className={`w-full ${currentPage === "home" ? "max-w-3xl" : "max-w-6xl"} p-6 lg:p-2`}>
+                            <main className={`w-full ${currentPage === "home" ? "max-w-3xl" : "max-w-6xl"} mt-6 p-6 lg:p-2`}>
                                 <ErrorBoundary>
                                     {children}
                                 </ErrorBoundary>

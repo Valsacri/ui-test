@@ -576,8 +576,8 @@ export function TopBar({
                           }
                           if (postIdToOpen) {
                             openPost(postIdToOpen, isCommentNotification)
-                          } else if (isStoryNotification) {
-                            openStory(user!.id, notif.referenceId!)
+                          } else if (isStoryNotification && user?.id && notif.referenceId) {
+                            openStory(user.id, notif.referenceId)
                           } else {
                             onNavigate("notifications")
                           }

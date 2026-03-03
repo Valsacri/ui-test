@@ -7,7 +7,7 @@ import { cn, resolvePostImageUrl } from "@/lib/utils"
 import { useStories } from "@/hooks/use-stories"
 import { StoryViewer } from "@/components/sporgates/story-viewer"
 import { AddStoryDialog } from "@/components/sporgates/add-story-dialog"
-import { StoryFeedSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { StorySkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { authService } from "@/lib/services/auth"
 import { userService } from "@/lib/services/user"
 import type { StoryFeedItem, StoryDto } from "@/lib/types/story"
@@ -139,14 +139,10 @@ export function Stories() {
   const ownFeedItem = feedItems.find((f) => f.userId === currentUserId)
   const otherItems = feedItems.filter((f) => f.userId !== currentUserId)
 
-  if (isLoading) {
-    return <StoryFeedSkeleton count={6} />
-  }
-
   return (
     <>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {/* ── Fixed "Add Story" card ── Always opens create dialog */}
+        {/* ── Fixed "Add Story" card ── No backend data; always visible */}
         <button
           type="button"
           onClick={() => setShowAddDialog(true)}
@@ -186,8 +182,12 @@ export function Stories() {
           </div>
         </button>
 
-        {/* ── User's own stories card ── Only shown when they have stories */}
-        {hasOwnStories && ownFeedItem && (
+        {/* ── Loading: skeleton cards for feed items only ── */}
+        {isLoading &&
+          Array.from({ length: 6 }).map((_, i) => <StorySkeleton key={`skeleton-${i}`} />)}
+
+        {/* ── User's own stories card ── Only shown when they have stories (not loading) */}
+        {!isLoading && hasOwnStories && ownFeedItem && (
           <button
             type="button"
             onClick={() => openViewer(ownFeedItem, 0)}
@@ -236,7 +236,7 @@ export function Stories() {
         )}
 
         {/* ── Other users' story cards ── */}
-        {otherItems.map((item, i) => (
+        {!isLoading && otherItems.map((item, i) => (
           <button
             type="button"
             key={item.userId}

@@ -16,7 +16,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { businessesService, activitiesService, servicesService, authService } from "@/lib/services"
-import { userService } from "@/lib/services/user"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import type { PageRoute } from "@/lib/navigation"
@@ -45,11 +44,13 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
   const [activeTab, setActiveTab] = useState("Overview")
   const [following, setFollowing] = useState(false)
 
-  const { data: business, isLoading: loadingBiz } = useSWR(
+  const { data: business, isLoading: loadingBiz, mutate: mutateBusiness } = useSWR(
     businessId ? `/businesses/${businessId}` : null,
     () => businessesService.getById(businessId),
     { revalidateOnFocus: false, dedupingInterval: 10000 }
   )
+
+  const isFollowing = business?.followedByCurrentUser ?? following
 
   const { data: activitiesRaw = [] } = useSWR(
     businessId ? `/activities?organizerId=${businessId}` : null,
@@ -128,7 +129,7 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
     location: business.city && business.state ? `${business.city}, ${business.state}` : business.address || "Location unavailable",
     rating: 5.0,
     reviews: 0,
-    followers: 0,
+    followers: business.followersCount ?? 0,
     activities: activities.length,
     verified: !!business.verifiedAt,
     type: business.type || "Business"
@@ -231,11 +232,12 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
             onClick={async () => {
               const me = authService.getCurrentUser()?.id
               if (!me) return
-              const prev = following
+              const prev = isFollowing
               setFollowing(!prev)
               try {
-                if (prev) await userService.unfollowUser(me, businessId)
-                else await userService.followUser(me, businessId)
+                if (prev) await businessesService.unfollowBusiness(businessId)
+                else await businessesService.followBusiness(businessId)
+                await mutateBusiness()
               } catch {
                 setFollowing(prev)
                 toast.error(prev ? "Failed to unfollow" : "Failed to follow")
@@ -243,12 +245,12 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
             }}
             className={cn(
               "rounded-full px-5 py-2 text-xs font-semibold transition-all",
-              following
+              isFollowing
                 ? "border border-primary bg-primary/10 text-primary"
                 : "gradient-primary text-white shadow-md"
             )}
           >
-            {following ? "Following" : "Follow"}
+            {isFollowing ? "Following" : "Follow"}
           </button>
           <button
             type="button"

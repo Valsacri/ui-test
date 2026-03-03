@@ -1,9 +1,9 @@
 "use client"
 
-import { BusinessDashboardPage } from "@/components/sporgates/pages/business-dashboard-page"
+import { BusinessAnalyticsPage } from "@/components/sporgates/pages/business-pages"
 import { useAppRouter } from "@/lib/route-map"
 
-export default function BusinessDashboardRoute() {
-    const { navigate } = useAppRouter()
-    return <BusinessDashboardPage onNavigate={navigate} />
+export default function BusinessRootRoute() {
+  const { navigate } = useAppRouter()
+  return <BusinessAnalyticsPage onNavigate={navigate} />
 }

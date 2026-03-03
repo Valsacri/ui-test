@@ -58,6 +58,7 @@ const routeMap: Record<PageRoute, string> = {
     "settings-transactions": "/settings/transactions",
 
     // Business
+    "business-feed": "/business/feed",
     "business-dashboard": "/business/dashboard",
     "business-activities": "/business/activities",
     "business-customers": "/business/customers",

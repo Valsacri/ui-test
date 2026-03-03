@@ -5,9 +5,13 @@
 
 export type PostVisibility = 'PUBLIC' | 'FOLLOWERS_ONLY' | 'PRIVATE'
 
+export type AuthorType = 'USER' | 'BUSINESS'
+
 export interface Post {
   id: string
   authorId?: string
+  authorType?: AuthorType
+  businessId?: string
   authorName?: string
   authorAvatar?: string
   content?: string
@@ -39,7 +43,7 @@ export interface Comment {
 
 /**
  * Payload for creating a new post.
- * Author info is resolved server-side from JWT — no authorId/Name/Avatar needed.
+ * Author info is resolved server-side from JWT (or from business when businessId is set).
  */
 export interface CreatePostPayload {
   content: string
@@ -47,6 +51,8 @@ export interface CreatePostPayload {
   images?: string[]
   sport?: string
   visibility?: PostVisibility
+  /** When set, post is created as the business (owner/staff only). */
+  businessId?: string
 }
 
 /**
@@ -95,4 +101,6 @@ export interface PostCardData {
   saved?: boolean
   sport?: string
   visibility?: PostVisibility
+  authorType?: AuthorType
+  businessId?: string
 }

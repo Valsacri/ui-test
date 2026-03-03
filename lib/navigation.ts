@@ -41,6 +41,7 @@ export type PageRoute =
   | "settings-privacy-policy"
   | "settings-help"
   | "settings-transactions"
+  | "business-feed"
   | "business-dashboard"
   | "business-activities"
   | "business-customers"

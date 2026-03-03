@@ -15,16 +15,44 @@ import {
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { ProgressChart } from "@/components/sporgates/progress-chart"
+import { FeedComposer } from "@/components/sporgates/feed-composer"
+import { PostCard } from "@/components/sporgates/cards/post-card"
 import { useBusinessContext } from "@/lib/business-context"
-import { activitiesService } from "@/lib/services/activities"
+import { activitiesService, postsService, authService } from "@/lib/services"
 import { businessesService } from "@/lib/services/businesses"
+import { formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
+import type { PostCardData } from "@/lib/types/post"
+import type { FeedComposerPayload } from "@/components/sporgates/feed-composer"
 
 interface BusinessDashboardPageProps {
   onNavigate: (page: PageRoute) => void
 }
 
 export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps) {
-  const { activeBusinessId } = useBusinessContext()
+  const { activeBusinessId, businesses } = useBusinessContext()
+  const activeBusiness = businesses.find((b) => b.id === activeBusinessId)
+  const currentUser = authService.getCurrentUser()
+  const userId = currentUser?.id
+  const initials = (currentUser?.firstName?.[0] ?? "") + (currentUser?.lastName?.[0] ?? "") || (currentUser?.username?.[0] ?? "?").toUpperCase()
+  const currentUserForComment = currentUser
+    ? {
+        id: currentUser.id,
+        authorName: [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ") || currentUser.username || "User",
+        authorAvatar: initials,
+      }
+    : null
+
+  const { data: postsData, mutate: mutatePosts } = useSWR(
+    activeBusinessId ? [`/posts/business/${activeBusinessId}`, activeBusinessId] : null,
+    () => postsService.getByBusiness(activeBusinessId!, 0, 20),
+    { revalidateOnFocus: false, dedupingInterval: 5000 }
+  )
+  const businessPosts = postsData?.content ?? []
+
+  const handleCreatePost = async (payload: FeedComposerPayload) => {
+    await postsService.create({ ...payload, businessId: activeBusinessId! })
+    mutatePosts()
+  }
 
   const { data: activitiesRaw = [] } = useSWR(
     activeBusinessId ? `/business/${activeBusinessId}/activities` : null,
@@ -106,6 +134,54 @@ export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps
           Overview of your business performance
         </p>
       </div>
+
+      {/* Business Feed: create post + recent posts */}
+      {activeBusinessId && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-foreground">Feed</h2>
+          <FeedComposer
+            userDisplayName={activeBusiness?.name ?? "Your business"}
+            userAvatar={activeBusiness?.avatar}
+            placeholder="Share an update with your followers..."
+            onSubmit={handleCreatePost}
+            onSuccess={() => mutatePosts()}
+            className="max-w-2xl"
+          />
+          <div className="space-y-4 max-w-2xl">
+            {businessPosts.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">No posts yet. Create one above.</p>
+            ) : (
+              businessPosts.map((p: any) => {
+                const postCard: PostCardData = {
+                  id: p.id,
+                  author: p.authorName ?? "Business",
+                  authorAvatar: p.authorAvatar ?? "?",
+                  time: formatFeedTime(p.createdAt),
+                  content: p.content ?? "",
+                  image: resolvePostImageUrl(p.image) || p.image,
+                  likes: p.likes ?? 0,
+                  comments: p.comments ?? 0,
+                  shares: p.shares ?? 0,
+                  liked: p.likedByCurrentUser ?? false,
+                  saved: p.savedByCurrentUser ?? false,
+                  sport: p.sport,
+                  authorType: p.authorType,
+                  businessId: p.businessId,
+                }
+                return (
+                  <PostCard
+                    key={p.id}
+                    post={postCard}
+                    userId={userId}
+                    currentUser={currentUserForComment}
+                    onCountChange={() => mutatePosts()}
+                  />
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

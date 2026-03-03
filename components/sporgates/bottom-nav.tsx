@@ -7,8 +7,8 @@ import {
   MessageCircle,
   User,
   LayoutDashboard,
-  BarChart3,
   Users,
+  Rss,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -29,9 +29,9 @@ const userItems = [
 
 const businessItems = [
   { label: "Dashboard", icon: LayoutDashboard, page: "business-dashboard" as PageRoute },
+  { label: "Feed", icon: Rss, page: "business-feed" as PageRoute },
   { label: "Activities", icon: CalendarDays, page: "business-activities" as PageRoute },
   { label: "Customers", icon: Users, page: "business-customers" as PageRoute },
-  { label: "Analytics", icon: BarChart3, page: "business-analytics" as PageRoute },
   { label: "Profile", icon: User, page: "profile" as PageRoute },
 ]
 

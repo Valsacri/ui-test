@@ -197,13 +197,13 @@ export function FeedSkeleton({ count = 3 }: { count?: number }) {
 
 export function StorySkeleton() {
     return (
-        <div className="relative flex h-[160px] w-[100px] shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card animate-pulse">
-            <Skeleton className="h-full w-full absolute inset-0 rounded-none" />
+        <div className="relative flex h-[160px] w-[100px] shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
+            <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
             <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2">
-                <Skeleton className="h-10 w-10 rounded-full border-2 border-background" />
+                <Skeleton className="h-10 w-10 rounded-full border-2 border-border" />
             </div>
-            <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center">
-                <Skeleton className="h-3 w-16 bg-white/50" />
+            <div className="absolute inset-x-0 bottom-0 z-10 flex h-12 items-end justify-center pb-2">
+                <Skeleton className="h-3 w-16 rounded-full" />
             </div>
         </div>
     )

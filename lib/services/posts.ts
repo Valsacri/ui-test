@@ -38,6 +38,17 @@ export const postsService = {
     return data;
   },
 
+  getByBusiness: async (
+    businessId: string,
+    page = 0,
+    size = DEFAULT_PAGE_SIZE
+  ): Promise<PostsPage> => {
+    const { data } = await apiClient.get<PostsPage>(`/v1/posts/business/${businessId}`, {
+      params: { page, size: Math.min(size, MAX_PAGE_SIZE) },
+    });
+    return data;
+  },
+
   create: async (payload: CreatePostPayload): Promise<Post> => {
     const { data } = await apiClient.post<Post>('/v1/posts', payload);
     return data;

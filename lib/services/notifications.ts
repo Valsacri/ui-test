@@ -58,11 +58,12 @@ export function subscribeToNotificationStream(
                         buffer = events.pop() ?? '';
                         for (const raw of events) {
                             let name = '';
-                            let data: string | null = null;
+                            const dataLines: string[] = [];
                             for (const line of raw.split('\n')) {
                                 if (line.startsWith('event:')) name = line.slice(6).trim();
-                                if (line.startsWith('data:')) data = line.slice(5).trim();
+                                if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
                             }
+                            const data = dataLines.length ? dataLines.join('\n') : null;
                             if (name === 'notification' && data) onNotification();
                         }
                         read();

@@ -13,10 +13,10 @@ import {
   Bell,
   Settings,
   LayoutDashboard,
-  BarChart3,
   UserCheck,
   Megaphone,
   Package,
+  Rss,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -47,10 +47,10 @@ const userSecondaryItems = [
 
 const businessNavItems = [
   { label: "Dashboard", icon: LayoutDashboard, page: "business-dashboard" as PageRoute },
+  { label: "Feed", icon: Rss, page: "business-feed" as PageRoute },
   { label: "Activities", icon: CalendarDays, page: "business-activities" as PageRoute },
   { label: "Customers", icon: UserCheck, page: "business-customers" as PageRoute },
   { label: "Team", icon: Users, page: "business-team" as PageRoute },
-  { label: "Analytics", icon: BarChart3, page: "business-analytics" as PageRoute },
   { label: "Campaigns", icon: Megaphone, page: "business-campaigns" as PageRoute },
   { label: "Resources", icon: Package, page: "business-resources" as PageRoute },
   { label: "Partners", icon: Users, page: "business-partners" as PageRoute },

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { PostActionBar } from "@/components/sporgates/post-action-bar"
 import { PostCommentsInline } from "@/components/sporgates/post-comments-inline"
-import { FeedSkeleton } from "@/components/sporgates/ux/page-skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { postsService, authService } from "@/lib/services"
 import { formatFeedTime, resolvePostImageUrl, isAvatarImageUrl } from "@/lib/utils"
@@ -102,8 +102,29 @@ export function PostPopupModal({ postId, open, onOpenChange, openComments }: Pos
     if (!postId) return null
     if (isLoading) {
       return (
-        <div className="flex min-h-[280px] items-center justify-center p-8">
-          <FeedSkeleton />
+        <div className="flex flex-col md:flex-row h-full md:max-h-[85vh] max-h-[100dvh] w-full bg-card rounded-none md:rounded-2xl overflow-hidden">
+          <div className="flex-shrink-0 w-full md:w-[65%] aspect-[4/5] max-h-[45vh] md:max-h-[85vh] md:aspect-auto md:h-[85vh] bg-muted rounded-none md:rounded-l-2xl">
+            <Skeleton className="h-full w-full rounded-none md:rounded-l-2xl" />
+          </div>
+          <div className="flex flex-1 flex-col min-w-0 p-4 border-t md:border-t-0 md:border-l border-border">
+            <div className="flex items-center gap-3 shrink-0">
+              <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+            <div className="mt-4 flex gap-4">
+              <Skeleton className="h-9 w-16 rounded-full" />
+              <Skeleton className="h-9 w-16 rounded-full" />
+              <Skeleton className="h-9 w-16 rounded-full" />
+            </div>
+          </div>
         </div>
       )
     }

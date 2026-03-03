@@ -146,9 +146,10 @@ export function NotificationsPage() {
       return
     }
     // "Liked your story" — open story viewer (recipient is the story author)
-    const isStoryNotification = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
+    const storyRefId = notif.referenceId
+    const isStoryNotification = notif.referenceType?.toUpperCase() === "STORY" && storyRefId && user?.id
     if (isStoryNotification) {
-      openStory(user.id, notif.referenceId)
+      openStory(user.id, storyRefId)
       if (!notif.read) {
         mutateNotifications(
           notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),

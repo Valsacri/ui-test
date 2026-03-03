@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Megaphone,
   Package,
+  Rss,
   Settings,
   TrendingUp,
   UserCheck,
@@ -28,8 +29,15 @@ const businessItems = [
     id: "dashboard",
     icon: LayoutDashboard,
     label: "Dashboard",
-    description: "Overview & insights",
+    description: "Analytics & insights",
     destination: "business-dashboard",
+  },
+  {
+    id: "feed",
+    icon: Rss,
+    label: "Feed",
+    description: "Posts & updates",
+    destination: "business-feed",
   },
   {
     id: "activities",
@@ -58,13 +66,6 @@ const businessItems = [
     label: "Resources",
     description: "Products & facilities",
     destination: "business-resources",
-  },
-  {
-    id: "analytics",
-    icon: BarChart3,
-    label: "Analytics",
-    description: "Performance metrics",
-    destination: "business-analytics",
   },
   {
     id: "athletes",
