@@ -2,16 +2,35 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { AUTH_COOKIE_NAME, PUBLIC_ROUTES } from '@/lib/constants'
 
+const LANDING_HOSTS = ['www.sporgates.com', 'sporgates.com']
+const APP_HOST = 'app.sporgates.com'
+
 /**
- * Server-side auth middleware.
- * 
- * Since JWT tokens live in localStorage (not accessible server-side),
- * we use a cookie marker (`auth_logged_in`) set after successful login.
- * The client-side AuthGuard remains as a secondary check for
- * token validity and logout events.
+ * Server-side middleware: domain-based routing + auth.
+ *
+ * - www.sporgates.com / sporgates.com → landing page at /
+ * - app.sporgates.com → app (auth required for protected routes)
+ * - JWT lives in localStorage; we use cookie marker `auth_logged_in` for server-side auth check.
  */
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
+    const host = request.headers.get('host') ?? ''
+
+    // Domain-based routing: landing vs app
+    const isLandingDomain = LANDING_HOSTS.some((h) => host.toLowerCase() === h)
+    const isAppDomain = host.toLowerCase() === APP_HOST
+
+    if (isLandingDomain && pathname === '/') {
+        // Serve landing at root on www / apex
+        const url = request.nextUrl.clone()
+        url.pathname = '/landing'
+        return NextResponse.rewrite(url)
+    }
+
+    if (isAppDomain && pathname === '/landing') {
+        // On app subdomain, send /landing visitors to app home
+        return NextResponse.redirect(new URL('/', request.url))
+    }
 
     // Allow public routes, static assets, and API routes
     if (

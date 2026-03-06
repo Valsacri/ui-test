@@ -2,10 +2,20 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react"
 import Image from "next/image"
-import { MoreHorizontal, Globe, Users, Lock, Link2, EyeOff, Flag, ChevronLeft, ChevronRight } from "lucide-react"
+import { MoreHorizontal, Globe, Users, Lock, Link2, EyeOff, Flag, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { cn, resolvePostImageUrl, isAvatarImageUrl } from "@/lib/utils"
 import { PostActionBar } from "@/components/sporgates/post-action-bar"
 import { PostCommentsInline } from "@/components/sporgates/post-comments-inline"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { usePostActions } from "@/hooks/use-post-actions"
 import type { PostCardData, PostVisibility } from "@/lib/types/post"
 import { toast } from "sonner"
@@ -27,6 +37,9 @@ export interface PostCardProps {
   /** Whether this is one of the first visible posts (enables priority image loading). */
   priority?: boolean
   className?: string
+  /** When true, show Delete in the options menu. Call onDelete when user confirms. */
+  canDelete?: boolean
+  onDelete?: (postId: string) => void | Promise<void>
 }
 
 /**
@@ -40,6 +53,8 @@ export const PostCard = React.memo(function PostCard({
   initialShowComments,
   priority = false,
   className,
+  canDelete = false,
+  onDelete,
 }: PostCardProps) {
   const [commentCount, setCommentCount] = useState(post.comments ?? 0)
   const [showComments, setShowComments] = useState(initialShowComments ?? false)
@@ -117,7 +132,7 @@ export const PostCard = React.memo(function PostCard({
             </div>
           </div>
         </div>
-        <PostOptionsMenu postId={post.id} />
+        <PostOptionsMenu postId={post.id} canDelete={canDelete} onDelete={onDelete} />
       </div>
 
       {/* Content */}
@@ -251,9 +266,18 @@ function PostImages({ images, fallbackImage, priority }: { images?: string[]; fa
   )
 }
 
-/** Post options dropdown (copy link, hide, report). */
-function PostOptionsMenu({ postId }: { postId: string }) {
+/** Post options dropdown (delete when allowed, copy link, hide, report). */
+function PostOptionsMenu({
+  postId,
+  canDelete = false,
+  onDelete,
+}: {
+  postId: string
+  canDelete?: boolean
+  onDelete?: (postId: string) => void | Promise<void>
+}) {
   const [open, setOpen] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close on outside click
@@ -265,6 +289,30 @@ function PostOptionsMenu({ postId }: { postId: string }) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
+
+  const handleConfirmDelete = async () => {
+    if (!onDelete) return
+    try {
+      await onDelete(postId)
+      setConfirmDeleteOpen(false)
+      toast.success('Post deleted')
+    } catch {
+      toast.error('Failed to delete post')
+    }
+  }
+
+  const deleteAction =
+    canDelete && onDelete
+      ? {
+          label: 'Delete post',
+          icon: Trash2,
+          danger: true,
+          onClick: () => {
+            setOpen(false)
+            setConfirmDeleteOpen(true)
+          },
+        }
+      : null
 
   const actions = [
     {
@@ -280,6 +328,7 @@ function PostOptionsMenu({ postId }: { postId: string }) {
       icon: EyeOff,
       onClick: () => toast.info('Post hidden from your feed'),
     },
+    ...(deleteAction ? [deleteAction] : []),
     {
       label: 'Report',
       icon: Flag,
@@ -289,34 +338,55 @@ function PostOptionsMenu({ postId }: { postId: string }) {
   ]
 
   return (
-    <div ref={menuRef} className="relative" onClick={(e) => e.stopPropagation()}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="rounded-full p-1.5 transition-colors hover:bg-muted"
-        aria-label="More options"
-      >
-        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-border bg-card py-1 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
-          {actions.map((a) => (
-            <button
-              key={a.label}
-              type="button"
-              onClick={() => { a.onClick(); setOpen(false) }}
-              className={cn(
-                'flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted',
-                a.danger ? 'text-destructive' : 'text-foreground'
-              )}
+    <>
+      <div ref={menuRef} className="relative" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="rounded-full p-1.5 transition-colors hover:bg-muted"
+          aria-label="More options"
+        >
+          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+        </button>
+        {open && (
+          <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-border bg-card py-1 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+            {actions.map((a) => (
+              <button
+                key={a.label}
+                type="button"
+                onClick={() => { a.onClick(); setOpen(false) }}
+                className={cn(
+                  'flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors hover:bg-muted',
+                  (a as { danger?: boolean }).danger ? 'text-destructive' : 'text-foreground'
+                )}
+              >
+                <a.icon className="h-3.5 w-3.5" />
+                {a.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete post?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your post.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleConfirmDelete() }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              <a.icon className="h-3.5 w-3.5" />
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 

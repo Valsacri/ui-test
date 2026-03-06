@@ -173,6 +173,7 @@ export function FeedSection({ feed, userId, currentUser, composer }: FeedSection
                             saved: item.savedByCurrentUser ?? false,
                             sport: item.sport,
                         }
+                        const canDeletePost = !!userId && item.authorId === userId
                         return (
                             <div
                                 key={item.id}
@@ -192,6 +193,10 @@ export function FeedSection({ feed, userId, currentUser, composer }: FeedSection
                                     userId={userId}
                                     currentUser={currentUser}
                                     priority={index < 2}
+                                    canDelete={canDeletePost}
+                                    onDelete={async (id) => {
+                                        await feed.deletePost(id)
+                                    }}
                                 />
                             </div>
                         )

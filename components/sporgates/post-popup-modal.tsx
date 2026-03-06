@@ -1,23 +1,36 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import useSWR from "swr"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, MoreHorizontal, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, MoreHorizontal, X, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { getPath } from "@/lib/route-map"
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { PostActionBar } from "@/components/sporgates/post-action-bar"
 import { PostCommentsInline } from "@/components/sporgates/post-comments-inline"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { postsService, authService } from "@/lib/services"
+import { useBusinessContext } from "@/lib/business-context"
 import { formatFeedTime, resolvePostImageUrl, isAvatarImageUrl } from "@/lib/utils"
 import { usePostActions } from "@/hooks/use-post-actions"
+import { mutate as swrMutate } from "swr"
 
 export interface PostPopupModalProps {
   postId: string | null
@@ -34,6 +47,7 @@ export interface PostPopupModalProps {
 export function PostPopupModal({ postId, open, onOpenChange, openComments }: PostPopupModalProps) {
   const currentUser = authService.getCurrentUser()
   const userId = currentUser?.id
+  const { activeBusinessId } = useBusinessContext()
   const initials =
     (currentUser?.firstName?.[0] ?? "") +
     (currentUser?.lastName?.[0] ?? "") ||
@@ -143,17 +157,26 @@ export function PostPopupModal({ postId, open, onOpenChange, openComments }: Pos
     const authorAvatar = post.authorAvatar ?? "?"
     const timeStr = formatFeedTime(post.createdAt)
     const hasMedia = images.length > 0
+    const isBusinessPost = post.authorType === "BUSINESS" || !!post.businessId
+    const authorProfileId = post.businessId ?? post.authorId
+    const authorProfileHref = authorProfileId
+      ? getPath(isBusinessPost ? "business-detail" : "person-detail", authorProfileId)
+      : null
+    const canDeleteModal =
+      !!userId &&
+      ((post.authorType === "USER" && post.authorId === userId) ||
+        (post.authorType === "BUSINESS" && !!post.businessId && post.businessId === activeBusinessId))
 
     const rightPanel = (
       <div className={`flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden bg-card border-t border-border rounded-none md:rounded-r-2xl ${hasMedia ? "md:border-t-0 md:border-l md:rounded-l-none" : "md:rounded-2xl"} pb-4 md:pb-0`}>
         {/* Post header */}
         <div className="flex items-start gap-3 p-3 sm:p-4 shrink-0">
-          {post.authorId ? (
+          {authorProfileHref ? (
             <Link
-              href={getPath("person-detail", post.authorId)}
+              href={authorProfileHref}
               onClick={() => onOpenChange(false)}
               className="relative h-10 w-10 shrink-0 rounded-full overflow-hidden bg-muted ring-offset-2 ring-offset-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`View ${authorName}'s profile`}
+              aria-label={isBusinessPost ? `View ${authorName} business` : `View ${authorName}'s profile`}
             >
               {isAvatarImageUrl(authorAvatar) ? (
                 <Image
@@ -186,12 +209,12 @@ export function PostPopupModal({ postId, open, onOpenChange, openComments }: Pos
               )}
             </div>
           )}
-          {post.authorId ? (
+          {authorProfileHref ? (
             <Link
-              href={getPath("person-detail", post.authorId)}
+              href={authorProfileHref}
               onClick={() => onOpenChange(false)}
               className="min-w-0 flex-1 min-h-[2.5rem] flex flex-col justify-center ring-offset-2 ring-offset-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-              aria-label={`View ${authorName}'s profile`}
+              aria-label={isBusinessPost ? `View ${authorName} business` : `View ${authorName}'s profile`}
             >
               <p className="text-sm font-semibold text-foreground">{authorName}</p>
               <p className="text-[11px] text-muted-foreground">{timeStr}</p>
@@ -203,13 +226,17 @@ export function PostPopupModal({ postId, open, onOpenChange, openComments }: Pos
             </div>
           )}
           <div className="flex items-center gap-0.5 shrink-0">
-            <button
-              type="button"
-              className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
-              aria-label="More options"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
+            <PostModalOptionsMenu
+              postId={post.id}
+              canDelete={canDeleteModal}
+              onDelete={async () => {
+                await postsService.delete(post.id)
+                onOpenChange(false)
+                toast.success("Post deleted")
+                if (userId) swrMutate(`/posts/user/${userId}`)
+                if (post.businessId) swrMutate(`/posts/business/${post.businessId}`)
+              }}
+            />
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -338,5 +365,86 @@ export function PostPopupModal({ postId, open, onOpenChange, openComments }: Pos
         {content()}
       </DialogContent>
     </Dialog>
+  )
+}
+
+function PostModalOptionsMenu({
+  postId,
+  canDelete,
+  onDelete,
+}: {
+  postId: string
+  canDelete: boolean
+  onDelete: () => Promise<void>
+}) {
+  const [open, setOpen] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [open])
+
+  const handleConfirmDelete = async () => {
+    await onDelete()
+    setConfirmDeleteOpen(false)
+  }
+
+  return (
+    <>
+      <div ref={ref} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+          aria-label="More options"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+        {open && (
+          <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-xl border border-border bg-card py-1 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false)
+                  setConfirmDeleteOpen(true)
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-muted"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete post
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete post?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your post.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmDelete()
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

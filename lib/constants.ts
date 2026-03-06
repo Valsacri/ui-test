@@ -17,6 +17,7 @@ export const AUTH_COOKIE_NAME = 'auth_logged_in'
 
 // ── Public Routes (no auth required) ──────────────────────
 export const PUBLIC_ROUTES = [
+    '/landing',
     '/signin',
     '/signup',
     '/forgot-password',

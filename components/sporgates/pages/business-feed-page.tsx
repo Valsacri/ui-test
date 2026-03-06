@@ -93,6 +93,11 @@ export function BusinessFeedPage({ onNavigate }: BusinessFeedPageProps) {
                     userId={userId}
                     currentUser={currentUserForComment}
                     onCountChange={() => mutatePosts()}
+                    canDelete
+                    onDelete={async (id) => {
+                      await postsService.delete(id)
+                      mutatePosts()
+                    }}
                   />
                 )
               })

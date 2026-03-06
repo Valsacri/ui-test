@@ -18,18 +18,22 @@ import {
   Loader2,
   Camera,
   ImagePlus,
+  MessageCircle,
 } from "lucide-react"
 import { userService, authService, activitiesService, postsService } from "@/lib/services"
+import { PostCard } from "@/components/sporgates/cards/post-card"
 import type { PageRoute } from "@/lib/navigation"
 import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
-import { cn, parseBackendDate } from "@/lib/utils"
+import { cn, parseBackendDate, formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
+import { usePostModal } from "@/lib/post-modal-context"
+import type { PostCardData } from "@/lib/types/post"
 
 interface ProfilePageProps {
   onNavigate: (page: PageRoute) => void
 }
 
-const tabs = ["Overview", "Activity", "Achievements"]
+const tabs = ["Overview", "Feed", "Activity", "Achievements"]
 
 const recentActivity = [
   { id: "1", type: "joined", title: "5v5 Basketball Pickup Game", date: "Feb 7, 2026", sport: "Basketball" },
@@ -90,9 +94,19 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [uploadingCover, setUploadingCover] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const maxHours = Math.max(...weeklyData.map((d) => d.hours))
+  const { openPost } = usePostModal()
 
   const user = authService.getCurrentUser()
   const userId = user?.id
+  const initials =
+    (user?.firstName?.[0] ?? "") + (user?.lastName?.[0] ?? "") || (user?.username?.[0] ?? "?").toUpperCase()
+  const currentUserForComment = user
+    ? {
+        id: user.id,
+        authorName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || "User",
+        authorAvatar: initials,
+      }
+    : null
 
   const { data: userData, error: userError, isLoading: userLoading, mutate: mutateUser } = useSWR(
     userId ? `/users/${userId}` : null,
@@ -106,11 +120,12 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
     { revalidateOnFocus: false, dedupingInterval: 10000 }
   )
 
-  const { data: userPosts = [] } = useSWR(
+  const { data: postsPage, mutate: mutatePosts } = useSWR(
     userId ? `/posts/user/${userId}` : null,
     () => postsService.getByUser(userId!, userId),
     { revalidateOnFocus: false, dedupingInterval: 10000 }
   )
+  const userPostsList = postsPage?.content ?? []
 
   const isLoading = userLoading || (actLoading && actData.length === 0)
   const error = userError || actError
@@ -429,9 +444,9 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
           {/* My Posts (from API) */}
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <h2 className="mb-4 text-base font-bold text-foreground">My Posts</h2>
-            {Array.isArray(userPosts) && userPosts.length > 0 ? (
+            {userPostsList.length > 0 ? (
               <div className="space-y-3">
-                {userPosts.slice(0, 5).map((post: any) => (
+                {userPostsList.slice(0, 5).map((post: any) => (
                   <div
                     key={post.id}
                     className="rounded-xl border border-border bg-muted/50 p-3"
@@ -448,6 +463,63 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
               <p className="text-sm text-muted-foreground">No posts yet. Share something with the community!</p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Feed Tab */}
+      {activeTab === "Feed" && (
+        <div className="space-y-4 animate-fade-in">
+          {userPostsList.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-12 text-center">
+              <MessageCircle className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+              <p className="text-sm font-semibold text-foreground">No posts yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">Share something with the community!</p>
+            </div>
+          ) : (
+            userPostsList.map((p: any) => {
+              const postCard: PostCardData = {
+                id: p.id,
+                author: p.authorName ?? userProfile.name ?? "User",
+                authorAvatar: p.authorAvatar ?? userProfile.avatar ?? "?",
+                time: formatFeedTime(p.createdAt),
+                content: p.content ?? "",
+                image: resolvePostImageUrl(p.image) || p.image,
+                likes: p.likes ?? 0,
+                comments: p.comments ?? 0,
+                shares: p.shares ?? 0,
+                liked: p.likedByCurrentUser ?? false,
+                saved: p.savedByCurrentUser ?? false,
+                sport: p.sport,
+                authorType: p.authorType,
+                businessId: p.businessId,
+              }
+              return (
+                <div
+                  key={postCard.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openPost(postCard.id)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return
+                    openPost(postCard.id)
+                  }}
+                  className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
+                >
+                  <PostCard
+                    post={postCard}
+                    userId={userId}
+                    currentUser={currentUserForComment}
+                    onCountChange={() => mutatePosts()}
+                    canDelete
+                    onDelete={async (id) => {
+                      await postsService.delete(id)
+                      mutatePosts()
+                    }}
+                  />
+                </div>
+              )
+            })
+          )}
         </div>
       )}
 

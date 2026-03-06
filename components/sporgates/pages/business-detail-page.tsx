@@ -15,23 +15,26 @@ import {
   Mail,
 } from "lucide-react"
 import { toast } from "sonner"
-import { businessesService, activitiesService, servicesService, authService } from "@/lib/services"
+import { businessesService, activitiesService, servicesService, authService, postsService } from "@/lib/services"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
+import { PostCard } from "@/components/sporgates/cards/post-card"
 import type { PageRoute } from "@/lib/navigation"
-import { cn } from "@/lib/utils"
+import { cn, formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
 import { useState } from "react"
 import useSWR from "swr"
 import Image from "next/image"
 import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
+import { usePostModal } from "@/lib/post-modal-context"
+import type { Post, PostCardData } from "@/lib/types/post"
 
 interface BusinessDetailPageProps {
   businessId: string
   onNavigate: (page: PageRoute, id?: string) => void
 }
 
-const tabs = ["Overview", "Activities", "Services", "Reviews"]
+const tabs = ["Overview", "Feed", "Activities", "Services", "Reviews"]
 
 const reviewsData = [
   { id: "1", author: "Jordan R.", avatar: "JR", rating: 5, date: "Feb 5, 2026", comment: "Excellent facilities and great staff. The basketball courts are top-notch and well-maintained." },
@@ -43,6 +46,20 @@ const reviewsData = [
 export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
   const [following, setFollowing] = useState(false)
+  const { openPost } = usePostModal()
+  const currentUser = authService.getCurrentUser()
+  const userId = currentUser?.id
+  const initials =
+    (currentUser?.firstName?.[0] ?? "") +
+    (currentUser?.lastName?.[0] ?? "") ||
+    (currentUser?.username?.[0] ?? "?").toUpperCase()
+  const currentUserForComment = currentUser
+    ? {
+        id: currentUser.id,
+        authorName: [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ") || currentUser.username || "User",
+        authorAvatar: initials,
+      }
+    : null
 
   const { data: business, isLoading: loadingBiz, mutate: mutateBusiness } = useSWR(
     businessId ? `/businesses/${businessId}` : null,
@@ -63,6 +80,18 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
     () => servicesService.getAll({ providerId: businessId }),
     { revalidateOnFocus: false, dedupingInterval: 10000 }
   )
+
+  const { data: postsData, mutate: mutatePosts } = useSWR(
+    businessId && activeTab === "Feed" ? [`/posts/business/${businessId}`, businessId] : null,
+    () => postsService.getByBusiness(businessId, 0, 50),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+  const businessPosts = postsData?.content ?? []
+  const canDeleteBusinessPost =
+    !!userId &&
+    !!business &&
+    (business.owner?.id === userId ||
+      (Array.isArray(business.staff) && business.staff.some((s: { id?: string }) => s.id === userId)))
 
   const loading = loadingBiz
 
@@ -380,6 +409,62 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === "Feed" && (
+        <div className="space-y-4 animate-fade-in">
+          {businessPosts.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-12 text-center">
+              <MessageCircle className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+              <p className="text-sm font-semibold text-foreground">No posts yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">This business hasn&apos;t shared any posts</p>
+            </div>
+          ) : (
+            businessPosts.map((p: Post) => {
+              const postCard: PostCardData = {
+                id: String(p.id),
+                author: p.authorName ?? businessDisplay?.name ?? "Business",
+                authorAvatar: p.authorAvatar ?? "?",
+                time: formatFeedTime(p.createdAt),
+                content: p.content ?? "",
+                image: resolvePostImageUrl(p.image) || p.image,
+                likes: p.likes ?? 0,
+                comments: p.comments ?? 0,
+                shares: p.shares ?? 0,
+                liked: p.likedByCurrentUser ?? false,
+                saved: p.savedByCurrentUser ?? false,
+                sport: p.sport,
+                authorType: p.authorType,
+                businessId: p.businessId,
+              }
+              return (
+                <div
+                  key={postCard.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openPost(postCard.id)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return
+                    openPost(postCard.id)
+                  }}
+                  className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-2xl"
+                >
+                  <PostCard
+                    post={postCard}
+                    userId={userId}
+                    currentUser={currentUserForComment}
+                    onCountChange={() => mutatePosts()}
+                    canDelete={canDeleteBusinessPost}
+                    onDelete={async (id) => {
+                      await postsService.delete(id)
+                      mutatePosts()
+                    }}
+                  />
+                </div>
+              )
+            })
+          )}
         </div>
       )}
 

@@ -1,12 +1,7 @@
 "use client"
 
-import React, { createContext, useCallback, useContext, useState } from "react"
-import { PostPopupModal } from "@/components/sporgates/post-popup-modal"
-
-interface PostModalState {
-  postId: string | null
-  openComments: boolean
-}
+import React, { createContext, useCallback, useContext } from "react"
+import { useRouter } from "next/navigation"
 
 interface PostModalContextValue {
   openPost: (postId: string, openComments?: boolean) => void
@@ -16,28 +11,23 @@ interface PostModalContextValue {
 const PostModalContext = createContext<PostModalContextValue | null>(null)
 
 export function PostModalProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<PostModalState>({
-    postId: null,
-    openComments: false,
-  })
+  const router = useRouter()
 
-  const openPost = useCallback((postId: string, openComments = false) => {
-    setState({ postId, openComments })
-  }, [])
+  const openPost = useCallback(
+    (postId: string, openComments = false) => {
+      const path = openComments ? `/post/${postId}?comments=1` : `/post/${postId}`
+      router.push(path)
+    },
+    [router]
+  )
 
   const closePost = useCallback(() => {
-    setState((prev) => ({ ...prev, postId: null }))
-  }, [])
+    router.back()
+  }, [router])
 
   return (
     <PostModalContext.Provider value={{ openPost, closePost }}>
       {children}
-      <PostPopupModal
-        postId={state.postId}
-        open={!!state.postId}
-        onOpenChange={(open) => !open && closePost()}
-        openComments={state.openComments}
-      />
     </PostModalContext.Provider>
   )
 }
