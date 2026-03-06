@@ -105,3 +105,28 @@
 .animate-slide-in-up {
   animation: slideInUp 0.4s ease-out;
 }
+
+/* Landing: float + slide-up */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.animate-slide-up {
+  animation: slide-up 0.8s ease-out forwards;
+}
+
+/* Landing: sport motion path draw-in */
+@keyframes landing-motion-line {
+  from { stroke-dashoffset: 120; }
+  to { stroke-dashoffset: 0; }
+}
+.animate-landing-motion-line {
+  animation: landing-motion-line 2.5s ease-out forwards;
+}

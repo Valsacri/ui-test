@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 import { AUTH_COOKIE_NAME, PUBLIC_ROUTES } from '@/lib/constants'
 
 const LANDING_HOSTS = ['www.sporgates.com', 'sporgates.com']
-const APP_HOST = 'app.sporgates.com'
 
 /**
  * Server-side middleware: domain-based routing + auth.
@@ -18,18 +17,32 @@ export function middleware(request: NextRequest) {
 
     // Domain-based routing: landing vs app
     const isLandingDomain = LANDING_HOSTS.some((h) => host.toLowerCase() === h)
-    const isAppDomain = host.toLowerCase() === APP_HOST
+    const isAppOrLocal = !isLandingDomain // app.sporgates.com or localhost
 
+    // www.sporgates.com / sporgates.com: always show landing at / (no /landing in URL)
     if (isLandingDomain && pathname === '/') {
-        // Serve landing at root on www / apex
         const url = request.nextUrl.clone()
         url.pathname = '/landing'
         return NextResponse.rewrite(url)
     }
 
-    if (isAppDomain && pathname === '/landing') {
-        // On app subdomain, send /landing visitors to app home
-        return NextResponse.redirect(new URL('/', request.url))
+    // app.sporgates.com (and localhost): at "/" show landing if not logged in, else app home
+    if (isAppOrLocal && pathname === '/') {
+        const authCookie = request.cookies.get(AUTH_COOKIE_NAME)
+        if (!authCookie?.value) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/landing'
+            return NextResponse.rewrite(url)
+        }
+        // Logged in: fall through to (main)/page.tsx
+    }
+
+    // If logged in and they hit /landing on app (or localhost), send to home
+    if (isAppOrLocal && pathname === '/landing') {
+        const authCookie = request.cookies.get(AUTH_COOKIE_NAME)
+        if (authCookie?.value) {
+            return NextResponse.redirect(new URL('/', request.url))
+        }
     }
 
     // Allow public routes, static assets, and API routes

@@ -87,10 +87,31 @@ const config: Config = {
             height: '0',
           },
         },
+        'landing-float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        'landing-float-delay': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-12px)' },
+        },
+        'landing-ball-arc': {
+          '0%': { transform: 'translate(0, 0) scale(1)', opacity: '0.9' },
+          '50%': { transform: 'translate(6px, -20px) scale(1.05)', opacity: '1' },
+          '100%': { transform: 'translate(12px, 0) scale(1)', opacity: '0.9' },
+        },
+        'landing-glow-pulse': {
+          '0%, 100%': { opacity: '0.06' },
+          '50%': { opacity: '0.12' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'landing-float': 'landing-float 4s ease-in-out infinite',
+        'landing-float-delay': 'landing-float-delay 5s ease-in-out infinite',
+        'landing-ball-arc': 'landing-ball-arc 2.5s ease-in-out infinite',
+        'landing-glow-pulse': 'landing-glow-pulse 6s ease-in-out infinite',
       },
     },
   },
