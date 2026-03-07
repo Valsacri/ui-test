@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { ArrowRight } from "lucide-react"
 
 const APP_URL = "https://app.sporgates.com"
@@ -7,10 +8,20 @@ const APP_URL = "https://app.sporgates.com"
 export function LandingHero() {
     return (
         <section className="relative min-h-[32rem] w-full overflow-hidden sm:min-h-[36rem] lg:min-h-[42rem]">
-            {/* Background: gradient (add /public/images/hero-sports.jpg and use next/image for photo hero) */}
-            <div className="absolute inset-0 w-full bg-gradient-to-br from-[#003C66] via-[#005A99] to-[#003C66]" />
+            {/* Background image */}
+            <div className="absolute inset-0 w-full">
+                <Image
+                    src="/images/hero-sports.jpg"
+                    alt=""
+                    fill
+                    className="object-cover object-center"
+                    priority
+                    sizes="100vw"
+                />
+            </div>
 
-            <div className="absolute inset-0 bg-black/30" aria-hidden />
+            {/* Dark overlay for text readability */}
+            <div className="absolute inset-0 bg-black/50" aria-hidden />
             <div
                 className="absolute inset-0 bg-gradient-to-br from-[#003C66]/30 via-transparent to-[#005A99]/20"
                 aria-hidden
