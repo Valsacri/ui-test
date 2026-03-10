@@ -5,6 +5,25 @@
 
 export type StoryMediaType = 'IMAGE' | 'VIDEO'
 
+/** Viewer summary (id, name, avatar) inside story_views */
+export interface StoryViewerSummary {
+  id: string
+  name: string
+  avatar: string | null
+}
+
+/** Nested object: viewers list and count for a story */
+export interface StoryViewsDto {
+  count: number
+  viewers: StoryViewerSummary[]
+}
+
+/** Nested object: replies count and first page of replies for a story */
+export interface StoryRepliesDto {
+  totalCount: number
+  content: StoryReply[]
+}
+
 /** Full story object returned by GET /v1/stories/users/{userId} */
 export interface StoryDto {
   id: string
@@ -20,6 +39,10 @@ export interface StoryDto {
   likeCount: number
   likedByCurrentUser: boolean
   createdAt: string
+  /** Nested: viewers list and count (when returned by API) */
+  storyViews?: StoryViewsDto
+  /** Nested: replies count and first page (when returned by API) */
+  storyReplies?: StoryRepliesDto
 }
 
 /** Summary entry for the stories feed strip (one per user). */

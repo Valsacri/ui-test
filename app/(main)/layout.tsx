@@ -18,7 +18,9 @@ import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
 import { mutate as swrMutate } from "swr"
 import { PostModalProvider } from "@/lib/post-modal-context"
 import { StoryModalProvider } from "@/lib/story-modal-context"
+import { StoryReplyModalProvider } from "@/lib/story-reply-modal-context"
 import { NotificationCountProvider } from "@/lib/notification-count-context"
+import { MessageCountProvider } from "@/lib/message-count-context"
 import type { PageRoute } from "@/lib/navigation"
 
 
@@ -138,10 +140,52 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
     const [unreadNotifications, setUnreadNotifications] = useState(0)
     const [unreadMessages, setUnreadMessages] = useState(0)
 
-    // Chrome (and other browsers) block audio not triggered by user gesture. Play a silent
-    // sound on first interaction to "unlock" the origin so notification sounds can play later.
+    // Unlock audio on first user gesture so notification sound can play later (browser autoplay policy).
     const audioUnlockedRef = useRef(false)
     const notificationAudioRef = useRef<HTMLAudioElement | null>(null)
+    const audioContextRef = useRef<AudioContext | null>(null)
+
+    /** Play notification sound: try MP3 first, then fallback beep if missing or failed. */
+    const playNotificationSound = useCallback(() => {
+        const volume = 0.6
+        const tryMp3 = () => {
+            const audio = notificationAudioRef.current
+            if (audio) {
+                audio.volume = volume
+                audio.currentTime = 0
+                audio.play().catch(tryBeep)
+            } else {
+                const newAudio = new Audio("/sound/notification.mp3")
+                newAudio.volume = volume
+                newAudio.play().catch(tryBeep)
+            }
+        }
+        const tryBeep = () => {
+            try {
+                const ctx = audioContextRef.current
+                if (!ctx) return
+                if (ctx.state === "suspended") ctx.resume().then(() => playBeep(ctx)).catch(() => { })
+                else playBeep(ctx)
+            } catch { /* ignore */ }
+        }
+        const playBeep = (ctx: AudioContext) => {
+            const osc = ctx.createOscillator()
+            const gain = ctx.createGain()
+            osc.connect(gain)
+            gain.connect(ctx.destination)
+            osc.frequency.value = 880
+            osc.type = "sine"
+            gain.gain.setValueAtTime(0.15, ctx.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2)
+            osc.start(ctx.currentTime)
+            osc.stop(ctx.currentTime + 0.2)
+        }
+        try {
+            tryMp3()
+        } catch {
+            tryBeep()
+        }
+    }, [])
 
     useEffect(() => {
         if (audioUnlockedRef.current) return
@@ -153,6 +197,11 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 notificationAudioRef.current = audio
                 audio.volume = 0
                 audio.play().catch(() => { })
+            } catch { /* ignore */ }
+            try {
+                const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+                audioContextRef.current = ctx
+                ctx.resume().catch(() => { })
             } catch { /* ignore */ }
             document.removeEventListener("click", unlock)
             document.removeEventListener("keydown", unlock)
@@ -176,23 +225,22 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
             .catch(() => { })
     }, [])
 
+    const refetchMessagesCount = useCallback(() => {
+        const u = authService.getCurrentUser()
+        if (!u?.id) return
+        messagesService.getUnreadCount(u.id)
+            .then((data: { unreadCount?: number }) => {
+                setUnreadMessages(data?.unreadCount ?? 0)
+            })
+            .catch(() => { })
+    }, [])
+
     const handleNewNotification = useCallback(() => {
-        try {
-            const audio = notificationAudioRef.current
-            if (audio) {
-                audio.volume = 0.6
-                audio.currentTime = 0
-                audio.play().catch(() => { })
-            } else {
-                const newAudio = new Audio("/sound/notification.mp3")
-                newAudio.volume = 0.6
-                newAudio.play().catch(() => { })
-            }
-        } catch { /* ignore */ }
+        playNotificationSound()
         refetchNotificationCount()
         const u = authService.getCurrentUser()
         if (u?.id) swrMutate(`/notifications/user/${u.id}`)
-    }, [refetchNotificationCount])
+    }, [playNotificationSound, refetchNotificationCount])
 
     const user = authService.getCurrentUser()
     useNotificationStream(user?.id ?? null, handleNewNotification)
@@ -231,19 +279,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 .then((data) => {
                     const count = typeof data === 'number' ? data : (data?.count ?? 0)
                     if (count > prevUnreadRef.current) {
-                        // New notification(s) arrived  — play sound
-                        try {
-                            const audio = notificationAudioRef.current
-                            if (audio) {
-                                audio.volume = 0.6
-                                audio.currentTime = 0
-                                audio.play().catch(() => { })
-                            } else {
-                                const newAudio = new Audio("/sound/notification.mp3")
-                                newAudio.volume = 0.6
-                                newAudio.play().catch(() => { })
-                            }
-                        } catch { /* ignore */ }
+                        // New notification(s) arrived — play sound (MP3 or fallback beep)
+                        playNotificationSound()
                     }
                     prevUnreadRef.current = count
                     setUnreadNotifications(count)
@@ -251,12 +288,14 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 .catch(() => { })
         }, 15000)
         return () => clearInterval(interval)
-    }, [user?.id])
+    }, [user?.id, playNotificationSound])
 
     return (
         <PostModalProvider>
             <StoryModalProvider>
+                <StoryReplyModalProvider>
                 <NotificationCountProvider value={onUnreadNotificationsChange}>
+                <MessageCountProvider value={refetchMessagesCount}>
                 <div className="min-h-screen bg-background">
                     <TopBar
                         onNavigate={navigate}
@@ -293,7 +332,9 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                         isBusinessMode={isBusinessMode}
                     />
                 </div>
+                </MessageCountProvider>
                 </NotificationCountProvider>
+                </StoryReplyModalProvider>
             </StoryModalProvider>
         </PostModalProvider>
     )

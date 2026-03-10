@@ -24,6 +24,25 @@ export const storiesService = {
         return data;
     },
 
+    /** Get a single story by ID (author only, e.g. for reply preview). */
+    getStoryById: async (storyId: string): Promise<StoryDto> => {
+        const { data } = await apiClient.get<StoryDto>(`/v1/stories/${storyId}`);
+        return data;
+    },
+
+    /** Get story preview for DM reply (mediaUrl, author) and opening the story viewer. */
+    getStoryPreview: async (storyId: string): Promise<{
+        id: string
+        mediaUrl: string
+        mediaType?: string
+        authorId?: string
+        authorName?: string
+        authorAvatar?: string
+    }> => {
+        const { data } = await apiClient.get(`/v1/stories/${storyId}/preview`);
+        return data;
+    },
+
     /** Create a new story. */
     create: async (payload: CreateStoryPayload): Promise<StoryDto> => {
         const { data } = await apiClient.post<StoryDto>('/v1/stories', payload);

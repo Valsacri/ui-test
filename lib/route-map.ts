@@ -27,7 +27,7 @@ const routeMap: Record<PageRoute, string> = {
     jobs: "/jobs",
     "job-detail": "/jobs/[id]",
     messages: "/messages",
-    conversation: "/messages/[id]",
+    conversation: "/messages",
     notifications: "/notifications",
     community: "/community",
     "post-detail": "/post/[id]",

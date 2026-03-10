@@ -58,3 +58,64 @@ export function formatFeedTime(createdAt: string | number[] | undefined): string
     return ''
   }
 }
+
+/** True if the message can be edited (sent by current user and within 1 minute). */
+export function canEditMessage(
+  message: { senderId?: string; createdAt?: string | number[] },
+  currentUserId: string
+): boolean {
+  if (!currentUserId || message.senderId !== currentUserId) return false
+  const d = parseBackendDate(message.createdAt)
+  if (!d) return false
+  const diffMs = Date.now() - d.getTime()
+  return diffMs < 60 * 1000
+}
+
+/** Minutes of inactivity after which a user is considered offline. */
+export const PRESENCE_ONLINE_MINUTES = 5
+
+/** True if lastActiveAt is within PRESENCE_ONLINE_MINUTES (user considered online). */
+export function isOnline(lastActiveAt: string | number[] | undefined | null): boolean {
+  const d = parseBackendDate(lastActiveAt ?? undefined)
+  if (!d) return false
+  const diffMs = Date.now() - d.getTime()
+  return diffMs >= 0 && diffMs < PRESENCE_ONLINE_MINUTES * 60 * 1000
+}
+
+/** "Last seen X ago" for presence. Returns empty if online or no date. */
+export function formatLastSeen(lastActiveAt: string | number[] | undefined | null): string {
+  const d = parseBackendDate(lastActiveAt ?? undefined)
+  if (!d) return ''
+  if (isOnline(lastActiveAt ?? undefined)) return ''
+  const diffMs = Date.now() - d.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  if (diffMins < 1) return 'Last seen just now'
+  if (diffMins < 60) return `Last seen ${diffMins}m ago`
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `Last seen ${diffHours}h ago`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays === 1) return 'Last seen yesterday'
+  if (diffDays < 7) return `Last seen ${diffDays}d ago`
+  return `Last seen ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+}
+
+/** Format message/conversation time for list (e.g. "2m ago", "Yesterday"). Handles backend string or array. */
+export function formatMessageTime(createdAt: string | number[] | undefined): string {
+  const d = parseBackendDate(createdAt)
+  if (!d) return ''
+  try {
+    const now = new Date()
+    const diffMs = now.getTime() - d.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    const diffHours = Math.floor(diffMins / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays}d ago`
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
+  } catch {
+    return ''
+  }
+}

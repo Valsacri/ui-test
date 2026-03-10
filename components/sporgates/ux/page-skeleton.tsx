@@ -130,6 +130,41 @@ export function ConversationThreadSkeleton({ count = 5 }: { count?: number }) {
     )
 }
 
+/** Full conversation view loading: header + thread + input. Use until messages and conversation info are loaded. */
+export function ConversationLoadingSkeleton() {
+    return (
+        <div className="flex h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:h-[calc(100vh-5rem)]">
+            {/* Header skeleton */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div className="flex items-center gap-3">
+                    <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                    <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                    <div className="space-y-1">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-14" />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                </div>
+            </div>
+            {/* Message thread skeleton */}
+            <div className="flex-1 overflow-y-auto p-4">
+                <ConversationThreadSkeleton count={6} />
+            </div>
+            {/* Input area skeleton */}
+            <div className="border-t border-border p-4">
+                <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 flex-1 rounded-full" />
+                    <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // ==================== Page-level skeletons ====================
 
 export function DetailPageSkeleton({ className }: { className?: string }) {

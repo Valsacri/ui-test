@@ -2,10 +2,10 @@
 
 import Image from "next/image"
 import { ArrowRight } from "lucide-react"
-
-const APP_URL = "https://app.sporgates.com"
+import { useAppBaseUrl } from "@/lib/landing-app-url"
 
 export function LandingHero() {
+    const base = useAppBaseUrl()
     return (
         <section className="relative min-h-[32rem] w-full overflow-hidden sm:min-h-[36rem] lg:min-h-[42rem]">
             {/* Background image */}
@@ -73,14 +73,14 @@ export function LandingHero() {
                         style={{ animationDelay: "0.3s" }}
                     >
                         <a
-                            href={`${APP_URL}/signup`}
+                            href={base ? `${base}/signup` : "/signup"}
                             className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#FC8936] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[#FC8936]/25 transition-all hover:bg-[#e67a2e] hover:shadow-xl hover:shadow-[#FC8936]/30 focus:outline-none focus:ring-2 focus:ring-[#FC8936] focus:ring-offset-2 focus:ring-offset-[#003C66]"
                         >
                             Get Started Free
                             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </a>
                         <a
-                            href={APP_URL}
+                            href={base ? `${base}/` : "/"}
                             className="inline-flex items-center justify-center rounded-xl border border-white/30 bg-white/10 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition-all hover:border-white/50 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#003C66]"
                         >
                             Open App

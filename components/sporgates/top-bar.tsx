@@ -25,11 +25,12 @@ import { userService } from "@/lib/services/user"
 import { searchService } from "@/lib/services/search"
 import { messagesService } from "@/lib/services/messages"
 import { notificationsService } from "@/lib/services/notifications"
-import { cn, resolvePostImageUrl, isAvatarImageUrl, formatFeedTime } from "@/lib/utils"
+import { cn, resolvePostImageUrl, isAvatarImageUrl, formatFeedTime, formatMessageTime, isOnline } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
 import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
 import { usePostModal } from "@/lib/post-modal-context"
 import { useStoryModal } from "@/lib/story-modal-context"
+import { useStoryReplyModal } from "@/lib/story-reply-modal-context"
 
 // Inline defaults — no BE endpoints for topbar goals/conversations/notifications preview
 const goals = [
@@ -60,10 +61,11 @@ const notifTypeIcons: Record<string, React.ComponentType<{ className?: string }>
   booking: CalendarDays,
   achievement: Trophy,
   system: Settings,
+  message_reaction: Heart,
 }
 
 interface TopBarProps {
-  onNavigate: (page: PageRoute) => void
+  onNavigate: (page: PageRoute, id?: string) => void
   isBusinessMode: boolean
   businesses: Business[]
   activeBusinessId: string | null
@@ -99,7 +101,7 @@ export function TopBar({
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [conversations, setConversations] = useState<Array<{ id: string; name: string; avatar: string; lastMessage: string; time: string; unread: number; online?: boolean }>>([])
+  const [conversations, setConversations] = useState<Array<{ id: string; name: string; avatar: string; avatarUrl: string | null; lastMessage: string; time: string; unread: number; online?: boolean }>>([])
   const [conversationsLoading, setConversationsLoading] = useState(false)
   const [notificationsList, setNotificationsList] = useState<Array<{
     id: string
@@ -111,12 +113,14 @@ export function TopBar({
     postId: string | null
     referenceId: string | null
     referenceType: string | null
+    senderId: string | null
     senderName: string | null
     senderAvatar: string | null
   }>>([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const { openPost } = usePostModal()
   const { openStory } = useStoryModal()
+  const { openStoryReply } = useStoryReplyModal()
 
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -147,15 +151,31 @@ export function TopBar({
     messagesService.getConversations(user.id)
       .then((data: any[]) => {
         const list = Array.isArray(data) ? data : []
-        setConversations(list.slice(0, 10).map((c: any) => ({
-          id: c.id || String(c),
-          name: c.name || c.participantNames?.[0] || "Conversation",
-          avatar: (c.name || "C").slice(0, 2).toUpperCase(),
-          lastMessage: c.lastMessageContent || c.lastMessage || "",
-          time: c.lastMessageAt ? formatTimeAgo(String(c.lastMessageAt)) : "",
-          unread: c.unreadCount ?? 0,
-          online: false,
-        })))
+        setConversations(list.slice(0, 10).map((c: any) => {
+          const ids = c.participantIds || []
+          const otherId = ids.find((id: string) => id !== user.id) || ids[0]
+          const names = c.participantNames || {}
+          const avatars = c.participantAvatars || {}
+          const name = c.name || (otherId && names[otherId]) || "Conversation"
+          const avatarUrlRaw = otherId && avatars[otherId] ? String(avatars[otherId]).trim() : ""
+          const avatarUrl = avatarUrlRaw ? resolvePostImageUrl(avatarUrlRaw) : null
+          const initials = (name || "C").slice(0, 2).toUpperCase()
+          const time = formatMessageTime(c.lastMessageAt)
+          const lastActiveAt = otherId ? c.participantLastActiveAt?.[otherId] : undefined
+          // In dropdown show only received messages; hide preview when last message was sent by current user
+          const lastFromOther = c.lastMessageSenderId !== user?.id
+          const lastMessage = lastFromOther ? (c.lastMessageContent || c.lastMessage || "") : ""
+          return {
+            id: c.id || String(c),
+            name,
+            avatar: initials,
+            avatarUrl,
+            lastMessage,
+            time,
+            unread: (user?.id && c.unreadCounts?.[user.id]) ?? c.unreadCount ?? 0,
+            online: isOnline(lastActiveAt),
+          }
+        }))
       })
       .catch(() => setConversations([]))
       .finally(() => setConversationsLoading(false))
@@ -184,6 +204,7 @@ export function TopBar({
             postId,
             referenceId: n.referenceId != null ? String(n.referenceId) : null,
             referenceType: n.referenceType != null ? String(n.referenceType) : null,
+            senderId: n.senderId != null ? String(n.senderId) : null,
             senderName: senderName != null && String(senderName).trim() !== "" ? String(senderName) : null,
             senderAvatar: senderAvatar != null && String(senderAvatar).trim() !== "" ? String(senderAvatar) : null,
           }
@@ -192,24 +213,6 @@ export function TopBar({
       .catch(() => setNotificationsList([]))
       .finally(() => setNotificationsLoading(false))
   }, [showNotifications, user?.id])
-
-  function formatTimeAgo(dateStr: string): string {
-    try {
-      const date = new Date(dateStr)
-      const now = new Date()
-      const diffMs = now.getTime() - date.getTime()
-      const diffMin = Math.floor(diffMs / 60_000)
-      if (diffMin < 1) return "Just now"
-      if (diffMin < 60) return `${diffMin}m ago`
-      const diffHrs = Math.floor(diffMin / 60)
-      if (diffHrs < 24) return `${diffHrs}h ago`
-      const diffDays = Math.floor(diffHrs / 24)
-      if (diffDays < 7) return `${diffDays}d ago`
-      return date.toLocaleDateString()
-    } catch {
-      return dateStr || ""
-    }
-  }
 
   const handleLogout = () => {
     authService.logout()
@@ -456,14 +459,24 @@ export function TopBar({
                       key={convo.id}
                       onClick={() => {
                         closeAll()
-                        onNavigate("messages")
+                        onNavigate("conversation", convo.id)
                       }}
                       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted"
                     >
-                      <div className="relative shrink-0">
-                        <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-full text-xs font-bold text-white">
-                          {convo.avatar}
-                        </div>
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
+                        {convo.avatarUrl && isAvatarImageUrl(convo.avatarUrl) ? (
+                          <Image
+                            src={convo.avatarUrl}
+                            alt={convo.name}
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        ) : (
+                          <div className="gradient-primary flex h-full w-full items-center justify-center text-xs font-bold text-white">
+                            {convo.avatar}
+                          </div>
+                        )}
                         {convo.online && (
                           <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card bg-green-500" />
                         )}
@@ -560,6 +573,7 @@ export function TopBar({
                     const Icon = notifTypeIcons[notif.type.toLowerCase()] || Bell
                     const postIdToOpen = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId ? notif.referenceId : null)
                     const isCommentNotification = ["POST_COMMENT", "COMMENT_REPLY", "COMMENT_LIKE"].includes(String(notif.type).toUpperCase())
+                    const isStoryReply = notif.referenceType?.toUpperCase() === "STORY_REPLY" && notif.referenceId && notif.senderId
                     const isStoryNotification = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
                     return (
                       <button
@@ -576,8 +590,19 @@ export function TopBar({
                           }
                           if (postIdToOpen) {
                             openPost(postIdToOpen, isCommentNotification)
+                          } else if (isStoryReply && notif.referenceId && notif.senderId) {
+                            openStoryReply({
+                              id: notif.id,
+                              storyId: notif.referenceId,
+                              message: notif.message,
+                              senderId: notif.senderId,
+                              senderName: notif.senderName ?? "Someone",
+                              senderAvatar: notif.senderAvatar,
+                            })
                           } else if (isStoryNotification && user?.id && notif.referenceId) {
                             openStory(user.id, notif.referenceId)
+                          } else if (notif.referenceType?.toUpperCase() === "CONVERSATION" && notif.referenceId) {
+                            onNavigate("conversation", notif.referenceId)
                           } else {
                             onNavigate("notifications")
                           }

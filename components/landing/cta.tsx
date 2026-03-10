@@ -1,10 +1,10 @@
 "use client"
 
 import { ArrowRight } from "lucide-react"
-
-const APP_URL = "https://app.sporgates.com"
+import { useAppBaseUrl } from "@/lib/landing-app-url"
 
 export function LandingCTA() {
+    const base = useAppBaseUrl()
     return (
         <section className="relative overflow-hidden bg-gradient-to-br from-[#003C66] to-[#005A99] py-24 lg:py-32">
             <div className="pointer-events-none absolute inset-0" aria-hidden>
@@ -33,7 +33,7 @@ export function LandingCTA() {
 
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                     <a
-                        href={`${APP_URL}/signup`}
+                        href={base ? `${base}/signup` : "/signup"}
                         className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#FC8936] px-8 py-4 text-base font-semibold text-white shadow-lg shadow-[#FC8936]/25 transition-all hover:bg-[#e67a2e] hover:shadow-xl hover:shadow-[#FC8936]/30 focus:outline-none focus:ring-2 focus:ring-[#FC8936] focus:ring-offset-2 focus:ring-offset-[#003C66]"
                     >
                         Create Free Account
@@ -44,7 +44,7 @@ export function LandingCTA() {
                 <p className="mt-6 text-sm text-white/50">
                     Already have an account?{" "}
                     <a
-                        href={`${APP_URL}/signin`}
+                        href={base ? `${base}/signin` : "/signin"}
                         className="font-medium text-white/80 underline underline-offset-4 transition-colors hover:text-white"
                     >
                         Sign in

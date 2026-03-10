@@ -122,6 +122,16 @@
   animation: slide-up 0.8s ease-out forwards;
 }
 
+/* Landing: partners moving band – 3 copies, scroll by one third for seamless infinite loop */
+@keyframes partners-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+.animate-partners-scroll {
+  animation: partners-scroll 45s linear infinite;
+  will-change: transform;
+}
+
 /* Landing: sport motion path draw-in */
 @keyframes landing-motion-line {
   from { stroke-dashoffset: 120; }

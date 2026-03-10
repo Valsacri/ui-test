@@ -28,9 +28,10 @@ import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { cn, parseBackendDate, formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
 import { usePostModal } from "@/lib/post-modal-context"
 import type { PostCardData } from "@/lib/types/post"
+import { FollowListModal } from "@/components/sporgates/follow-list-modal"
 
 interface ProfilePageProps {
-  onNavigate: (page: PageRoute) => void
+  onNavigate: (page: PageRoute, id?: string) => void
 }
 
 const tabs = ["Overview", "Feed", "Activity", "Achievements"]
@@ -93,6 +94,7 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
   const [uploadingCover, setUploadingCover] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [followListModal, setFollowListModal] = useState<"followers" | "following" | null>(null)
   const maxHours = Math.max(...weeklyData.map((d) => d.hours))
   const { openPost } = usePostModal()
 
@@ -308,19 +310,39 @@ export function ProfilePage({ onNavigate }: ProfilePageProps) {
             </span>
           </div>
           <div className="mt-4 flex items-center gap-6 text-sm">
-            <span>
+            <button
+              type="button"
+              onClick={() => userId && setFollowListModal("followers")}
+              className="text-left transition-opacity hover:opacity-80 disabled:pointer-events-none disabled:opacity-50"
+              disabled={!userId}
+            >
               <strong className="text-foreground">{userProfile.followers}</strong>{" "}
               <span className="text-muted-foreground">Followers</span>
-            </span>
-            <span>
+            </button>
+            <button
+              type="button"
+              onClick={() => userId && setFollowListModal("following")}
+              className="text-left transition-opacity hover:opacity-80 disabled:pointer-events-none disabled:opacity-50"
+              disabled={!userId}
+            >
               <strong className="text-foreground">{userProfile.following}</strong>{" "}
               <span className="text-muted-foreground">Following</span>
-            </span>
+            </button>
             <span>
               <strong className="text-foreground">{userProfile.activitiesJoined}</strong>{" "}
               <span className="text-muted-foreground">Activities</span>
             </span>
           </div>
+          {userId && followListModal && (
+            <FollowListModal
+              open={!!followListModal}
+              onOpenChange={(open) => !open && setFollowListModal(null)}
+              userId={userId}
+              mode={followListModal}
+              onNavigate={onNavigate}
+              onUnfollow={() => mutateUser()}
+            />
+          )}
         </div>
       </div>
 

@@ -65,6 +65,35 @@ export const userService = {
         await apiClient.delete(`/v1/users/${currentUserId}/follow/${targetUserId}`);
     },
 
+    /** Paginated followers of a user (people who follow this user). */
+    getFollowers: async (userId: string, params?: { page?: number; size?: number }) => {
+        const response = await apiClient.get(`/v1/users/${userId}/followers`, {
+            params: { page: params?.page ?? 0, size: params?.size ?? 20 },
+        });
+        const data = response.data;
+        return { content: data?.content ?? [], totalElements: data?.totalElements ?? 0 };
+    },
+
+    /** Paginated following of a user (people this user follows). */
+    getFollowing: async (userId: string, params?: { page?: number; size?: number }) => {
+        const response = await apiClient.get(`/v1/users/${userId}/following`, {
+            params: { page: params?.page ?? 0, size: params?.size ?? 20 },
+        });
+        const data = response.data;
+        return { content: data?.content ?? [], totalElements: data?.totalElements ?? 0 };
+    },
+
+    /** Users that current user follows and who follow back (for starting chats). */
+    getMutualFollows: async (userId: string) => {
+        const response = await apiClient.get(`/v1/users/${userId}/mutual-follows`);
+        return response.data as Array<{ id: string; firstName?: string; lastName?: string; username?: string; profilePicture?: string; lastActiveAt?: string | number[] }>;
+    },
+
+    /** Report current user activity for presence (online status). Call periodically when app is in use. */
+    reportActivity: async (userId: string) => {
+        await apiClient.put(`/v1/users/${userId}/activity`);
+    },
+
     updateLanguagePreference: async (id: string, language: string) => {
         const response = await apiClient.put(`/v1/users/${id}/language-preference`, { language });
         return response.data;

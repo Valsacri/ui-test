@@ -21,18 +21,21 @@ import { ErrorState } from "@/components/sporgates/ux/error-state"
 import { toast } from "sonner"
 import { usePostModal } from "@/lib/post-modal-context"
 import { useStoryModal } from "@/lib/story-modal-context"
+import { useStoryReplyModal } from "@/lib/story-reply-modal-context"
 import { useNotificationCountUpdate } from "@/lib/notification-count-context"
 import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
+import { useAppRouter } from "@/lib/route-map"
 
 interface Notification {
   id: string
-  type: "activity" | "social" | "booking" | "achievement" | "system" | "comment" | "follow" | "follow_back"
+  type: "activity" | "social" | "booking" | "achievement" | "system" | "comment" | "follow" | "follow_back" | "message_reaction"
   title: string
   message: string
   time: string
   read: boolean
   userName: string
   userAvatar: string
+  senderId: string | null
   senderAvatar: string | null
   /** Post to open when notification is clicked (backend postId or referenceId for type "post"). */
   postId: string | null
@@ -49,6 +52,7 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   comment: MessageSquare,
   follow: UserPlus,
   follow_back: UserCheck,
+  message_reaction: Heart,
 }
 
 const typeColors: Record<string, string> = {
@@ -60,13 +64,16 @@ const typeColors: Record<string, string> = {
   comment: "text-sky-500",
   follow: "text-emerald-500",
   follow_back: "text-emerald-500",
+  message_reaction: "text-rose-500",
 }
 
 export function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all")
   const user = authService.getCurrentUser()
+  const { navigate } = useAppRouter()
   const { openPost } = usePostModal()
   const { openStory } = useStoryModal()
+  const { openStoryReply } = useStoryReplyModal()
   const onUnreadNotificationsChange = useNotificationCountUpdate()
 
   const { data: rawNotifications, error, isLoading, mutate: mutateNotifications } = useSWR(
@@ -82,6 +89,7 @@ export function NotificationsPage() {
         if (s === "POST_LIKE" || s === "COMMENT_LIKE") return "social"
         if (s === "NEW_FOLLOWER") return "follow"
         if (s === "FOLLOW_BACK") return "follow_back"
+        if (s === "MESSAGE_REACTION") return "message_reaction"
         return (t as Notification["type"]) || "system"
       }
       return list.map((n: Record<string, unknown>) => ({
@@ -93,6 +101,7 @@ export function NotificationsPage() {
         read: Boolean(n.read),
         userName: String(n.senderName ?? n.sender_name ?? n.referenceType ?? "Sporgates"),
         userAvatar: String(n.senderName ?? n.sender_name ?? n.referenceType ?? "SG").substring(0, 2).toUpperCase(),
+        senderId: n.senderId != null ? String(n.senderId) : null,
         senderAvatar: [n.senderAvatar, (n as Record<string, unknown>).sender_avatar].find((v): v is string => typeof v === "string" && v.length > 0) ?? null,
         postId: n.postId != null ? String(n.postId) : (String(n.referenceType || "").toLowerCase() === "post" && n.referenceId ? String(n.referenceId) : null),
         referenceId: n.referenceId != null ? String(n.referenceId) : null,
@@ -145,11 +154,49 @@ export function NotificationsPage() {
       }
       return
     }
+    // "Replied to your story" — open story reply modal (preview + message bubble)
+    const replyStoryId = notif.referenceId
+    const replySenderId = notif.senderId
+    const isStoryReply = notif.referenceType?.toUpperCase() === "STORY_REPLY" && replyStoryId && replySenderId
+    if (isStoryReply && replyStoryId && replySenderId) {
+      openStoryReply({
+        id: notif.id,
+        storyId: replyStoryId,
+        message: notif.message,
+        senderId: replySenderId,
+        senderName: notif.userName,
+        senderAvatar: notif.senderAvatar,
+      })
+      if (!notif.read) {
+        mutateNotifications(
+          notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
+          false
+        )
+        onUnreadNotificationsChange?.((prev) => Math.max(0, prev - 1))
+        notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
+      }
+      return
+    }
     // "Liked your story" — open story viewer (recipient is the story author)
     const storyRefId = notif.referenceId
     const isStoryNotification = notif.referenceType?.toUpperCase() === "STORY" && storyRefId && user?.id
     if (isStoryNotification) {
       openStory(user.id, storyRefId)
+      if (!notif.read) {
+        mutateNotifications(
+          notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
+          false
+        )
+        onUnreadNotificationsChange?.((prev) => Math.max(0, prev - 1))
+        notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
+      }
+      return
+    }
+    // Message reaction — open conversation
+    const convRefId = notif.referenceId
+    const isConversation = notif.referenceType?.toUpperCase() === "CONVERSATION" && convRefId
+    if (isConversation && convRefId) {
+      navigate("conversation", convRefId)
       if (!notif.read) {
         mutateNotifications(
           notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
@@ -257,8 +304,9 @@ export function NotificationsPage() {
             const Icon = typeIcons[notif.type] || Bell
             const iconColor = typeColors[notif.type] || "text-muted-foreground"
             const hasPost = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId)
+            const hasStoryReply = notif.referenceType?.toUpperCase() === "STORY_REPLY" && notif.referenceId && notif.senderId
             const hasStory = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
-            const isClickable = hasPost || hasStory
+            const isClickable = hasPost || hasStoryReply || hasStory
             return (
               <div
                 key={notif.id}
@@ -305,10 +353,19 @@ export function NotificationsPage() {
 
                 {/* Content */}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm">
-                    <span className="font-semibold text-foreground">{notif.userName}</span>{" "}
-                    <span className="text-muted-foreground">{notif.message}</span>
-                  </p>
+                  {hasStoryReply ? (
+                    <>
+                      <p className="text-sm font-semibold text-foreground">{notif.title}</p>
+                      <p className="mt-1.5 line-clamp-2 rounded-lg bg-muted/80 px-2.5 py-1.5 text-xs text-foreground">
+                        {notif.message}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm">
+                      <span className="font-semibold text-foreground">{notif.userName}</span>{" "}
+                      <span className="text-muted-foreground">{notif.message}</span>
+                    </p>
+                  )}
                   <p className="mt-1 text-[10px] text-muted-foreground">{notif.time}</p>
                 </div>
 

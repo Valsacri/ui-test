@@ -214,6 +214,14 @@ export function StoryViewer({
     // ─── Keyboard nav ────────────────────────────────────────────────
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const active = document.activeElement
+            const isTyping = active && (
+                active.tagName === "INPUT" ||
+                active.tagName === "TEXTAREA" ||
+                (active as HTMLElement).isContentEditable
+            )
+            if (isTyping) return
+
             if (e.key === "Escape") onClose()
             if (e.key === "ArrowRight") goNext()
             if (e.key === "ArrowLeft") goPrev()
@@ -477,10 +485,15 @@ export function StoryViewer({
                         onClick={async () => {
                             setShowViewersPanel(true)
                             setIsPaused(true)
+                            if (currentStory.storyViews?.viewers != null) {
+                                setViewers(currentStory.storyViews.viewers)
+                            }
                             setLoadingViewers(true)
                             try {
                                 const [v, l] = await Promise.all([
-                                    storiesService.getViewers(currentStory.id),
+                                    currentStory.storyViews?.viewers != null
+                                        ? Promise.resolve(currentStory.storyViews.viewers)
+                                        : storiesService.getViewers(currentStory.id),
                                     storiesService.getLikers(currentStory.id),
                                 ])
                                 setViewers(v)
@@ -503,35 +516,37 @@ export function StoryViewer({
 
                 {/* ── Bottom bar: Reply + Like ────────────────────────────── */}
                 <div className="absolute bottom-0 left-0 right-0 z-20 flex items-center gap-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-4 pt-8">
-                    {/* Reply input */}
-                    <div className="flex flex-1 items-center overflow-hidden rounded-full border border-white/20 bg-white/10 backdrop-blur-sm">
-                        <input
-                            type="text"
-                            placeholder={`Reply to ${currentStory.authorName}…`}
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            onFocus={() => setIsPaused(true)}
-                            onBlur={() => {
-                                if (!replyText.trim()) setIsPaused(false)
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") handleReply()
-                            }}
-                            className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder-white/50 outline-none"
-                            disabled={isSendingReply}
-                        />
-                        {replyText.trim() && (
-                            <button
-                                type="button"
-                                onClick={handleReply}
+                    {/* Reply input (hidden when viewing your own story) */}
+                    {!isOwner && (
+                        <div className="flex flex-1 items-center overflow-hidden rounded-full border border-white/20 bg-white/10 backdrop-blur-sm">
+                            <input
+                                type="text"
+                                placeholder={`Reply to ${currentStory.authorName}…`}
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                onFocus={() => setIsPaused(true)}
+                                onBlur={() => {
+                                    if (!replyText.trim()) setIsPaused(false)
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleReply()
+                                }}
+                                className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder-white/50 outline-none"
                                 disabled={isSendingReply}
-                                className="mr-2 rounded-full bg-blue-500 p-1.5 text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
-                                aria-label="Send reply"
-                            >
-                                <Send className="h-4 w-4" />
-                            </button>
-                        )}
-                    </div>
+                            />
+                            {replyText.trim() && (
+                                <button
+                                    type="button"
+                                    onClick={handleReply}
+                                    disabled={isSendingReply}
+                                    className="mr-2 rounded-full bg-blue-500 p-1.5 text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
+                                    aria-label="Send reply"
+                                >
+                                    <Send className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {/* Like button */}
                     <button
