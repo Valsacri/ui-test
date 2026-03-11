@@ -70,6 +70,7 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     if (p === "/business/analytics") return "business-analytics"
     if (p === "/business/campaigns") return "business-campaigns"
     if (p === "/business/resources") return "business-resources"
+    if (p.startsWith("/business/resources/")) return "business-resource-detail"
     if (p === "/business/partners") return "business-partners"
     if (p === "/business/athletes") return "business-athletes"
     if (p === "/business/jobs") return "business-jobs"
@@ -89,6 +90,7 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     if (p === "/business/attendance-management") return "attendance-management"
     if (p === "/business/create-facility") return "create-facility"
     if (p === "/business/create-squad") return "create-squad"
+    if (p.match(/\/business\/activities\/[^/]+\/edit/)) return "create-activity-steps"
 
     return "home"
 }

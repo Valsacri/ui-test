@@ -62,4 +62,36 @@ export const bookingService = {
         const response = await apiClient.get('/v1/bookings/availability', { params: { facilityId, date } });
         return response.data;
     },
+
+    checkServiceAvailability: async (serviceId: string, date: string) => {
+        const response = await apiClient.get('/v1/bookings/availability/service', { params: { serviceId, date } });
+        return response.data;
+    },
+
+    createServiceBooking: async (data: {
+        serviceId: string;
+        date: string;
+        startTime: string;
+        endTime: string;
+        notes?: string;
+    }) => {
+        const startDateTime = `${data.date}T${data.startTime}:00`;
+        const endDateTime = `${data.date}T${data.endTime}:00`;
+        const response = await apiClient.post('/v1/bookings/service', {
+            serviceId: data.serviceId,
+            startDateTime,
+            endDateTime,
+            notes: data.notes,
+        });
+        return response.data;
+    },
+
+    createMultiSlotBooking: async (data: {
+        facilityId: string;
+        timeRanges: Array<{ startDateTime: string; endDateTime: string }>;
+        notes?: string;
+    }) => {
+        const response = await apiClient.post('/v1/bookings/multi-slot', data);
+        return response.data;
+    },
 };

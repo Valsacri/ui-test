@@ -414,8 +414,8 @@ interface CreateActivityStepsPageProps extends BusinessFormPageProps {
 export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivityStepsPageProps) {
   const steps = [
     { id: 1, label: "Basic Info", icon: ImageIcon },
-    { id: 2, label: "Location", icon: MapPin },
-    { id: 3, label: "Schedule", icon: Calendar },
+    { id: 2, label: "Schedule", icon: Calendar },
+    { id: 3, label: "Location", icon: MapPin },
     { id: 4, label: "Resources", icon: Package },
     { id: 5, label: "Sponsorship", icon: Target },
     { id: 6, label: "Review", icon: CheckCircle },
@@ -450,6 +450,9 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
     eventPoster: "",
     coverImage: "",
     visibility: "public",
+    scheduleMode: "single" as "single" | "multiple",
+    sessions: [] as Array<{ id: string; date: string; startTime: string; endTime: string }>,
+    staffAssignments: [] as Array<{ id: string; roleType: string; userId?: string; userName: string; notes: string }>,
   })
   const [skipMapGeocode, setSkipMapGeocode] = useState(false)
 
@@ -520,7 +523,27 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
           eventPoster: activity.eventPoster || "",
           coverImage: activity.coverImage || "",
           visibility: "public",
+          scheduleMode: (activity.sessions && activity.sessions.length > 0) ? "multiple" : "single",
+          sessions: (activity.sessions || []).map((s: any) => ({
+            id: s.id || crypto.randomUUID(),
+            date: s.startDateTime ? s.startDateTime.split("T")[0] : "",
+            startTime: s.startDateTime ? s.startDateTime.split("T")[1]?.slice(0, 5) : "",
+            endTime: s.endDateTime ? s.endDateTime.split("T")[1]?.slice(0, 5) : "",
+          })),
+          staffAssignments: (activity.staffAssignments || []).map((sa: any) => ({
+            id: sa.id || crypto.randomUUID(),
+            roleType: sa.roleType || "",
+            userId: sa.userId,
+            userName: sa.userName || "",
+            notes: sa.notes || "",
+          })),
         })
+
+        // Restore facility selection if the activity had one
+        if (activity.facilityId) {
+          setSelectedFacilityId(activity.facilityId)
+          setLocationMode("facility")
+        }
       } catch (err) {
         console.error("Failed to load activity", err)
         toast.error("Could not load activity details")
@@ -561,6 +584,61 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
     loadResources()
   }, [activeBusinessId])
 
+  // Fetch available facilities for activity sessions (Location step)
+  const [availableFacilities, setAvailableFacilities] = useState<any[]>([])
+  const [loadingFacilities, setLoadingFacilities] = useState(false)
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null)
+  const [locationMode, setLocationMode] = useState<"facility" | "custom">("custom")
+
+  useEffect(() => {
+    if (currentStep !== 3) return
+    const hasSessionRanges = formData.scheduleMode === "multiple" && formData.sessions.length > 0
+      && formData.sessions.every(s => s.date && s.startTime && s.endTime)
+    const hasSingleRange = formData.scheduleMode === "single" && formData.date && formData.time && formData.duration > 0
+
+    if (!hasSessionRanges && !hasSingleRange) {
+      // No time ranges yet — fetch all facilities so the user can still choose
+      const fetchAll = async () => {
+        setLoadingFacilities(true)
+        try {
+          const result = await facilitiesService.getAll()
+          setAvailableFacilities(Array.isArray(result) ? result : [])
+        } catch {
+          setAvailableFacilities([])
+        } finally {
+          setLoadingFacilities(false)
+        }
+      }
+      fetchAll()
+      return
+    }
+
+    const fetchFacilities = async () => {
+      setLoadingFacilities(true)
+      try {
+        let ranges: Array<{ startDateTime: string; endDateTime: string }> = []
+        if (hasSessionRanges) {
+          ranges = formData.sessions.map(s => ({
+            startDateTime: `${s.date}T${s.startTime}:00`,
+            endDateTime: `${s.date}T${s.endTime}:00`,
+          }))
+        } else if (hasSingleRange) {
+          const startDt = `${formData.date}T${formData.time}:00`
+          const endDate = new Date(new Date(startDt).getTime() + formData.duration * 60000)
+          ranges = [{ startDateTime: startDt, endDateTime: endDate.toISOString().slice(0, 19) }]
+        }
+        const result = await facilitiesService.getAvailableForSlots({ ranges })
+        setAvailableFacilities(Array.isArray(result) ? result : [])
+      } catch (err) {
+        console.error("Failed to fetch available facilities", err)
+        setAvailableFacilities([])
+      } finally {
+        setLoadingFacilities(false)
+      }
+    }
+    fetchFacilities()
+  }, [currentStep])
+
 
 
   const toggleResource = (id: string) => {
@@ -577,9 +655,12 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
       case 1:
         return formData.title && formData.sport && formData.level
       case 2:
-        return formData.location.address && formData.location.city
-      case 3:
+        if (formData.scheduleMode === "multiple") {
+          return formData.sessions.length > 0 && formData.sessions.every(s => s.date && s.startTime && s.endTime)
+        }
         return formData.date && formData.time
+      case 3:
+        return formData.location.address && formData.location.city
       default:
         return true
     }
@@ -588,17 +669,24 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
   const handleNext = () => {
     if (!canProceed()) return
 
-    if (currentStep === 3) {
-      if (!formData.date || !formData.time) return
-      const startDateTime = new Date(`${formData.date}T${formData.time}`)
-      const now = new Date()
-      if (startDateTime < now) {
-        toast.error("Activity start time must be in the future")
-        return
-      }
-      if (formData.duration <= 0) {
-        toast.error("Duration must be greater than 0")
-        return
+    if (currentStep === 2) {
+      if (formData.scheduleMode === "single") {
+        if (!formData.date || !formData.time) return
+        const startDateTime = new Date(`${formData.date}T${formData.time}`)
+        const now = new Date()
+        if (startDateTime < now) {
+          toast.error("Activity start time must be in the future")
+          return
+        }
+        if (formData.duration <= 0) {
+          toast.error("Duration must be greater than 0")
+          return
+        }
+      } else {
+        if (formData.sessions.length === 0) {
+          toast.error("Add at least one session")
+          return
+        }
       }
       if (formData.maxParticipants <= 0) {
         toast.error("Max participants must be greater than 0")
@@ -651,19 +739,28 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
     setSubmitting(true)
     setSubmitError("")
     try {
-      const startDateTime = formData.date && formData.time ? `${formData.date}T${formData.time}:00` : undefined
+      // Compute startDateTime / endDateTime
+      let startDateTime: string | undefined = undefined
+      let endDateTime: string | undefined = undefined
 
-      // Calculate endDateTime based on duration
-      let endDateTime = undefined
-      if (startDateTime && formData.duration) {
-        const startDate = new Date(startDateTime)
-        const endDate = new Date(startDate.getTime() + formData.duration * 60000)
-        endDateTime = endDate.toISOString().slice(0, 19) // Format as YYYY-MM-DDTHH:mm:ss
+      if (formData.scheduleMode === "multiple" && formData.sessions.length > 0) {
+        // Use first session as primary start/end
+        const firstSession = formData.sessions[0]
+        startDateTime = `${firstSession.date}T${firstSession.startTime}:00`
+        endDateTime = `${firstSession.date}T${firstSession.endTime}:00`
+      } else if (formData.date && formData.time) {
+        startDateTime = `${formData.date}T${formData.time}:00`
+        if (formData.duration) {
+          const startDate = new Date(startDateTime)
+          const endDate = new Date(startDate.getTime() + formData.duration * 60000)
+          endDateTime = endDate.toISOString().slice(0, 19)
+        }
       }
 
-      // Find facilityId from selected resources
-      const selectedFacilities = availableResources.filter(r => r.resourceType === 'facility' && formData.selectedResources.includes(r.id))
-      const facilityId = selectedFacilities.length > 0 ? selectedFacilities[0].id : undefined
+      // Use facility from Location step (selectedFacilityId) or from selected resources
+      const facilityId = selectedFacilityId
+        || availableResources.filter(r => r.resourceType === 'facility' && formData.selectedResources.includes(r.id))[0]?.id
+        || undefined
 
       const currentBusiness = businesses.find(b => b.id === activeBusinessId)
 
@@ -704,6 +801,17 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
         organizerName: currentBusiness?.name || "",
         facilityId: facilityId,
         resourceIds: formData.selectedResources,
+        sessions: formData.scheduleMode === "multiple" ? formData.sessions.map(s => ({
+          startDateTime: `${s.date}T${s.startTime}:00`,
+          endDateTime: `${s.date}T${s.endTime}:00`,
+        })) : undefined,
+        staffAssignments: formData.staffAssignments.length > 0 ? formData.staffAssignments.map(sa => ({
+          id: sa.id,
+          roleType: sa.roleType,
+          userId: sa.userId || null,
+          userName: sa.userName,
+          notes: sa.notes,
+        })) : undefined,
         sponsorshipTiers: formData.customTiers.map(t => ({
           id: t.id,
           name: t.name,
@@ -739,8 +847,8 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-foreground">Create New Activity</h1>
-          <p className="text-xs text-muted-foreground">Follow the steps to publish a new event</p>
+          <h1 className="text-xl font-bold text-foreground">{activityId ? "Edit Activity" : "Create New Activity"}</h1>
+          <p className="text-xs text-muted-foreground">{activityId ? "Update your activity details" : "Follow the steps to publish a new event"}</p>
         </div>
       </div>
 
@@ -947,139 +1055,153 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
           {
             currentStep === 2 && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <h3 className="mb-4 text-sm font-bold text-foreground">Location Details</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
-                    <input
-                      value={formData.location.address}
-                      onChange={(event) => {
-                        setSkipMapGeocode(false)
-                        setFormData({
-                          ...formData,
-                          location: { ...formData.location, address: event.target.value },
-                        })
-                      }
-                      }
-                      placeholder="Venue address"
-                      className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
-                      <input
-                        value={formData.location.city}
-                        onChange={(event) => {
-                          setSkipMapGeocode(false)
-                          setFormData({
-                            ...formData,
-                            location: { ...formData.location, city: event.target.value },
-                          })
-                        }
-                        }
-                        placeholder="e.g. New York"
-                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground">Neighborhood</label>
-                      <input
-                        value={formData.location.neighborhood}
-                        onChange={(event) => {
-                          setSkipMapGeocode(false)
-                          setFormData({
-                            ...formData,
-                            location: { ...formData.location, neighborhood: event.target.value },
-                          })
-                        }
-                        }
-                        placeholder="e.g. Manhattan"
-                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-blue-50/50 px-3 py-2 text-xs text-blue-600/80 border border-blue-100">
-                    <MapPin className="h-3.5 w-3.5" />
-                    <p>You can drag the map marker to pinpoint the exact location.</p>
-                  </div>
-                  <MapView
-                    center={[formData.location.lat, formData.location.lng]}
-                    markerLabel={formData.location.address || "Select a location"}
-                    height="220px"
-                    addressQuery={[formData.location.address, formData.location.city].filter(Boolean).join(", ")}
-                    onLocationSelect={(lat, lng) =>
-                      setFormData({
-                        ...formData,
-                        location: { ...formData.location, lat, lng }
-                      })
-                    }
-                    skipGeocode={skipMapGeocode}
-                    onAddressFound={(address, source) => {
-                      if (!address) return
-                      setSkipMapGeocode(true)
-                      setFormData(prev => ({
-                        ...prev,
-                        location: {
-                          ...prev.location,
-                          // Only update address text if the update comes from map interaction (drag/click)
-                          // If it comes from search/typing, keep the user's input
-                          address: source === 'map'
-                            ? [address.house_number, address.road].filter(Boolean).join(" ")
-                            : prev.location.address,
-                          city: address.city || address.town || address.village || address.county || prev.location.city,
-                          neighborhood: address.suburb || address.neighbourhood || prev.location.neighborhood,
-                          state: address.state || prev.location.state,
-                          country: address.country_code?.toUpperCase() || prev.location.country,
-                        }
-                      }))
-                    }}
-                  />
-                </div>
-              </div>
-            )
-          }
-
-          {
-            currentStep === 3 && (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <h3 className="mb-4 text-sm font-bold text-foreground">Schedule</h3>
                 <div className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <DateTimePicker
-                      label="Date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(value) => setFormData({ ...formData, date: value })}
-                      minDate={new Date().toISOString().split('T')[0]}
-                    />
-                    <DateTimePicker
-                      label="Start Time"
-                      type="time"
-                      value={formData.time}
-                      onChange={(value) => setFormData({ ...formData, time: value })}
-                    />
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground">Duration (minutes)</label>
-                      <input
-                        type="number"
-                        value={formData.duration}
-                        onChange={(event) => setFormData({ ...formData, duration: Number(event.target.value) || 0 })}
-                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground">Max Participants</label>
-                      <input
-                        type="number"
-                        value={formData.maxParticipants}
-                        onChange={(event) => setFormData({ ...formData, maxParticipants: Number(event.target.value) || 0 })}
-                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
-                      />
+                  {/* Schedule Mode Toggle */}
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-foreground">Schedule Mode</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, scheduleMode: "single" })}
+                        className={cn(
+                          "rounded-xl border px-4 py-2 text-xs font-semibold transition-colors",
+                          formData.scheduleMode === "single"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        Single Session
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, scheduleMode: "multiple" })}
+                        className={cn(
+                          "rounded-xl border px-4 py-2 text-xs font-semibold transition-colors",
+                          formData.scheduleMode === "multiple"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        Multiple Sessions
+                      </button>
                     </div>
                   </div>
+
+                  {formData.scheduleMode === "single" ? (
+                    /* Single session - original fields */
+                    <>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <DateTimePicker
+                          label="Date"
+                          type="date"
+                          value={formData.date}
+                          onChange={(value) => setFormData({ ...formData, date: value })}
+                          minDate={new Date().toISOString().split('T')[0]}
+                        />
+                        <DateTimePicker
+                          label="Start Time"
+                          type="time"
+                          value={formData.time}
+                          onChange={(value) => setFormData({ ...formData, time: value })}
+                        />
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-xs font-medium text-foreground">Duration (minutes)</label>
+                          <input
+                            type="number"
+                            value={formData.duration}
+                            onChange={(event) => setFormData({ ...formData, duration: Number(event.target.value) || 0 })}
+                            className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1.5 block text-xs font-medium text-foreground">Max Participants</label>
+                          <input
+                            type="number"
+                            value={formData.maxParticipants}
+                            onChange={(event) => setFormData({ ...formData, maxParticipants: Number(event.target.value) || 0 })}
+                            className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* Multiple sessions */
+                    <>
+                      <div className="space-y-3">
+                        {formData.sessions.map((session, idx) => (
+                          <div key={session.id} className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
+                            <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{idx + 1}</span>
+                            <div className="grid flex-1 gap-2 sm:grid-cols-3">
+                              <input
+                                type="date"
+                                value={session.date}
+                                onChange={(e) => {
+                                  const updated = [...formData.sessions]
+                                  updated[idx] = { ...updated[idx], date: e.target.value }
+                                  setFormData({ ...formData, sessions: updated })
+                                }}
+                                min={new Date().toISOString().split('T')[0]}
+                                className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
+                              />
+                              <input
+                                type="time"
+                                value={session.startTime}
+                                onChange={(e) => {
+                                  const updated = [...formData.sessions]
+                                  updated[idx] = { ...updated[idx], startTime: e.target.value }
+                                  setFormData({ ...formData, sessions: updated })
+                                }}
+                                className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
+                                placeholder="Start"
+                              />
+                              <input
+                                type="time"
+                                value={session.endTime}
+                                onChange={(e) => {
+                                  const updated = [...formData.sessions]
+                                  updated[idx] = { ...updated[idx], endTime: e.target.value }
+                                  setFormData({ ...formData, sessions: updated })
+                                }}
+                                className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
+                                placeholder="End"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, sessions: formData.sessions.filter((_, i) => i !== idx) })}
+                              className="mt-1 rounded-full p-1 text-muted-foreground hover:bg-red-50 hover:text-red-500"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            sessions: [...formData.sessions, { id: crypto.randomUUID(), date: "", startTime: "", endTime: "" }]
+                          })}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 py-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/5"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Session
+                        </button>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-foreground">Max Participants (applies to all sessions)</label>
+                        <input
+                          type="number"
+                          value={formData.maxParticipants}
+                          onChange={(event) => setFormData({ ...formData, maxParticipants: Number(event.target.value) || 0 })}
+                          className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                        />
+                      </div>
+                    </>
+                  )}
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-foreground">Price per participant</label>
@@ -1114,94 +1236,345 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
           }
 
           {
-            currentStep === 4 && (
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                <h3 className="mb-4 text-sm font-bold text-foreground">Select Resources</h3>
-
-                {/* Resource Controls */}
-                <div className="mb-4 space-y-3">
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    {[
-                      { id: "all", label: "All" },
-                      { id: "facility", label: "Facilities" },
-                      { id: "product", label: "Products" },
-                      { id: "service", label: "Services" },
-                    ].map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setResourceCategory(cat.id as any)}
-                        className={cn(
-                          "whitespace-nowrap rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
-                          resourceCategory === cat.id
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border text-muted-foreground hover:bg-muted"
-                        )}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
+            currentStep === 3 && (
+              <div className="space-y-4">
+                {/* Available Facilities Picker */}
+                {(availableFacilities.length > 0 || loadingFacilities) && (
+                  <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                    <h3 className="mb-3 text-sm font-bold text-foreground">Available Facilities</h3>
+                    <p className="mb-4 text-xs text-muted-foreground">These facilities are available for your scheduled time slots. Select one to use its location.</p>
+                    {loadingFacilities ? (
+                      <div className="py-6 text-center text-xs text-muted-foreground">Checking facility availability...</div>
+                    ) : (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {availableFacilities.map((f: any) => {
+                          const isSelected = selectedFacilityId === f.id
+                          return (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedFacilityId(null)
+                                  setLocationMode("custom")
+                                  return
+                                }
+                                setSelectedFacilityId(f.id)
+                                setLocationMode("facility")
+                                setSkipMapGeocode(true)
+                                setFormData(prev => ({
+                                  ...prev,
+                                  location: {
+                                    address: f.address || f.location || prev.location.address,
+                                    city: f.city || prev.location.city,
+                                    neighborhood: f.neighborhood || prev.location.neighborhood,
+                                    state: f.state || prev.location.state,
+                                    country: f.country || prev.location.country,
+                                    lat: f.latitude || prev.location.lat,
+                                    lng: f.longitude || prev.location.lng,
+                                  },
+                                }))
+                              }}
+                              className={cn(
+                                "flex items-center gap-3 rounded-2xl border p-3 text-left transition-all hover:border-primary/50",
+                                isSelected
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
+                                  : "border-border bg-card"
+                              )}
+                            >
+                              <img
+                                src={f.coverImage || f.image || "/placeholder.svg"}
+                                alt={f.name}
+                                className="h-12 w-12 rounded-xl object-cover bg-muted"
+                                crossOrigin="anonymous"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground truncate">{f.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{f.address || f.location}</p>
+                                {f.pricePerHour != null && (
+                                  <p className="mt-0.5 text-xs font-medium text-primary">${f.pricePerHour}/hr</p>
+                                )}
+                              </div>
+                              {isSelected && <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={resourceSearch}
-                      onChange={(e) => setResourceSearch(e.target.value)}
-                      placeholder="Search resources..."
-                      className="h-10 w-full rounded-xl border border-border bg-muted pl-9 pr-4 text-sm outline-none focus:border-primary"
+                )}
+
+                {/* Manual Location / Custom Location */}
+                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-foreground">
+                      {locationMode === "facility" ? "Facility Location" : "Location Details"}
+                    </h3>
+                    {selectedFacilityId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFacilityId(null)
+                          setLocationMode("custom")
+                        }}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        Use custom location instead
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground">Address</label>
+                      <input
+                        value={formData.location.address}
+                        onChange={(event) => {
+                          setSkipMapGeocode(false)
+                          setSelectedFacilityId(null)
+                          setLocationMode("custom")
+                          setFormData({
+                            ...formData,
+                            location: { ...formData.location, address: event.target.value },
+                          })
+                        }}
+                        placeholder="Venue address"
+                        className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-foreground">City</label>
+                        <input
+                          value={formData.location.city}
+                          onChange={(event) => {
+                            setSkipMapGeocode(false)
+                            setSelectedFacilityId(null)
+                            setLocationMode("custom")
+                            setFormData({
+                              ...formData,
+                              location: { ...formData.location, city: event.target.value },
+                            })
+                          }}
+                          placeholder="e.g. New York"
+                          className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg bg-blue-50/50 px-3 py-2 text-xs text-blue-600/80 border border-blue-100">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <p>You can drag the map marker to pinpoint the exact location.</p>
+                    </div>
+                    <MapView
+                      center={[formData.location.lat, formData.location.lng]}
+                      markerLabel={formData.location.address || "Select a location"}
+                      height="220px"
+                      addressQuery={locationMode === "custom" ? [formData.location.address, formData.location.city].filter(Boolean).join(", ") : undefined}
+                      onLocationSelect={(lat, lng) =>
+                        setFormData({
+                          ...formData,
+                          location: { ...formData.location, lat, lng }
+                        })
+                      }
+                      skipGeocode={skipMapGeocode || locationMode === "facility"}
+                      onAddressFound={(address, source) => {
+                        if (!address) return
+                        setSkipMapGeocode(true)
+                        setFormData(prev => ({
+                          ...prev,
+                          location: {
+                            ...prev.location,
+                            address: source === 'map'
+                              ? [address.house_number, address.road].filter(Boolean).join(" ")
+                              : prev.location.address,
+                            city: address.city || address.town || address.village || address.county || prev.location.city,
+                            neighborhood: address.suburb || address.neighbourhood || prev.location.neighborhood,
+                            state: address.state || prev.location.state,
+                            country: address.country_code?.toUpperCase() || prev.location.country,
+                          }
+                        }))
+                      }}
                     />
                   </div>
                 </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  {loadingResources ? (
-                    <div className="col-span-2 py-8 text-center text-sm text-muted-foreground">Loading resources...</div>
-                  ) : availableResources.length === 0 ? (
-                    <div className="col-span-2 py-8 text-center text-sm text-muted-foreground">No resources found. Create facilities or products first.</div>
-                  ) : (
-                    availableResources
-                      .filter(r => {
-                        const matchesCategory = resourceCategory === "all" || r.resourceType === resourceCategory
-                        const matchesSearch = r.name.toLowerCase().includes(resourceSearch.toLowerCase())
-                        return matchesCategory && matchesSearch
-                      })
-                      .map((resource) => {
-                        const selected = formData.selectedResources.includes(resource.id)
-                        return (
-                          <button
-                            key={resource.id}
-                            type="button"
-                            onClick={() => toggleResource(resource.id)}
-                            className={cn(
-                              "flex items-center gap-3 rounded-2xl border border-border bg-card p-3 text-left transition-all hover:border-primary/50",
-                              selected && "border-secondary bg-secondary/5 ring-1 ring-secondary"
-                            )}
-                          >
-                            <img
-                              src={resource.image || resource.coverImage || "/placeholder.svg"}
-                              alt={resource.name}
-                              className="h-12 w-12 rounded-xl object-cover bg-muted"
-                              crossOrigin="anonymous"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-0.5">
-                                <p className="text-sm font-semibold text-foreground truncate max-w-[120px]">{resource.name}</p>
-                                <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground capitalize">{resource.resourceType}</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground truncate">{resource.description}</p>
-                              <p className="mt-1 text-xs font-medium text-primary">
-                                {resource.resourceType === 'facility' && resource.pricePerHour ? `$${resource.pricePerHour}/hr` :
-                                  resource.price ? `$${resource.price}` : 'Free'}
-                              </p>
-                            </div>
-                            {selected && <CheckCircle className="h-5 w-5 text-secondary flex-shrink-0" />}
-                          </button>
-                        )
-                      })
-                  )}
-                </div>
               </div>
+            )
+          }
+
+          {
+            currentStep === 4 && (
+              <>
+                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <h3 className="mb-4 text-sm font-bold text-foreground">Select Resources</h3>
+
+                  {/* Resource Controls */}
+                  <div className="mb-4 space-y-3">
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                      {[
+                        { id: "all", label: "All" },
+                        { id: "product", label: "Products" },
+                        { id: "service", label: "Services" },
+                      ].map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setResourceCategory(cat.id as any)}
+                          className={cn(
+                            "whitespace-nowrap rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+                            resourceCategory === cat.id
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:bg-muted"
+                          )}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={resourceSearch}
+                        onChange={(e) => setResourceSearch(e.target.value)}
+                        placeholder="Search resources..."
+                        className="h-10 w-full rounded-xl border border-border bg-muted pl-9 pr-4 text-sm outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {loadingResources ? (
+                      <div className="col-span-2 py-8 text-center text-sm text-muted-foreground">Loading resources...</div>
+                    ) : availableResources.length === 0 ? (
+                      <div className="col-span-2 py-8 text-center text-sm text-muted-foreground">No resources found. Create facilities or products first.</div>
+                    ) : (
+                      availableResources
+                        .filter(r => {
+                          if (r.resourceType === "facility") return false
+                          const matchesCategory = resourceCategory === "all" || r.resourceType === resourceCategory
+                          const matchesSearch = r.name.toLowerCase().includes(resourceSearch.toLowerCase())
+                          return matchesCategory && matchesSearch
+                        })
+                        .map((resource) => {
+                          const selected = formData.selectedResources.includes(resource.id)
+                          return (
+                            <button
+                              key={resource.id}
+                              type="button"
+                              onClick={() => toggleResource(resource.id)}
+                              className={cn(
+                                "flex items-center gap-3 rounded-2xl border border-border bg-card p-3 text-left transition-all hover:border-primary/50",
+                                selected && "border-secondary bg-secondary/5 ring-1 ring-secondary"
+                              )}
+                            >
+                              <img
+                                src={resource.image || resource.coverImage || "/placeholder.svg"}
+                                alt={resource.name}
+                                className="h-12 w-12 rounded-xl object-cover bg-muted"
+                                crossOrigin="anonymous"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <p className="text-sm font-semibold text-foreground truncate max-w-[120px]">{resource.name}</p>
+                                  <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground capitalize">{resource.resourceType}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate">{resource.description}</p>
+                                <p className="mt-1 text-xs font-medium text-primary">
+                                  {resource.resourceType === 'facility' && resource.pricePerHour ? `$${resource.pricePerHour}/hr` :
+                                    resource.price ? `$${resource.price}` : 'Free'}
+                                </p>
+                              </div>
+                              {selected && <CheckCircle className="h-5 w-5 text-secondary flex-shrink-0" />}
+                            </button>
+                          )
+                        })
+                    )}
+                  </div>
+                </div>
+
+                {/* Human Resources / Staff Section */}
+                <div className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <h3 className="mb-3 text-sm font-bold text-foreground">Staff & Human Resources</h3>
+                  <p className="mb-4 text-xs text-muted-foreground">Assign roles like Referee, Coach, or Photographer to your event.</p>
+                  <div className="space-y-3">
+                    {formData.staffAssignments.map((staff, idx) => (
+                      <div key={staff.id} className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
+                        <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-secondary/10 text-xs font-bold text-secondary">{idx + 1}</span>
+                        <div className="grid flex-1 gap-2 sm:grid-cols-3">
+                          <Select
+                            value={staff.roleType}
+                            onValueChange={(val) => {
+                              const updated = [...formData.staffAssignments]
+                              updated[idx] = { ...updated[idx], roleType: val }
+                              setFormData({ ...formData, staffAssignments: updated })
+                            }}
+                          >
+                            <SelectTrigger className="h-9 rounded-lg border border-border bg-muted text-xs">
+                              <SelectValue placeholder="Role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[
+                                { value: "REFEREE", label: "Referee" },
+                                { value: "COACH", label: "Coach" },
+                                { value: "STAFF", label: "Staff" },
+                                { value: "FIRST_AID", label: "First Aid" },
+                                { value: "EQUIPMENT_MANAGER", label: "Equipment Manager" },
+                                { value: "SCOREKEEPER", label: "Scorekeeper" },
+                                { value: "TIMEKEEPER", label: "Timekeeper" },
+                                { value: "PHOTOGRAPHER", label: "Photographer" },
+                                { value: "SECURITY", label: "Security" },
+                                { value: "MEDICAL", label: "Medical" },
+                                { value: "VOLUNTEER", label: "Volunteer" },
+                              ].map(role => (
+                                <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <input
+                            type="text"
+                            value={staff.userName}
+                            onChange={(e) => {
+                              const updated = [...formData.staffAssignments]
+                              updated[idx] = { ...updated[idx], userName: e.target.value }
+                              setFormData({ ...formData, staffAssignments: updated })
+                            }}
+                            placeholder="Name (optional)"
+                            className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
+                          />
+                          <input
+                            type="text"
+                            value={staff.notes}
+                            onChange={(e) => {
+                              const updated = [...formData.staffAssignments]
+                              updated[idx] = { ...updated[idx], notes: e.target.value }
+                              setFormData({ ...formData, staffAssignments: updated })
+                            }}
+                            placeholder="Notes"
+                            className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, staffAssignments: formData.staffAssignments.filter((_, i) => i !== idx) })}
+                          className="mt-1 rounded-full p-1 text-muted-foreground hover:bg-red-50 hover:text-red-500"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        staffAssignments: [...formData.staffAssignments, { id: crypto.randomUUID(), roleType: "", userName: "", notes: "" }]
+                      })}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-secondary/40 py-3 text-xs font-semibold text-secondary transition-colors hover:bg-secondary/5"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Staff Member
+                    </button>
+                  </div>
+                </div>
+              </>
             )
           }
 
@@ -1314,23 +1687,38 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                   </div>
                 </div>
 
-                {/* Location Card */}
-                <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-                  <h4 className="flex items-center gap-2 text-sm font-bold text-foreground mb-4">
-                    <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center">
-                      <MapPin className="w-3.5 h-3.5 text-secondary" />
+                {/* Location Card with Map */}
+                <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                  <div className="gradient-primary px-5 py-3">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-white">
+                      <MapPin className="w-4 h-4" />
+                      Location
+                    </h4>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <MapPin className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground">{formData.location.address || "Not set"}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{formData.location.city || "City not specified"}</p>
+                      </div>
+                      {formData.location.lat !== 0 && formData.location.lng !== 0 && (
+                        <span className="text-[10px] font-bold gradient-primary text-white px-2.5 py-1 rounded-full shrink-0">
+                          📍 GPS Set
+                        </span>
+                      )}
                     </div>
-                    Location
-                  </h4>
-                  <div className="flex items-start gap-3 bg-muted/30 p-4 rounded-xl border border-border/50">
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-foreground">{formData.location.address || "Not set"}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{[formData.location.city, formData.location.neighborhood].filter(Boolean).join(", ") || "City not specified"}</p>
-                    </div>
-                    {formData.location.lat && formData.location.lng && (
-                      <span className="text-[10px] font-medium bg-primary/10 text-primary px-2 py-1 rounded-lg shrink-0">
-                        📍 GPS Set
-                      </span>
+                    {formData.location.lat !== 0 && formData.location.lng !== 0 && (
+                      <div className="rounded-xl overflow-hidden border border-border">
+                        <MapView
+                          center={[formData.location.lat, formData.location.lng]}
+                          markerLabel={formData.location.address || "Activity Location"}
+                          height="180px"
+                          skipGeocode
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1467,6 +1855,50 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                     )}
                   </div>
                 </div>
+
+                {/* Staff & Human Resources */}
+                <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                  <div className="gradient-secondary px-5 py-3">
+                    <h4 className="flex items-center gap-2 text-sm font-bold text-white">
+                      <Shield className="w-4 h-4" />
+                      Staff & Human Resources
+                    </h4>
+                  </div>
+                  <div className="p-5">
+                    {formData.staffAssignments.length > 0 ? (
+                      <div className="space-y-2">
+                        {formData.staffAssignments.map(sa => {
+                          const roleLabel = {
+                            REFEREE: "Referee", COACH: "Coach", STAFF: "Staff",
+                            FIRST_AID: "First Aid", EQUIPMENT_MANAGER: "Equipment Manager",
+                            SCOREKEEPER: "Scorekeeper", TIMEKEEPER: "Timekeeper",
+                            PHOTOGRAPHER: "Photographer", SECURITY: "Security",
+                            MEDICAL: "Medical", VOLUNTEER: "Volunteer",
+                          }[sa.roleType] || sa.roleType
+                          return (
+                            <div key={sa.id} className="flex items-center gap-3 text-xs bg-muted/30 p-3 rounded-xl border border-border/50">
+                              <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center shrink-0">
+                                <Shield className="w-3.5 h-3.5 text-secondary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-foreground">{roleLabel}</p>
+                                {sa.userName && <p className="text-muted-foreground truncate">{sa.userName}</p>}
+                              </div>
+                              {sa.notes && (
+                                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-lg shrink-0 max-w-[120px] truncate">{sa.notes}</span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 bg-muted/20 rounded-xl border border-dashed border-border">
+                        <Shield className="w-6 h-6 text-muted-foreground/30 mx-auto mb-2" />
+                        <p className="text-xs text-muted-foreground">No staff assigned</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )
           }
@@ -1549,7 +1981,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
         </div>
 
       </div>
-    </div>
+    </div >
   )
 }
 

@@ -32,6 +32,7 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
   const [editingTier, setEditingTier] = useState<SponsorshipTier | null>(null)
 
   const handleAddTier = () => {
+    // Clear existing tiers — only one allowed
     setEditingTier({
       id: `tier-${Date.now()}`,
       name: "",
@@ -43,14 +44,8 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
 
   const saveTier = () => {
     if (!editingTier || !editingTier.name) return
-    const existingIndex = tiers.findIndex((tier) => tier.id === editingTier.id)
-    if (existingIndex >= 0) {
-      const updated = [...tiers]
-      updated[existingIndex] = editingTier
-      onChange(updated)
-    } else {
-      onChange([...tiers, editingTier])
-    }
+    // Only one tier allowed — replace entire array
+    onChange([editingTier])
     setEditingTier(null)
   }
 
@@ -109,17 +104,21 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
           <div className="flex gap-2">
             <div className="flex gap-1 mr-2 border-r border-border pr-2">
               {[
-                { name: "Gold", price: 5000, color: "bg-yellow-500/10 text-yellow-600 border-yellow-200" },
-                { name: "Silver", price: 2500, color: "bg-slate-200 text-slate-600 border-slate-200" },
-                { name: "Bronze", price: 1000, color: "bg-orange-500/10 text-orange-600 border-orange-200" }
+                { name: "Gold", price: 5000, color: "bg-yellow-500/10 text-yellow-600 border-yellow-200", selectedColor: "ring-2 ring-yellow-400 bg-yellow-500/20" },
+                { name: "Silver", price: 2500, color: "bg-slate-200 text-slate-600 border-slate-200", selectedColor: "ring-2 ring-slate-400 bg-slate-300" },
+                { name: "Bronze", price: 1000, color: "bg-orange-500/10 text-orange-600 border-orange-200", selectedColor: "ring-2 ring-orange-400 bg-orange-500/20" }
               ].map(preset => {
-                const alreadyExists = tiers.some(t => t.name.toLowerCase().includes(preset.name.toLowerCase()))
+                const isSelected = tiers.some(t => t.name.toLowerCase().includes(preset.name.toLowerCase()))
                 return (
                   <button
                     key={preset.name}
                     type="button"
-                    disabled={alreadyExists}
                     onClick={() => {
+                      if (isSelected) {
+                        // Deselect
+                        onChange([])
+                        return
+                      }
                       const newTier = {
                         id: `tier-${Date.now()}-${preset.name}`,
                         name: `${preset.name} Sponsor`,
@@ -127,13 +126,12 @@ export function SponsorshipTierBuilder({ tiers, onChange, eventPoster, onPosterU
                         benefits: [`${preset.name} Tier Benefits`],
                         logoPositions: []
                       }
-                      onChange([...tiers, newTier])
+                      onChange([newTier])
                     }}
-                    className={cn("text-[10px] px-2 py-1 rounded-full border font-medium transition-colors",
-                      alreadyExists ? "opacity-40 cursor-not-allowed" : "hover:opacity-80",
-                      preset.color)}
+                    className={cn("text-[10px] px-2 py-1 rounded-full border font-medium transition-colors hover:opacity-80",
+                      isSelected ? preset.selectedColor : preset.color)}
                   >
-                    +{preset.name}
+                    {isSelected ? `✓ ${preset.name}` : preset.name}
                   </button>
                 )
               })}

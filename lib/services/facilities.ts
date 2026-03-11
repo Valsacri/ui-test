@@ -30,4 +30,13 @@ export const facilitiesService = {
         const response = await apiClient.delete(`/v1/facilities/${id}`);
         return response.data;
     },
+
+    getAvailableForSlots: async (data: {
+        ranges: Array<{ startDateTime: string; endDateTime: string }>;
+        sportId?: string;
+        city?: string;
+    }) => {
+        const response = await apiClient.post('/v1/facilities/available-for-slots', data);
+        return response.data;
+    },
 };

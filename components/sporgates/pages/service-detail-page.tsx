@@ -243,6 +243,7 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
         </div>
 
         <ServiceBookingSidebar
+          serviceId={serviceId}
           serviceName={service.name}
           serviceImage={service.image}
           provider={service.provider}
@@ -251,29 +252,6 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
           rating={service.rating}
           reviews={service.reviews}
           verified={service.verified}
-          onBooking={async (date, time, notes) => {
-            const durationStr = service.duration || "60 min"
-            const durationMinutes = parseInt(durationStr.replace(/\D/g, ""), 10) || 60
-            const durationHours = durationMinutes / 60
-            const [h, m] = time.split(":").map(Number)
-            const endMin = h * 60 + m + durationMinutes
-            const endH = Math.floor(endMin / 60) % 24
-            const endM = endMin % 60
-            const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`
-            try {
-              await bookingService.createBooking({
-                facilityId: serviceId,
-                date,
-                startTime: time,
-                endTime,
-                duration: durationHours,
-                notes: notes || undefined,
-              })
-              toast.success("Booking request sent! The provider will confirm shortly.")
-            } catch {
-              toast.error("Failed to submit booking. Please try again.")
-            }
-          }}
         />
       </div>
     </div>

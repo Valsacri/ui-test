@@ -30,8 +30,8 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
   const cartItems = cart?.items ?? []
   const cartTotal = cart?.cartTotal ?? 0
   const cartCount = cart?.cartCount ?? 0
-  const updateQuantity = cart?.updateQuantity ?? (() => {})
-  const removeItem = cart?.removeItem ?? (() => {})
+  const updateQuantity = cart?.updateQuantity ?? (() => { })
+  const removeItem = cart?.removeItem ?? (() => { })
 
   const [activeCategory, setActiveCategory] = useState("All")
   const [showCart, setShowCart] = useState(false)
@@ -435,6 +435,10 @@ export function MarketplacePage({ onNavigate, isBusinessMode = false }: Marketpl
                   </div>
                   <button
                     type="button"
+                    onClick={() => {
+                      setShowCart(false)
+                      onNavigate("checkout")
+                    }}
                     className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
                   >
                     Checkout

@@ -17,6 +17,7 @@ interface CartContextValue {
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void
   updateQuantity: (productId: string, delta: number) => void
   removeItem: (productId: string) => void
+  clearCart: () => void
   cartCount: number
   cartTotal: number
 }
@@ -39,7 +40,7 @@ function saveCart(items: CartItem[]) {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
-  } catch {}
+  } catch { }
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -80,16 +81,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.filter((i) => i.productId !== productId))
   }, [])
 
+  const clearCart = useCallback(() => {
+    setItems([])
+  }, [])
+
   const value = useMemo(
     () => ({
       items,
       addItem,
       updateQuantity,
       removeItem,
+      clearCart,
       cartCount: items.reduce((sum, i) => sum + i.quantity, 0),
       cartTotal: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     }),
-    [items, addItem, updateQuantity, removeItem]
+    [items, addItem, updateQuantity, removeItem, clearCart]
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

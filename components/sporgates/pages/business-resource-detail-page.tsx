@@ -124,7 +124,7 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
       </button>
 
       {/* Hero Image */}
-      <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
+      <div className="relative h-48 overflow-hidden rounded-2xl md:h-64">
         {images.length > 0 ? (
           <Image
             src={images[activeImage] || images[0]}

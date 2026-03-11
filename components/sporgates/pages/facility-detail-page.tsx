@@ -3,12 +3,11 @@
 import { useState, useMemo } from "react"
 import useSWR from "swr"
 import Image from "next/image"
-import { ArrowLeft, Star, MapPin, Clock, ChevronLeft, ChevronRight, Calendar, Users, Phone } from "lucide-react"
+import { ArrowLeft, Star, MapPin, Clock, ChevronLeft, ChevronRight, Users } from "lucide-react"
 import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
-import { facilitiesService, bookingService } from "@/lib/services"
+import { facilitiesService } from "@/lib/services"
 import { mapFacility, type FacilityCardData, type FacilityDto } from "@/lib/explore-api"
 import type { PageRoute } from "@/lib/navigation"
-import { toast } from "sonner"
 import { BookingSidebar } from "@/components/sporgates/booking-sidebar"
 import { MapView } from "@/components/sporgates/map-view"
 import { cn } from "@/lib/utils"
@@ -20,7 +19,6 @@ interface FacilityDetailPageProps {
 
 export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPageProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
-  const [bookingStatus, setBookingStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
 
   const { data: facility, error, isLoading } = useSWR(
     facilityId ? `/facilities/${facilityId}` : null,
@@ -246,55 +244,11 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
         </div>
 
         <BookingSidebar
+          facilityId={facility.id}
           pricePerHour={facility.pricePerHour}
           capacity={facility.capacity || 40}
           itemName={facility.name}
-          onBooking={async (date, time, duration, participants) => {
-            setBookingStatus("loading")
-            try {
-              const timeToHHmm = (t: string) => {
-                const match = t.match(/(\d+):(\d{2})\s*(AM|PM)/i)
-                if (!match) return "09:00"
-                let h = parseInt(match[1], 10)
-                const m = match[2]
-                if (match[3].toUpperCase() === "PM" && h !== 12) h += 12
-                if (match[3].toUpperCase() === "AM" && h === 12) h = 0
-                return `${h.toString().padStart(2, "0")}:${m}`
-              }
-              const startTime = timeToHHmm(time)
-              const [sh, sm] = startTime.split(":").map(Number)
-              const endMin = sh * 60 + sm + duration * 60
-              const eh = Math.floor(endMin / 60) % 24
-              const em = endMin % 60
-              const endTime = `${eh.toString().padStart(2, "0")}:${em.toString().padStart(2, "0")}`
-              await bookingService.createBooking({
-                facilityId: facility.id,
-                date,
-                startTime,
-                endTime,
-                duration,
-                notes: `Duration: ${duration}h, Participants: ${participants}`,
-              })
-              setBookingStatus("success")
-              toast.success("Booking request submitted successfully")
-              setTimeout(() => setBookingStatus("idle"), 3000)
-            } catch {
-              setBookingStatus("error")
-              toast.error("Failed to submit booking. Please try again.")
-              setTimeout(() => setBookingStatus("idle"), 3000)
-            }
-          }}
         />
-        {bookingStatus === "success" && (
-          <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-center text-sm font-medium text-green-700">
-            Booking request submitted successfully!
-          </div>
-        )}
-        {bookingStatus === "error" && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm font-medium text-red-700">
-            Failed to submit booking. Please try again.
-          </div>
-        )}
       </div>
     </div>
   )

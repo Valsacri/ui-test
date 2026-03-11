@@ -79,6 +79,7 @@ export type PageRoute =
   | "choose-sports"
   | "set-goals"
   | "onboarding-confirmation"
+  | "checkout"
 
 export interface NavigationState {
   currentPage: PageRoute

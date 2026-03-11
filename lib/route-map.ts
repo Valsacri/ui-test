@@ -98,6 +98,7 @@ const routeMap: Record<PageRoute, string> = {
     "choose-sports": "/choose-sports",
     "set-goals": "/set-goals",
     "onboarding-confirmation": "/onboarding-confirmation",
+    checkout: "/checkout",
 }
 
 /**

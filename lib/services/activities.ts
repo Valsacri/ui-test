@@ -64,4 +64,14 @@ export const activitiesService = {
         const response = await apiClient.delete(`/v1/activities/${id}`);
         return response.data;
     },
+
+    getHumanResourceRoles: async () => {
+        const response = await apiClient.get('/v1/activities/human-resource-roles');
+        return response.data;
+    },
+
+    bookActivity: async (activityId: string) => {
+        const response = await apiClient.post(`/v1/activities/${activityId}/book`);
+        return response.data;
+    },
 };
