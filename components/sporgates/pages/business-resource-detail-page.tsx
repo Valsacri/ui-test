@@ -19,6 +19,8 @@ import {
   Tag,
   Building2,
   Wrench,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { facilitiesService } from "@/lib/services/facilities"
 import { marketplaceService } from "@/lib/services/marketplace"
@@ -116,6 +118,9 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
   const TypeIcon = resourceType === "facility" ? Building2 : resourceType === "product" ? Package : Wrench
   const typeLabel = resourceType === "facility" ? "Facility" : resourceType === "product" ? "Product" : "Service"
 
+  const nextImage = () => setActiveImage((prev) => (prev + 1) % Math.max(1, images.length))
+  const prevImage = () => setActiveImage((prev) => (prev - 1 + images.length) % Math.max(1, images.length))
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <button type="button" onClick={goBack} className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
@@ -123,16 +128,41 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
         Back to Resources
       </button>
 
-      {/* Hero Image */}
-      <div className="relative h-48 overflow-hidden rounded-2xl md:h-64">
+      {/* Hero Image - same constrained container as product/service detail pages */}
+      <div className="relative h-64 overflow-hidden rounded-2xl md:h-80">
         {images.length > 0 ? (
-          <Image
-            src={images[activeImage] || images[0]}
-            alt={name}
-            fill
-            className="object-cover transition-opacity duration-300"
-            sizes="(max-width: 768px) 100vw, 66vw"
-          />
+          <>
+            <Image
+              src={images[activeImage] || images[0]}
+              alt={name}
+              fill
+              className="object-cover transition-opacity duration-300"
+              sizes="(max-width: 768px) 100vw, 66vw"
+            />
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={prevImage}
+                  className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-foreground shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-card"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextImage}
+                  className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-foreground shadow-lg backdrop-blur-sm transition-all hover:scale-110 hover:bg-card"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <div className="absolute bottom-4 right-4 rounded-full bg-black/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+                  {activeImage + 1} / {images.length}
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted">
             <TypeIcon className="h-16 w-16 text-muted-foreground/30" />
@@ -140,7 +170,7 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
         )}
       </div>
 
-      {/* Image thumbnails */}
+      {/* Image thumbnails - use img with object-cover like product detail so thumbnails stay constrained */}
       {images.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {images.map((img, idx) => (
@@ -149,11 +179,16 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
               type="button"
               onClick={() => setActiveImage(idx)}
               className={cn(
-                "h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
+                "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
                 activeImage === idx ? "border-primary ring-2 ring-primary/20" : "border-border opacity-70 hover:opacity-100"
               )}
             >
-              <Image src={img} alt={`${name} ${idx + 1}`} fill className="object-cover" sizes="64px" />
+              <img
+                src={img}
+                alt={`${name} ${idx + 1}`}
+                className="h-full w-full object-cover"
+                crossOrigin="anonymous"
+              />
             </button>
           ))}
         </div>
