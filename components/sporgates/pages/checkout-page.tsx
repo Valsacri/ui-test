@@ -20,7 +20,7 @@ import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { useCart } from "@/lib/cart-context"
 import { ordersService } from "@/lib/services/orders"
-
+import { getApiErrorMessage } from "@/lib/api-errors"
 interface CheckoutPageProps {
     onNavigate: (page: PageRoute, detailId?: string) => void
 }
@@ -78,7 +78,7 @@ export function CheckoutPage({ onNavigate }: CheckoutPageProps) {
             toast.success("Order placed successfully!")
         } catch (err: any) {
             console.error("Order failed:", err)
-            toast.error(err?.response?.data?.message || "Failed to place order. Please try again.")
+            toast.error(getApiErrorMessage(err, "Failed to place order. Please try again."))
         } finally {
             setSubmitting(false)
         }

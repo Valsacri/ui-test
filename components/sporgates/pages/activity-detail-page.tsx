@@ -9,20 +9,27 @@ import {
   Users,
   Share2,
   Heart,
-  CheckCircle,
+    CheckCircle,
+    Loader2,
 } from "lucide-react"
 import { useState } from "react"
 import useSWR from "swr"
 import Image from "next/image"
+import { toast } from "sonner"
 import { activitiesService } from "@/lib/services/activities"
+import { authService } from "@/lib/services/auth"
+import { businessesService } from "@/lib/services/businesses"
+import { messagesService } from "@/lib/services/messages"
+import { getApiErrorMessage } from "@/lib/api-errors"
 import { TicketModal } from "@/components/sporgates/attendance/ticket-modal"
 import { DetailPageSkeleton } from "@/components/sporgates/ux/page-skeleton"
 import { ErrorState } from "@/components/sporgates/ux/error-state"
+import { ParticipantsModal } from "@/components/sporgates/activities/participants-modal"
 import type { PageRoute } from "@/lib/navigation"
 
 interface ActivityDetailPageProps {
   activityId: string
-  onNavigate: (page: PageRoute) => void
+  onNavigate: (page: PageRoute, id?: string) => void
 }
 
 const currencySymbols: Record<string, string> = {
@@ -70,12 +77,107 @@ function formatTime(dateVal: any): string {
 
 export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPageProps) {
   const [showTicket, setShowTicket] = useState(false)
+  const [ticketCode, setTicketCode] = useState<string | undefined>()
+  const [joining, setJoining] = useState(false)
+  const [hasJoined, setHasJoined] = useState(false)
+  const [followingOrganizer, setFollowingOrganizer] = useState(false)
+  const [isFollowed, setIsFollowed] = useState(false)
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false)
+  const [messagingOrganizer, setMessagingOrganizer] = useState(false)
 
-  const { data: activity, error, isLoading: loading } = useSWR(
+  const { data: activity, error, isLoading: loading, mutate } = useSWR(
     activityId ? `/activities/${activityId}` : null,
     () => activitiesService.getById(activityId),
     { revalidateOnFocus: false, dedupingInterval: 10000 }
   )
+
+  const currentUser = authService.getCurrentUser()
+
+  useSWR(
+    currentUser?.id && activityId ? `/attendance/${activityId}/status` : null,
+    () => activitiesService.checkAttendanceStatus(activityId),
+    {
+      onSuccess: (data) => {
+        setHasJoined(data.isRegistered)
+        if (data.ticketCode) {
+          setTicketCode(data.ticketCode)
+        }
+      },
+      revalidateOnFocus: false
+    }
+  )
+
+  useSWR(
+    currentUser?.id && activity?.organizerId ? `/businesses/${activity.organizerId}/follow/status` : null,
+    () => businessesService.checkFollowStatus(activity!.organizerId),
+    {
+      onSuccess: (data) => setIsFollowed(data.isFollowing),
+      revalidateOnFocus: false
+    }
+  )
+
+  const { data: participantsList } = useSWR(
+    activityId ? `/v1/activities/${activityId}/participants` : null,
+    () => activitiesService.getActivityParticipants(activityId),
+    { revalidateOnFocus: false }
+  )
+
+  const hasJoinedOrRegistered = hasJoined
+
+  const handleFollowOrganizer = async () => {
+    if (!currentUser?.id || !activity?.organizerId || followingOrganizer) return
+    setFollowingOrganizer(true)
+    try {
+      if (isFollowed) {
+        await businessesService.unfollowBusiness(activity.organizerId)
+        setIsFollowed(false)
+        toast.success("Unfollowed organizer")
+      } else {
+        await businessesService.followBusiness(activity.organizerId)
+        setIsFollowed(true)
+        toast.success("Following organizer! 🎉")
+      }
+    } catch (err: any) {
+      toast.error(getApiErrorMessage(err, "Failed to update follow status"))
+    } finally {
+      setFollowingOrganizer(false)
+    }
+  }
+
+  const handleJoinActivity = async () => {
+    if (joining) return
+    setJoining(true)
+    try {
+      const response = await activitiesService.bookActivity(activityId)
+      setTicketCode(response.ticketCode)
+      setHasJoined(true)
+      setShowTicket(true)
+      toast.success("You're in! 🎉 Your ticket is ready.")
+      // Refresh activity data to update participant count
+      mutate()
+    } catch (err: any) {
+      toast.error(getApiErrorMessage(err, "Failed to join activity"))
+    } finally {
+      setJoining(false)
+    }
+  }
+
+  const handleMessageOrganizer = async () => {
+    if (!currentUser?.id || !activity?.organizerId || messagingOrganizer) return
+    setMessagingOrganizer(true)
+    try {
+      const conv = await messagesService.createDirectConversation({ targetUserId: activity.organizerId })
+      if (conv?.id) {
+        onNavigate("conversation", conv.id)
+      } else {
+        toast.error("Failed to open conversation")
+      }
+    } catch (err: any) {
+      toast.error(getApiErrorMessage(err, "Could not start chat with organizer"))
+    } finally {
+      setMessagingOrganizer(false)
+    }
+  }
 
   if (loading) {
     return <DetailPageSkeleton />
@@ -125,6 +227,8 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
     .join("")
     .substring(0, 2)
     .toUpperCase()
+
+  const isFull = spotsLeft <= 0
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -246,31 +350,68 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
               </div>
               <button
                 type="button"
-                className="rounded-full border border-primary px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
+                onClick={handleFollowOrganizer}
+                disabled={followingOrganizer}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${isFollowed
+                  ? "border border-border bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+                  : "border border-primary text-primary hover:bg-primary hover:text-white"
+                  }`}
               >
-                Follow
+                {followingOrganizer ? "..." : isFollowed ? "Following" : "Follow"}
               </button>
             </div>
           </div>
 
           {/* Participants */}
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <h3 className="mb-3 text-sm font-bold text-foreground">
-              Participants ({currentParticipants}/{maxParticipants})
-            </h3>
+          <div 
+            className="rounded-2xl border border-border bg-card p-4 shadow-sm cursor-pointer hover:border-primary/30 transition-colors"
+            onClick={() => setShowParticipantsModal(true)}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-foreground">
+                Participants ({currentParticipants}/{maxParticipants})
+              </h3>
+              <span className="text-xs text-primary hover:underline font-medium">View All</span>
+            </div>
+            
             <div className="flex items-center -space-x-2">
-              {Array.from({ length: Math.min(currentParticipants, 7) }).map((_, i) => (
-                <div
-                  key={i}
-                  className="gradient-primary flex h-9 w-9 items-center justify-center rounded-full border-2 border-card text-[10px] font-bold text-white"
-                >
-                  P{i + 1}
+              {participantsList ? (
+                participantsList.slice(0, 7).map((user: any) => (
+                  <div
+                    key={user.id}
+                    className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-card gradient-primary text-[10px] font-bold text-white shadow-sm"
+                  >
+                    {user.profilePicture && (user.profilePicture.startsWith("/") || user.profilePicture.startsWith("http")) ? (
+                      <Image
+                        src={user.profilePicture}
+                        alt={user.username}
+                        fill
+                        className="object-cover"
+                        sizes="36px"
+                      />
+                    ) : (
+                      <span>{user.username?.slice(0, 2).toUpperCase() || "U"}</span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                Array.from({ length: Math.min(currentParticipants, 7) }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="gradient-primary flex h-9 w-9 items-center justify-center rounded-full border-2 border-card text-[10px] font-bold text-white"
+                  >
+                    P{i + 1}
+                  </div>
+                ))
+              )}
+
+              {currentParticipants > 7 && (
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium text-muted-foreground z-10">
+                  +{currentParticipants - 7}
                 </div>
-              ))}
-              {spotsLeft > 0 && (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-medium text-muted-foreground">
-                  +{spotsLeft}
-                </div>
+              )}
+              {currentParticipants === 0 && (
+                <span className="text-xs text-muted-foreground ml-3">Be the first to join!</span>
               )}
             </div>
           </div>
@@ -299,18 +440,32 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
                 <span className="font-medium text-foreground">{spotsLeft} spots</span>
               </div>
             </div>
+            {hasJoinedOrRegistered ? (
+              <button
+                type="button"
+                onClick={() => setShowTicket(true)}
+                className="mb-3 w-full rounded-xl border-2 border-primary bg-primary/10 py-3 text-sm font-bold text-primary transition-opacity hover:opacity-90"
+              >
+                View My Ticket
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleJoinActivity}
+                disabled={joining || isFull}
+                className="gradient-primary mb-3 w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {joining ? "Joining..." : isFull ? "Activity Full" : "Join Activity"}
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setShowTicket(true)}
-              className="gradient-primary mb-3 w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+              onClick={handleMessageOrganizer}
+              disabled={messagingOrganizer || !currentUser}
+              className="w-full rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Join Activity
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
-            >
-              Message Organizer
+              {messagingOrganizer && <Loader2 className="h-4 w-4 animate-spin" />}
+              {messagingOrganizer ? "Opening chat..." : "Message Organizer"}
             </button>
           </div>
         </div>
@@ -320,13 +475,23 @@ export function ActivityDetailPage({ activityId, onNavigate }: ActivityDetailPag
         isOpen={showTicket}
         onClose={() => setShowTicket(false)}
         activityId={activity.id}
-        userId={"user"}
+        userId={currentUser?.id || "user"}
         activityTitle={title}
         activityDate={date}
         activityTime={time}
         location={location}
-        userName={"User"}
+        userName={currentUser ? `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || "User" : "User"}
+        ticketCode={ticketCode}
+      />
+
+      <ParticipantsModal
+        activityId={activity.id}
+        isOpen={showParticipantsModal}
+        setIsOpen={setShowParticipantsModal}
+        currentParticipants={currentParticipants}
+        maxParticipants={maxParticipants}
       />
     </div>
   )
 }
+

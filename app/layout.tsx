@@ -1,7 +1,7 @@
 import React from "react"
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
-import { Toaster } from "sonner"
+import { Toaster } from "@/components/ui/sonner"
 
 import './globals.css'
 
@@ -27,7 +27,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         {children}
-        <Toaster position="top-right" richColors />
+        <Toaster />
       </body>
     </html>
   )

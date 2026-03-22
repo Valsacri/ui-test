@@ -154,6 +154,19 @@ export function NotificationsPage() {
       }
       return
     }
+    // Activity booking — navigate to activity detail page
+    if (notif.referenceType?.toUpperCase() === "ACTIVITY" && notif.referenceId) {
+      navigate("activity-detail", notif.referenceId)
+      if (!notif.read) {
+        mutateNotifications(
+          notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
+          false
+        )
+        onUnreadNotificationsChange?.((prev) => Math.max(0, prev - 1))
+        notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
+      }
+      return
+    }
     // "Replied to your story" — open story reply modal (preview + message bubble)
     const replyStoryId = notif.referenceId
     const replySenderId = notif.senderId
@@ -304,9 +317,10 @@ export function NotificationsPage() {
             const Icon = typeIcons[notif.type] || Bell
             const iconColor = typeColors[notif.type] || "text-muted-foreground"
             const hasPost = notif.postId ?? (notif.referenceType?.toLowerCase() === "post" && notif.referenceId)
+            const hasActivity = notif.referenceType?.toUpperCase() === "ACTIVITY" && notif.referenceId
             const hasStoryReply = notif.referenceType?.toUpperCase() === "STORY_REPLY" && notif.referenceId && notif.senderId
             const hasStory = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
-            const isClickable = hasPost || hasStoryReply || hasStory
+            const isClickable = hasPost || hasActivity || hasStoryReply || hasStory
             return (
               <div
                 key={notif.id}

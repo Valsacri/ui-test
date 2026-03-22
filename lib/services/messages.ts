@@ -18,9 +18,9 @@ export const messagesService = {
         return response.data;
     },
 
-    /** Get or create a 1:1 conversation with another user. Returns conversation (includes id). */
-    getOrCreateConversationWith: async (otherUserId: string) => {
-        const response = await apiClient.get(`/v1/conversations/with/${otherUserId}`);
+    /** Create a 1:1 conversation with another user using a strictly typed command. Returns conversation (includes id). */
+    createDirectConversation: async (command: { targetUserId: string }) => {
+        const response = await apiClient.post('/v1/conversations/direct-conversation', command);
         return response.data as { id: string };
     },
 

@@ -48,6 +48,18 @@ const ERROR_KEY_MESSAGES: Record<string, string> = {
     // Validation errors
     'command.invalid.args': 'Please check your input and try again.',
 
+    // Ticket & Check-in errors
+    'ticket.invalid': 'The scanned ticket code is invalid or not found.',
+    'ticket.not.confirmed': 'This ticket is not confirmed and cannot be used for check-in.',
+    'ticket.already.checked.in': 'This ticket has already been used for check-in.',
+
+    // Activity / Booking errors
+    'activity.not.found': 'The requested activity could not be found.',
+    'attendance.already.registered': 'You have already joined this activity.',
+    'activity.full': 'This activity is full. No more spots are available.',
+    'booking.not.found': 'Booking not found.',
+    'booking.not.pending.approval': 'This booking is not currently pending approval.',
+
     // Generic
     'error.unexpected': 'Something went wrong. Please try again later.',
 };

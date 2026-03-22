@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { useExplore } from "@/hooks/use-explore"
 import { activitiesService } from "@/lib/services/activities"
 import { authService } from "@/lib/services/auth"
+import { getApiErrorMessage } from "@/lib/api-errors"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
@@ -267,11 +268,11 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
                     onJoin={async (id) => {
                       setJoinedRecommendations((prev) => [...prev, id])
                       try {
-                        const user = authService.getCurrentUser()
-                        if (user?.id) await activitiesService.joinActivity(id, user.id)
-                      } catch {
+                        await activitiesService.bookActivity(id)
+                        toast.success("You're in! 🎉 Check your tickets.")
+                      } catch (err: any) {
                         setJoinedRecommendations((prev) => prev.filter((x) => x !== id))
-                        toast.error("Failed to join activity")
+                        toast.error(getApiErrorMessage(err, "Failed to join activity"))
                       }
                     }}
                   />

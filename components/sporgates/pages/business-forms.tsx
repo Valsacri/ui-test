@@ -47,6 +47,7 @@ import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporg
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { getApiErrorMessage } from "@/lib/api-errors"
 import { activitiesService } from "@/lib/services/activities"
 import { businessesService } from "@/lib/services/businesses"
 import { facilitiesService } from "@/lib/services/facilities"
@@ -2262,6 +2263,18 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
     setCoverFile(file)
   }
 
+  // Error key to user-friendly message mapping
+  const errorKeyMessages: Record<string, string> = {
+    "business.name.exists": "A business with this name already exists",
+    "business.username.exists": "This business username is already taken",
+    "business.email.exists": "A business with this email already exists",
+    "validation.error": "Please fill in all required fields",
+    "user.not.found": "User account not found. Please log in again",
+    "file.storage.failed": "Failed to upload images. Please try again",
+  }
+
+  const { addBusiness } = useBusinessContext()
+
   const handleCreateBusiness = async () => {
     if (!formData.name.trim()) { setError("Business name is required"); toast.error("Business name is required"); return }
     if (!formData.email.trim()) { setError("Email is required"); toast.error("Email is required"); return }
@@ -2270,21 +2283,37 @@ export function CreateBusinessPage({ onNavigate }: BusinessFormPageProps) {
     try {
       const username = formData.name.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 30)
 
-      await businessesService.create({
+      const created = await businessesService.create({
         name: formData.name,
         username,
         bio: formData.description,
-        address: formData.location, // Map location to address
+        address: formData.location,
         phoneNumber: formData.phone,
         email: formData.email,
         website: formData.website,
         type: formData.type,
       }, avatarFile, coverFile)
 
+      // Push the new business into context so topbar dropdown updates instantly
+      if (created && created.id) {
+        addBusiness({
+          id: created.id,
+          name: created.name || formData.name,
+          type: created.bio || formData.description || "Business",
+          avatar: created.avatar || undefined,
+          location: [created.city, created.state].filter(Boolean).join(", ") || created.address || formData.location || "",
+          rating: 0,
+          followers: 0,
+        })
+      }
+
       onNavigate("business-dashboard")
       toast.success("Business created successfully!")
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create business"
+    } catch (err: any) {
+      // Extract error key from backend structured response
+      const errorKey = err?.response?.data?.key
+      const msg = (errorKey && errorKeyMessages[errorKey])
+        || (err instanceof Error ? err.message : "Failed to create business")
       setError(msg)
       toast.error(msg)
     } finally {
@@ -2696,7 +2725,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
         }
       } catch (err: any) {
         if (!cancelled) {
-          const msg = err?.response?.data?.message || err?.message || "Unknown error"
+          const msg = getApiErrorMessage(err, "Unknown error")
           console.error("Failed to load resource:", err)
           setError(`Failed to load resource: ${msg}`)
         }

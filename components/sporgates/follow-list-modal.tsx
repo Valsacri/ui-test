@@ -96,7 +96,7 @@ export function FollowListModal({
         if (messagingUserId) return
         setMessagingUserId(targetUserId)
         try {
-            const conv = await messagesService.getOrCreateConversationWith(targetUserId)
+            const conv = await messagesService.createDirectConversation({ targetUserId })
             onOpenChange(false)
             onNavigate("conversation", conv.id)
         } catch {

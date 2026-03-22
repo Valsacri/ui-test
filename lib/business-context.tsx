@@ -23,6 +23,7 @@ interface BusinessContextType {
     switchBusiness: (bizId: string) => void
     switchToUser: () => void
     createNewBusiness: () => void
+    addBusiness: (business: BusinessItem) => void
 }
 
 const BusinessContext = createContext<BusinessContextType | null>(null)
@@ -85,6 +86,12 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         router.push("/business/onboarding")
     }, [router])
 
+    const addBusiness = useCallback((business: BusinessItem) => {
+        setBusinesses(prev => [business, ...prev.filter(b => b.id !== business.id)])
+        setActiveBusinessId(business.id)
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_BUSINESS_ID, business.id)
+    }, [])
+
     return (
         <BusinessContext.Provider
             value={{
@@ -94,6 +101,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
                 switchBusiness,
                 switchToUser,
                 createNewBusiness,
+                addBusiness,
             }}
         >
             {children}

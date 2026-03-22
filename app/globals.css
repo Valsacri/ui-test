@@ -140,3 +140,50 @@
 .animate-landing-motion-line {
   animation: landing-motion-line 2.5s ease-out forwards;
 }
+
+/* ===== Premium Toast Styles ===== */
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-sonner-toaster] [data-sonner-toast]:hover {
+  transform: scale(1.01);
+}
+
+/* Subtle progress bar at the bottom of each toast */
+[data-sonner-toaster] [data-sonner-toast]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 0 0 1rem 1rem;
+  background: currentColor;
+  opacity: 0.15;
+  animation: toast-progress 4s linear forwards;
+  pointer-events: none;
+}
+
+/* Type-specific progress bar colors */
+[data-sonner-toaster] [data-sonner-toast][data-type="success"]::after {
+  background: #10b981;
+  opacity: 0.3;
+}
+[data-sonner-toaster] [data-sonner-toast][data-type="error"]::after {
+  background: #ef4444;
+  opacity: 0.3;
+}
+[data-sonner-toaster] [data-sonner-toast][data-type="warning"]::after {
+  background: #f59e0b;
+  opacity: 0.3;
+}
+[data-sonner-toaster] [data-sonner-toast][data-type="info"]::after {
+  background: #0ea5e9;
+  opacity: 0.3;
+}
+

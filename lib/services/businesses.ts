@@ -77,6 +77,11 @@ export const businessesService = {
         await apiClient.delete(`/v1/businesses/${businessId}/follow`);
     },
 
+    checkFollowStatus: async (businessId: string) => {
+        const response = await apiClient.get(`/v1/businesses/${businessId}/follow/status`);
+        return response.data;
+    },
+
     uploadAvatar: async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);

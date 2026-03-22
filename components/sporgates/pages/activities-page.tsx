@@ -4,6 +4,8 @@ import { useMemo, useState } from "react"
 import useSWR from "swr"
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
 import { fetcher } from "@/lib/fetcher"
+import { authService } from "@/lib/services/auth"
+import { activitiesService } from "@/lib/services/activities"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ActivitiesFilterSidebar } from "@/components/sporgates/filters/activities-filter-sidebar"
 import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
@@ -36,6 +38,19 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
     dedupingInterval: 10000,
   })
 
+  // Fetch user participations
+  const currentUser = authService.getCurrentUser()
+  const { data: userParticipations } = useSWR(
+    currentUser?.id ? `/v1/activities/user/${currentUser.id}/participants` : null,
+    () => activitiesService.getUserParticipations(currentUser!.id),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+
+  const joinedActivityIds = useMemo(() => {
+    if (!Array.isArray(userParticipations)) return new Set<string>()
+    return new Set(userParticipations.map((a: any) => a.id))
+  }, [userParticipations])
+
   // Map API data to card format (memoized for performance)
   const activities = useMemo(() => {
     if (!Array.isArray(rawActivities)) return []
@@ -63,10 +78,11 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
         reviews: a.reviewCount || 0,
         organizer: a.organizerName || "Organizer",
         organizerAvatar: a.organizerAvatar || "",
-        tags: a.tags || []
+        tags: a.tags || [],
+        isJoined: joinedActivityIds.has(a.id)
       }
     })
-  }, [rawActivities])
+  }, [rawActivities, joinedActivityIds])
 
   const filteredActivities = useMemo(() => {
     const today = new Date()

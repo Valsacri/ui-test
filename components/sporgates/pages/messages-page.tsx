@@ -333,7 +333,7 @@ export function MessagesPage({ onNavigate }: MessagesPageProps) {
     if (!currentUser?.id || openingChatWithId) return
     setOpeningChatWithId(userId)
     try {
-      const conv = await messagesService.getOrCreateConversationWith(userId)
+      const conv = await messagesService.createDirectConversation({ targetUserId: userId })
       setSelectedConvo(conv.id)
       await refetchConversations()
       refetchUnreadMessagesCount?.()

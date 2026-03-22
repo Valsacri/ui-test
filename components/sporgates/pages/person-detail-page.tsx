@@ -248,7 +248,7 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
                 type="button"
                 onClick={async () => {
                   try {
-                    const conv = await messagesService.getOrCreateConversationWith(personId)
+                    const conv = await messagesService.createDirectConversation({ targetUserId: personId })
                     onNavigate("conversation", conv.id)
                   } catch {
                     toast.error("Could not start conversation")

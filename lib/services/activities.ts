@@ -41,13 +41,23 @@ export const activitiesService = {
         return response.data;
     },
 
+    checkAttendanceStatus: async (activityId: string) => {
+        const response = await apiClient.get(`/v1/attendance/activity/${activityId}/status`);
+        return response.data;
+    },
+
     getByOrganizer: async (organizerId: string) => {
         const response = await apiClient.get(`/v1/activities/organizer/${organizerId}`);
         return response.data;
     },
 
     getUserParticipations: async (userId: string) => {
-        const response = await apiClient.get(`/v1/activities/user/${userId}/participations`);
+        const response = await apiClient.get(`/v1/activities/user/${userId}/participants`);
+        return response.data;
+    },
+
+    getActivityParticipants: async (activityId: string) => {
+        const response = await apiClient.get(`/v1/activities/${activityId}/participants`);
         return response.data;
     },
 

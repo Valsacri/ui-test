@@ -1,7 +1,9 @@
 "use client"
 
 import Image from "next/image"
-import { Calendar, MapPin, Star, Users, Clock } from "lucide-react"
+import { Calendar, MapPin, Star, Users, Clock, Loader2 } from "lucide-react"
+import { useState } from "react"
+import { ParticipantsModal } from "@/components/sporgates/activities/participants-modal"
 
 interface ActivityCardProps {
   activity: {
@@ -21,12 +23,23 @@ interface ActivityCardProps {
     organizer: string
     organizerAvatar: string
     tags: string[]
+    isJoined?: boolean
   }
   onClick?: () => void
 }
 
 export function ActivityCard({ activity, onClick }: ActivityCardProps) {
+  const [showParticipants, setShowParticipants] = useState(false)
+  
+  const currentParticipants = activity.totalSpots - activity.spots
+
+  const handleParticipantsClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowParticipants(true)
+  }
+
   return (
+    <>
     <button
       type="button"
       onClick={onClick}
@@ -49,9 +62,18 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
             </span>
           ))}
         </div>
-        <div className="absolute right-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-bold text-secondary backdrop-blur-sm">
+        <div className="absolute right-3 top-3 rounded-full bg-card/90 px-2.5 py-1 text-xs font-bold text-secondary backdrop-blur-sm shadow-sm">
           {activity.price === 0 ? "Free" : `${activity.currency}${activity.price}`}
         </div>
+        
+        {activity.isJoined && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-primary/95 px-3 py-1 text-xs font-bold text-white shadow-md backdrop-blur-md">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Joined
+          </div>
+        )}
       </div>
       <div className="p-4">
         <div className="mb-1 flex items-center gap-2">
@@ -95,13 +117,26 @@ export function ActivityCard({ activity, onClick }: ActivityCardProps) {
             </div>
             <span className="text-xs text-muted-foreground">{activity.organizer}</span>
           </div>
-          <div className="flex items-center gap-1 text-xs">
+          <div 
+            className="flex items-center gap-1 text-xs hover:bg-primary/5 p-1 rounded transition-colors"
+            onClick={handleParticipantsClick}
+          >
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium text-primary">{activity.spots}</span>
-            <span className="text-muted-foreground">left</span>
+            <span className="font-medium text-primary hover:underline cursor-pointer">
+              Participants ({currentParticipants}/{activity.totalSpots})
+            </span>
           </div>
         </div>
       </div>
     </button>
+
+    <ParticipantsModal 
+      activityId={activity.id} 
+      isOpen={showParticipants} 
+      setIsOpen={setShowParticipants} 
+      currentParticipants={currentParticipants} 
+      maxParticipants={activity.totalSpots} 
+    />
+    </>
   )
 }
