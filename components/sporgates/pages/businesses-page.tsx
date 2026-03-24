@@ -38,11 +38,9 @@ export function BusinessesPage({ onNavigate }: BusinessesPageProps) {
       location: [b.city, b.state].filter(Boolean).join(", ") || b.address || "—",
       rating: b.rating || 0,
       reviews: b.reviews || 0,
-      image: b.cover
-        ? (b.cover.startsWith("/") ? `${apiUrl}${b.cover}` : b.cover)
-        : b.avatar
-          ? (b.avatar.startsWith("/") ? `${apiUrl}${b.avatar}` : b.avatar)
-          : "",
+      image: b.avatar
+        ? (b.avatar.startsWith("/") ? `${apiUrl}${b.avatar}` : b.avatar)
+        : "",
       followers: b.followersCount ?? b.followers ?? 0,
       activities: b.activities || 0,
       verified: !!b.verifiedAt,

@@ -6,6 +6,7 @@ import {
   Plus,
   Search,
   MoreHorizontal,
+  Play,
   TrendingUp,
   Users,
   CalendarDays,
@@ -20,6 +21,8 @@ import {
   Eye,
   Edit3,
   Clock,
+  Pause,
+  Archive,
 } from "lucide-react"
 
 import type { PageRoute } from "@/lib/navigation"
@@ -36,6 +39,7 @@ import { marketplaceService } from "@/lib/services/marketplace"
 import { servicesService } from "@/lib/services/services"
 import { activitiesService } from "@/lib/services/activities"
 import { businessesService } from "@/lib/services/businesses"
+import { campaignsService } from "@/lib/services/campaigns"
 import { useBusinessContext } from "@/lib/business-context"
 import { toast } from "sonner"
 import {
@@ -1021,12 +1025,89 @@ export function BusinessAnalyticsPage({ onNavigate }: BusinessSubPageProps) {
 
 export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false)
-  const [campaigns, setCampaigns] = useState([
-    { name: "Summer Sports Fest", status: "active", reach: 4500, conversions: 234, budget: 500, spent: 320 },
-    { name: "New Member Discount", status: "active", reach: 2800, conversions: 156, budget: 300, spent: 180 },
-    { name: "Team Building Promo", status: "ended", reach: 1900, conversions: 89, budget: 200, spent: 200 },
-    { name: "Holiday Special", status: "draft", reach: 0, conversions: 0, budget: 400, spent: 0 },
-  ])
+  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null)
+  const [timeWindowDays, setTimeWindowDays] = useState<7 | 14 | 30>(30)
+  const { activeBusinessId } = useBusinessContext()
+  const { data: campaigns = [], isLoading: campaignsLoading, mutate } = useSWR(
+    activeBusinessId ? `/business/${activeBusinessId}/campaigns` : null,
+    async () => campaignsService.list(activeBusinessId!),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
+  )
+  const { data: activeCampaignDetails } = useSWR(
+    activeBusinessId && activeCampaignId ? `/business/${activeBusinessId}/campaigns/${activeCampaignId}?window=${timeWindowDays}` : null,
+    async () => campaignsService.getById(activeBusinessId!, activeCampaignId!, timeWindowDays),
+    { revalidateOnFocus: false, dedupingInterval: 5000 }
+  )
+
+  const getStatusClass = (status: string) => {
+    if (status === "ACTIVE") return "bg-green-100 text-green-700"
+    if (status === "LEARNING" || status === "LEARNING_LIMITED") return "bg-blue-100 text-blue-700"
+    if (status === "ENDED" || status === "ARCHIVED") return "bg-muted text-muted-foreground"
+    if (status === "PAUSED") return "bg-orange-100 text-orange-700"
+    return "bg-yellow-100 text-yellow-700"
+  }
+  const getStatusGuidance = (status: string) => {
+    if (status === "READY") return "Ready to launch. Validate targeting and budget pacing before going live."
+    if (status === "LEARNING") return "In learning phase. Avoid significant edits for at least 3 snapshots."
+    if (status === "LEARNING_LIMITED") return "Learning is constrained. Refresh creatives or widen audience."
+    if (status === "ACTIVE") return "Running normally. Monitor KPI health and scale winning creatives."
+    if (status === "PAUSED") return "Paused. Resume when creative, audience, and budget are re-aligned."
+    if (status === "ARCHIVED") return "Archived. Historical reporting only."
+    if (status === "ENDED") return "Completed campaign window."
+    return "Draft setup in progress."
+  }
+  const getHealthClass = (health?: string) => {
+    if (health === "ON_TRACK") return "bg-emerald-100 text-emerald-700"
+    if (health === "UNDERPERFORMING") return "bg-red-100 text-red-700"
+    if (health === "NEEDS_CREATIVE_REFRESH") return "bg-blue-100 text-blue-700"
+    return "bg-muted text-muted-foreground"
+  }
+  const totals = campaigns.reduce(
+    (acc, campaign) => {
+      acc.budget += campaign.budgetAmount || 0
+      acc.spent += campaign.spent || 0
+      acc.reach += campaign.reach || 0
+      acc.conversions += campaign.conversions || 0
+      return acc
+    },
+    { budget: 0, spent: 0, reach: 0, conversions: 0 }
+  )
+
+  const handleLaunchCampaign = async (campaignId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.launch(activeBusinessId, campaignId)
+      await mutate()
+      toast.success("Campaign launched")
+    } catch (error) {
+      console.error("Failed to launch campaign", error)
+      toast.error("Failed to launch campaign")
+    }
+  }
+
+  const handlePauseCampaign = async (campaignId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.pause(activeBusinessId, campaignId)
+      await mutate()
+      toast.success("Campaign paused")
+    } catch (error) {
+      console.error("Failed to pause campaign", error)
+      toast.error("Failed to pause campaign")
+    }
+  }
+
+  const handleArchiveCampaign = async (campaignId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.archive(activeBusinessId, campaignId)
+      await mutate()
+      toast.success("Campaign archived")
+    } catch (error) {
+      console.error("Failed to archive campaign", error)
+      toast.error("Failed to archive campaign")
+    }
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -1045,10 +1126,42 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
         </button>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-[11px] text-muted-foreground">Total Budget</p>
+          <p className="mt-1 text-xl font-bold text-foreground">${totals.budget.toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-[11px] text-muted-foreground">Spent</p>
+          <p className="mt-1 text-xl font-bold text-foreground">${totals.spent.toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-[11px] text-muted-foreground">Reach</p>
+          <p className="mt-1 text-xl font-bold text-foreground">{totals.reach.toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-[11px] text-muted-foreground">Conversions</p>
+          <p className="mt-1 text-xl font-bold text-foreground">{totals.conversions.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {campaignsLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
+      {!campaignsLoading && campaigns.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-sm text-muted-foreground">No campaigns yet. Create your first campaign to get started.</p>
+        </div>
+      )}
+
+      {!campaignsLoading && campaigns.length > 0 && (
       <div className="space-y-3">
         {campaigns.map((campaign) => (
           <div
-            key={campaign.name}
+            key={campaign.id}
             className="rounded-2xl border border-border bg-card p-5 shadow-sm"
           >
             <div className="flex items-center justify-between">
@@ -1061,12 +1174,10 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                      campaign.status === "active" && "bg-green-100 text-green-700",
-                      campaign.status === "ended" && "bg-muted text-muted-foreground",
-                      campaign.status === "draft" && "bg-yellow-100 text-yellow-700"
+                      getStatusClass(campaign.status)
                     )}
                   >
-                    {campaign.status}
+                    {campaign.status.toLowerCase()}
                   </span>
                 </div>
               </div>
@@ -1085,42 +1196,185 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground">Budget</p>
-                <p className="text-sm font-bold text-foreground">${campaign.budget}</p>
+                <p className="text-sm font-bold text-foreground">${campaign.budgetAmount}</p>
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground">Spent</p>
                 <p className="text-sm font-bold text-foreground">${campaign.spent}</p>
               </div>
             </div>
-            {campaign.budget > 0 && (
+            <p className="mt-3 text-xs text-muted-foreground">{getStatusGuidance(campaign.status)}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", getHealthClass((campaign as { performance?: { health?: string } }).performance?.health))}>
+                {((campaign as { performance?: { health?: string } }).performance?.health || "UNKNOWN").toLowerCase().replaceAll("_", " ")}
+              </span>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                Next: {campaign.status === "READY" ? "launch" : campaign.status === "LEARNING" ? "stabilize" : campaign.status === "ACTIVE" ? "optimize" : "review"}
+              </span>
+            </div>
+            {campaign.budgetAmount > 0 && (
               <div className="mt-3">
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="gradient-secondary h-full rounded-full"
-                    style={{ width: `${(campaign.spent / campaign.budget) * 100}%` }}
+                    style={{ width: `${Math.min(100, (campaign.spent / campaign.budgetAmount) * 100)}%` }}
                   />
                 </div>
+              </div>
+            )}
+            {campaign.status === "READY" && (
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleLaunchCampaign(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                  Launch Campaign
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveCampaignId(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  KPI Review
+                </button>
+              </div>
+            )}
+            {(campaign.status === "LEARNING" || campaign.status === "ACTIVE" || campaign.status === "LEARNING_LIMITED") && (
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveCampaignId(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Monitor KPIs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePauseCampaign(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <Pause className="h-3.5 w-3.5" />
+                  Pause
+                </button>
+              </div>
+            )}
+            {(campaign.status === "PAUSED" || campaign.status === "ENDED") && (
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                {campaign.status === "PAUSED" && (
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchCampaign(campaign.id)}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    Resume
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleArchiveCampaign(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                  Archive
+                </button>
               </div>
             )}
           </div>
         ))}
       </div>
+      )}
+
+      {activeCampaignDetails && (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">KPI Health</p>
+              <p className="text-xs text-muted-foreground">{activeCampaignDetails.name}</p>
+            </div>
+            <div className="flex items-center gap-1 rounded-lg border border-border p-1">
+              {[7, 14, 30].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setTimeWindowDays(days as 7 | 14 | 30)}
+                  className={cn(
+                    "rounded-md px-2 py-1 text-[10px] font-semibold",
+                    timeWindowDays === days ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {days}d
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="rounded-xl border border-border bg-background p-3">
+              <p className="text-[10px] text-muted-foreground">CTR</p>
+              <p className="text-sm font-bold text-foreground">{(((activeCampaignDetails.performance.clickThroughRate || 0) * 100)).toFixed(2)}%</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background p-3">
+              <p className="text-[10px] text-muted-foreground">CPC</p>
+              <p className="text-sm font-bold text-foreground">${(activeCampaignDetails.performance.costPerClick || 0).toFixed(2)}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background p-3">
+              <p className="text-[10px] text-muted-foreground">CPA</p>
+              <p className="text-sm font-bold text-foreground">${(activeCampaignDetails.performance.costPerConversion || 0).toFixed(2)}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background p-3">
+              <p className="text-[10px] text-muted-foreground">ROAS</p>
+              <p className="text-sm font-bold text-foreground">{(activeCampaignDetails.performance.roas || 0).toFixed(2)}x</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", getHealthClass(activeCampaignDetails.performance.health))}>
+              {(activeCampaignDetails.performance.health || "UNKNOWN").toLowerCase().replaceAll("_", " ")}
+            </span>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+              {activeCampaignDetails.adNetworkSync?.syncStatus || "NOT_CONNECTED"}
+            </span>
+            {activeCampaignDetails.significantEditCount >= 3 && (
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                Learning reset risk high
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       <AddCampaignModal
         isOpen={isAddCampaignOpen}
+        businessId={activeBusinessId || undefined}
         onClose={() => setIsAddCampaignOpen(false)}
-        onCreate={(campaign) => {
-          setCampaigns((prev) => [
-            {
+        onCreate={async (campaign) => {
+          if (!activeBusinessId) return
+          const endDate = new Date(campaign.startDate)
+          endDate.setDate(endDate.getDate() + campaign.duration)
+          try {
+            await campaignsService.create(activeBusinessId, {
               name: campaign.name,
-              status: "draft",
-              reach: 0,
-              conversions: 0,
-              budget: campaign.budget,
-              spent: 0,
-            },
-            ...prev,
-          ])
+              objective: campaign.objective,
+              budgetType: "LIFETIME",
+              budgetAmount: campaign.budget,
+              startDate: campaign.startDate,
+              endDate: endDate.toISOString().slice(0, 10),
+              location: campaign.location,
+              radiusMiles: campaign.radius,
+              ageMin: campaign.ageMin,
+              ageMax: campaign.ageMax,
+              gender: campaign.gender,
+              sports: campaign.sports,
+            })
+            await mutate()
+            toast.success("Campaign created successfully")
+          } catch (error) {
+            console.error("Failed to create campaign", error)
+            toast.error("Failed to create campaign")
+          }
         }}
       />
     </div>

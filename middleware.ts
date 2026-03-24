@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { AUTH_COOKIE_NAME, PUBLIC_ROUTES } from '@/lib/constants'
+import { APP_HOME_PATH, AUTH_COOKIE_NAME, PUBLIC_ROUTES } from '@/lib/constants'
 
 const LANDING_HOSTS = ['www.sporgates.com', 'sporgates.com']
 
@@ -34,14 +34,14 @@ export function middleware(request: NextRequest) {
             url.pathname = '/landing'
             return NextResponse.rewrite(url)
         }
-        // Logged in: fall through to (main)/page.tsx
+        return NextResponse.redirect(new URL(APP_HOME_PATH, request.url))
     }
 
     // If logged in and they hit /landing on app (or localhost), send to home
     if (isAppOrLocal && pathname === '/landing') {
         const authCookie = request.cookies.get(AUTH_COOKIE_NAME)
         if (authCookie?.value) {
-            return NextResponse.redirect(new URL('/', request.url))
+            return NextResponse.redirect(new URL(APP_HOME_PATH, request.url))
         }
     }
 

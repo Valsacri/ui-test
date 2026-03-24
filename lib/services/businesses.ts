@@ -1,4 +1,9 @@
 import apiClient from '../api';
+import {
+    AddOrganizerPortfolioLinksCommand,
+    AddOrganizerPortfolioTestimonialCommand,
+    CreateOrganizerPortfolioEventCommand
+} from '../types/organizer-portfolio';
 
 export const businessesService = {
     getAll: async () => {
@@ -56,6 +61,42 @@ export const businessesService = {
 
     getAnalytics: async (businessId: string) => {
         const response = await apiClient.get(`/v1/businesses/${businessId}/analytics`);
+        return response.data;
+    },
+
+    getPortfolio: async (businessId: string) => {
+        const response = await apiClient.get(`/v1/businesses/${businessId}/portfolio`);
+        return response.data;
+    },
+
+    createPortfolioEvent: async (businessId: string, data: CreateOrganizerPortfolioEventCommand) => {
+        const response = await apiClient.post(`/v1/businesses/${businessId}/portfolio/events`, data);
+        return response.data;
+    },
+
+    deletePortfolioEvent: async (businessId: string, eventId: string) => {
+        const response = await apiClient.delete(`/v1/businesses/${businessId}/portfolio/events/${eventId}`);
+        return response.data;
+    },
+
+    addPortfolioLinks: async (businessId: string, eventId: string, type: 'media' | 'social', data: AddOrganizerPortfolioLinksCommand) => {
+        const response = await apiClient.post(`/v1/businesses/${businessId}/portfolio/events/${eventId}/links?type=${type}`, data);
+        return response.data;
+    },
+
+    addPortfolioTestimonial: async (businessId: string, eventId: string, data: AddOrganizerPortfolioTestimonialCommand) => {
+        const response = await apiClient.post(`/v1/businesses/${businessId}/portfolio/events/${eventId}/testimonials`, data);
+        return response.data;
+    },
+
+    uploadPortfolioAssets: async (businessId: string, eventId: string, type: 'photo' | 'document', files: File[]) => {
+        const formData = new FormData();
+        for (const file of files) {
+            formData.append('files', file);
+        }
+        const response = await apiClient.post(`/v1/businesses/${businessId}/portfolio/events/${eventId}/assets?type=${type}`, formData, {
+            headers: { 'Content-Type': null },
+        });
         return response.data;
     },
 

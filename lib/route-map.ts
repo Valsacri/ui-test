@@ -10,7 +10,7 @@ import type { PageRoute } from "@/lib/navigation"
  */
 const routeMap: Record<PageRoute, string> = {
     // Main pages
-    home: "/",
+    home: "/home",
     explore: "/explore",
     activities: "/activities",
     "activity-detail": "/activities/[id]",
@@ -70,6 +70,7 @@ const routeMap: Record<PageRoute, string> = {
     "business-athletes": "/business/athletes",
     "business-jobs": "/business/jobs",
     "business-job-detail": "/business/jobs/[id]",
+    "business-portfolio": "/business/portfolio",
     "business-profile": "/business/profile",
     "business-onboarding": "/business/onboarding",
     "create-activity": "/business/create-activity",
@@ -106,6 +107,10 @@ const routeMap: Record<PageRoute, string> = {
  */
 export function getPath(page: PageRoute, detailId?: string): string {
     const template = routeMap[page] || "/"
+    if (page === "organizer-portfolio" && !detailId) {
+        // Portfolio route requires a business id; fall back to businesses list when missing.
+        return routeMap["businesses"]
+    }
     if (detailId && template.includes("[id]")) {
         return template.replace("[id]", detailId)
     }

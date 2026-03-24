@@ -1,23 +1,20 @@
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 
 /**
  * Base URL for "Open App", "Sign In", "Get Started" links on the landing page.
- * On localhost we use relative paths (same origin). Otherwise we point to app.sporgates.com.
+ *
+ * Defaults to same-origin (relative paths) so dev / qa / prod each keep auth on the
+ * current host (e.g. dev.sporgates.com → /signin on dev, not app.sporgates.com).
+ *
+ * Set NEXT_PUBLIC_APP_ORIGIN (e.g. https://app.sporgates.com) only if marketing and
+ * app are on different origins and you need absolute links.
  */
-export const APP_BASE_URL_PRODUCTION = "https://app.sporgates.com"
-
 export function getAppBaseUrl(): string {
-    if (typeof window === "undefined") return APP_BASE_URL_PRODUCTION
-    const host = window.location.hostname
-    if (host === "localhost" || host === "127.0.0.1") return ""
-    return APP_BASE_URL_PRODUCTION
+    const origin = process.env.NEXT_PUBLIC_APP_ORIGIN?.trim()
+    return origin ? origin.replace(/\/$/, "") : ""
 }
 
-/** Hook so links update after mount (localhost → relative paths). */
+/** Resolves app link base; same as getAppBaseUrl (kept for landing components). */
 export function useAppBaseUrl(): string {
-    const [base, setBase] = useState(APP_BASE_URL_PRODUCTION)
-    useEffect(() => {
-        setBase(getAppBaseUrl())
-    }, [])
-    return base
+    return useMemo(() => getAppBaseUrl(), [])
 }

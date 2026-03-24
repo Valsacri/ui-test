@@ -7,5 +7,5 @@ import { useAppRouter } from "@/lib/route-map"
 export default function PortfolioRoute() {
     const { id } = useParams<{ id: string }>()
     const { navigate } = useAppRouter()
-    return <OrganizerPortfolio onClose={() => navigate("business-detail", id)} />
+    return <OrganizerPortfolio businessId={id} canManage={false} onClose={() => navigate("business-detail", id)} />
 }

@@ -1,107 +1,44 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { BarChart3, Compass, Sparkles, Users, Wallet } from "lucide-react"
 
-const stats = [
-    { value: "10,000+", label: "Active players" },
-    { value: "50+", label: "Sports supported" },
-    { value: "500+", label: "Venues & facilities" },
-    { value: "95%", label: "Satisfaction rate" },
-]
-
-const avatars = [
-    { bg: "bg-[#003C66]", initials: "JM" },
-    { bg: "bg-[#005A99]", initials: "SK" },
-    { bg: "bg-[#FC8936]", initials: "AL" },
-    { bg: "bg-[#003C66]", initials: "TP" },
-    { bg: "bg-[#e67a2e]", initials: "RV" },
+const builtInFeatures = [
+    { icon: Sparkles, title: "AI Goal Tracking", desc: "Smart recommendations and personalized progress insights." },
+    { icon: Compass, title: "Nearby Discovery", desc: "Find activities, facilities, and events close to you." },
+    { icon: Users, title: "Sponsored Events", desc: "Connect businesses with athletes seamlessly." },
+    { icon: BarChart3, title: "Campaign Analytics", desc: "Real-time metrics and ROI tracking for sponsors." },
+    { icon: Users, title: "Squad System", desc: "Create teams, manage rosters, and compete together." },
+    { icon: Wallet, title: "Secure Payments", desc: "Built-in wallet for tickets, subscriptions, and more." },
 ]
 
 export function LandingSocialProof() {
-    const ref = useRef<HTMLDivElement>(null)
-    const [visible, setVisible] = useState(false)
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) setVisible(true)
-            },
-            { threshold: 0.2 }
-        )
-        if (ref.current) observer.observe(ref.current)
-        return () => observer.disconnect()
-    }, [])
-
     return (
-        <section className="border-y border-[#e2e8f0] bg-white py-24 lg:py-32" ref={ref}>
+        <section className="border-t border-[#e2e8f0] bg-white py-20 lg:py-24">
             <div className="mx-auto max-w-7xl px-4 sm:px-6">
-                <div className="mx-auto max-w-3xl text-center">
-                    <div
-                        className="mb-8 flex items-center justify-center"
-                        style={{
-                            opacity: visible ? 1 : 0,
-                            transform: visible ? "translateY(0)" : "translateY(20px)",
-                            transition: "opacity 0.6s ease, transform 0.6s ease",
-                        }}
-                    >
-                        <div className="flex -space-x-3">
-                            {avatars.map((a) => (
-                                <div
-                                    key={a.initials}
-                                    className={`${a.bg} flex h-11 w-11 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white`}
-                                >
-                                    {a.initials}
-                                </div>
-                            ))}
-                        </div>
-                        <span className="ml-4 text-sm text-[#475569]">
-                            & thousands more
-                        </span>
-                    </div>
-
-                    <h2
-                        className="text-balance text-3xl font-bold tracking-tight text-[#0f172a] sm:text-4xl"
-                        style={{
-                            opacity: visible ? 1 : 0,
-                            transform: visible ? "translateY(0)" : "translateY(20px)",
-                            transition: "opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s",
-                        }}
-                    >
-                        Join thousands of players and organizers already using Sporgates
+                <div className="mx-auto max-w-2xl text-center">
+                    <h2 className="text-3xl font-black tracking-tight text-[#0f172a] sm:text-4xl">
+                        Everything you need, built in
                     </h2>
-
-                    <p
-                        className="mt-4 text-lg leading-relaxed text-[#475569]"
-                        style={{
-                            opacity: visible ? 1 : 0,
-                            transform: visible ? "translateY(0)" : "translateY(20px)",
-                            transition: "opacity 0.6s ease 0.2s, transform 0.6s ease 0.2s",
-                        }}
-                    >
-                        From casual players to professional organizers, our community is
-                        growing every day. Be part of the movement.
+                    <p className="mt-3 text-[#64748b]">
+                        Powered by AI and designed for the modern sports ecosystem.
                     </p>
                 </div>
 
-                <div className="mt-16 grid grid-cols-2 gap-8 lg:grid-cols-4">
-                    {stats.map((stat, i) => (
-                        <div
-                            key={stat.label}
-                            className="text-center"
-                            style={{
-                                opacity: visible ? 1 : 0,
-                                transform: visible ? "translateY(0)" : "translateY(20px)",
-                                transition: `opacity 0.6s ease ${0.3 + i * 0.1}s, transform 0.6s ease ${0.3 + i * 0.1}s`,
-                            }}
-                        >
-                            <p className="text-4xl font-bold text-[#003C66] sm:text-5xl">
-                                {stat.value}
-                            </p>
-                            <p className="mt-2 text-sm font-medium text-[#64748b]">
-                                {stat.label}
-                            </p>
-                        </div>
-                    ))}
+                <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {builtInFeatures.map((feature) => {
+                        const Icon = feature.icon
+                        return (
+                            <div key={feature.title} className="flex gap-3 rounded-xl border border-[#e2e8f0] bg-white p-4">
+                                <div className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f1f5f9] text-[#003C66]">
+                                    <Icon className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold text-[#0f172a]">{feature.title}</h3>
+                                    <p className="mt-1 text-sm text-[#64748b]">{feature.desc}</p>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
         </section>

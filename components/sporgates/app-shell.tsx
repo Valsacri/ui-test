@@ -221,7 +221,28 @@ export function AppShell() {
       case "business-detail":
         return <BusinessDetailPage businessId={detailId || "1"} onNavigate={navigate} />
       case "organizer-portfolio":
-        return <OrganizerPortfolio onClose={() => navigate("business-detail", detailId || "1")} />
+        return (
+          <OrganizerPortfolio
+            businessId={detailId || activeBusinessId || "1"}
+            canManage={isBusinessMode}
+            onClose={() => navigate("business-detail", detailId || activeBusinessId || "1")}
+          />
+        )
+      case "business-portfolio":
+        if (!activeBusinessId) {
+          return (
+            <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+              Select a business profile first to manage organizer portfolio.
+            </div>
+          )
+        }
+        return (
+          <OrganizerPortfolio
+            businessId={activeBusinessId}
+            canManage={true}
+            onClose={() => navigate("business-dashboard")}
+          />
+        )
       case "jobs":
         return <JobsPage onNavigate={navigate} isBusinessMode={isBusinessMode} activeBusinessId={activeBusinessId} />
       case "messages":
@@ -378,7 +399,17 @@ export function AppShell() {
         {showSidebars && (
           <ExploreSidebar
             currentPage={currentPage}
-            onNavigate={navigate}
+            onNavigate={(page) => {
+              if (page === "business-portfolio") {
+                navigate("business-portfolio")
+                return
+              }
+              if (page === "organizer-portfolio" && isBusinessMode && activeBusinessId) {
+                navigate(page, activeBusinessId)
+                return
+              }
+              navigate(page)
+            }}
             isBusinessMode={isBusinessMode}
           />
         )}

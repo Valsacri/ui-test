@@ -1,11 +1,13 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Eye,
   EyeOff,
+  Github,
   ArrowLeft,
   Mail,
   Lock,
@@ -22,9 +24,10 @@ import {
   ChevronDown,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
+import { SporgatesLogoText } from "@/components/sporgates/sporgates-logo-text"
 import { cn } from "@/lib/utils"
 import { authService } from "@/lib/services"
-import { AUTH_COOKIE_NAME } from "@/lib/constants"
+import { APP_HOME_PATH, AUTH_COOKIE_NAME } from "@/lib/constants"
 import { userService } from "@/lib/services/user"
 import { sportService } from "@/lib/services/sport"
 import { getApiErrorMessage, isApiError } from "@/lib/api-errors"
@@ -133,9 +136,9 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     setLoading(true)
     try {
       await authService.login({ email: data.email, password: data.password })
-      // Redirect to callbackUrl (set by middleware) or home
+      // Redirect to callbackUrl (set by middleware) or app home
       const params = new URLSearchParams(window.location.search)
-      const callbackUrl = params.get('callbackUrl') || '/'
+      const callbackUrl = params.get('callbackUrl') || APP_HOME_PATH
       window.location.href = callbackUrl
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, "Login failed. Please try again."))
@@ -585,19 +588,19 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     }
 
     return (
-      <div className="flex min-h-[80vh] items-center justify-center">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg text-center">
-          <div className="gradient-secondary mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+      <div className="flex min-h-screen items-center justify-center bg-[#e5e7eb] px-4 py-8">
+        <div className="w-full max-w-xl rounded-3xl border border-[#d1d5db] bg-white p-7 text-center shadow-lg sm:p-8">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#FC8936]">
             <Mail className="h-8 w-8 text-white" />
           </div>
-          <h1 className="mb-2 text-xl font-bold text-foreground">Verify Your Email</h1>
-          <p className="mb-6 text-sm text-muted-foreground">
+          <h1 className="mb-2 text-3xl font-black text-[#003C66]">Verify Your Email</h1>
+          <p className="mx-auto mb-7 max-w-lg text-lg text-[#64748b]">
             We&apos;ve sent a 6-digit verification code to{" "}
-            {verifyEmail ? <span className="font-semibold text-foreground">{verifyEmail}</span> : "your email"}.
-            Enter the code below to verify your account.
+            {verifyEmail ? <span className="font-semibold text-[#003C66]">{verifyEmail}</span> : "your email"}.
+            {" "}Enter the code below to verify your account.
           </p>
 
-          <div className="flex justify-center gap-2 mb-6">
+          <div className="mb-8 flex justify-center gap-2 sm:gap-3">
             {verificationCode.map((digit, index) => (
               <input
                 key={index}
@@ -610,9 +613,9 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
                 onKeyDown={(e) => handleCodeKeyDown(index, e)}
                 onFocus={(e) => e.target.select()}
                 className={cn(
-                  "h-14 w-12 rounded-xl border-2 bg-muted text-center text-xl font-bold outline-none transition-all",
-                  "focus:border-primary focus:ring-2 focus:ring-primary/20",
-                  verifySuccess ? "border-green-500 text-green-600" : "border-border text-foreground",
+                  "h-14 w-12 rounded-xl border-2 bg-[#f8fafc] text-center text-xl font-bold outline-none transition-all sm:h-16 sm:w-14",
+                  "focus:border-[#003C66] focus:ring-2 focus:ring-[#003C66]/20",
+                  verifySuccess ? "border-green-500 text-green-600" : "border-[#d1d5db] text-[#0f172a]",
                   error && !digit ? "border-red-300" : ""
                 )}
               />
@@ -620,18 +623,18 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
           </div>
 
           {error && (
-            <p className="mb-4 text-xs text-red-500">{error}</p>
+            <p className="mb-4 text-sm text-red-500">{error}</p>
           )}
 
           {verifySuccess && (
-            <p className="mb-4 text-xs font-semibold text-green-600">Email verified successfully! Redirecting...</p>
+            <p className="mb-4 text-sm font-semibold text-green-600">Email verified successfully! Redirecting...</p>
           )}
 
           <button
             type="button"
             onClick={handleVerifyEmail}
             disabled={loading || verifySuccess || verificationCode.join("").length !== 6}
-            className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="w-full rounded-2xl bg-[#7aa0b8] py-3 text-lg font-bold text-white transition-colors hover:bg-[#688fa8] disabled:opacity-50"
           >
             {loading ? "Verifying..." : verifySuccess ? "Verified ✓" : "Verify Email"}
           </button>
@@ -640,7 +643,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             type="button"
             onClick={handleResendCode}
             disabled={resendCooldown > 0}
-            className="mt-3 w-full text-xs font-semibold text-secondary transition-colors hover:text-secondary/80 disabled:text-muted-foreground disabled:cursor-not-allowed"
+            className="mt-4 w-full text-base font-semibold text-[#FC8936] transition-colors hover:text-[#e67a2e] disabled:cursor-not-allowed disabled:text-[#94a3b8]"
           >
             {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend verification code"}
           </button>
@@ -894,191 +897,266 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   const isSignIn = page === "signin"
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lg">
-        <div className="mb-6 text-center">
-          <div className="gradient-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-lg font-bold text-white">
-            S
+    <div className="min-h-screen bg-[#e5e7eb]">
+      <div className="grid min-h-screen lg:grid-cols-[45%_55%]">
+        <div className="relative hidden min-h-screen overflow-hidden lg:flex lg:flex-col">
+          <div className="absolute inset-0" aria-hidden>
+            <Image
+              src="/images/auth-image.jpg"
+              alt=""
+              fill
+              className="object-cover object-center"
+              sizes="(max-width: 1024px) 0px, 45vw"
+              priority
+            />
+            <div className="absolute inset-0 bg-[#003C66]/80" />
           </div>
-          <h1 className="text-xl font-bold text-foreground">
-            {isSignIn ? "Welcome Back" : "Create Account"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {isSignIn
-              ? "Sign in to continue your sports journey"
-              : "Join the Sporgates community today"}
-          </p>
+          <div className="relative z-10 flex min-h-screen flex-col justify-between p-10 text-white">
+            <div>
+              <SporgatesLogoText variant="onDark" heightClass="h-8 sm:h-9" />
+              <h2 className="mt-14 text-5xl font-black leading-tight">
+                {isSignIn ? "Welcome back." : "Your sports journey starts here."}
+              </h2>
+              <p className="mt-4 max-w-md text-sm text-white/80">
+                {isSignIn
+                  ? "Pick up right where you left off. Your events, your community, your goals - all waiting for you."
+                  : "Join a growing community of athletes, organizers, and sponsors building the future of sports."}
+              </p>
+            </div>
+            {isSignIn ? (
+              <div className="max-w-md rounded-2xl bg-white/10 p-4 text-sm backdrop-blur-sm">
+                <p className="italic text-white/90">
+                  &quot;Sporgates has completely changed how I organize local running events.&quot;
+                </p>
+                <p className="mt-3 font-semibold">Maria Rodriguez</p>
+                <p className="text-xs text-white/70">Event Organizer</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xl font-black text-[#FC8936]">50K+ <span className="ml-2 text-sm font-normal text-white/80">Active athletes on the platform</span></p>
+                <p className="text-xl font-black text-[#FC8936]">2.5K <span className="ml-2 text-sm font-normal text-white/80">Events created every month</span></p>
+                <p className="text-xl font-black text-[#FC8936]">300+ <span className="ml-2 text-sm font-normal text-white/80">Sponsorship campaigns running</span></p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {isSignIn ? (
-          <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
-            <div>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  {...signInForm.register("email")}
-                  className={cn(
-                    "h-12 w-full rounded-full border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
-                    signInForm.formState.errors.email ? "border-red-400" : "border-border"
-                  )}
-                />
-              </div>
-              {signInForm.formState.errors.email && (
-                <p className="mt-1 pl-4 text-xs text-red-500">{signInForm.formState.errors.email.message}</p>
-              )}
+        <div className="flex items-center justify-center px-6 py-10 lg:px-12 xl:px-16">
+          <div className="w-full">
+            <div className="mb-4 flex justify-center lg:hidden">
+              <SporgatesLogoText heightClass="h-7" />
             </div>
-            <div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  {...signInForm.register("password")}
-                  className={cn(
-                    "h-12 w-full rounded-full border bg-muted pl-11 pr-11 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
-                    signInForm.formState.errors.password ? "border-red-400" : "border-border"
-                  )}
-                />
+            <button
+              type="button"
+              onClick={() => onNavigate("home")}
+              className="mb-6 text-xs font-medium text-[#64748b] transition-colors hover:text-[#003C66]"
+            >
+              ← Back to home
+            </button>
+
+            <div className="mx-auto mb-5 max-w-xl text-center">
+              <h1 className="text-3xl font-black text-[#0f172a]">
+                {isSignIn ? "Sign in to your account" : "Create your account"}
+              </h1>
+              <p className="mt-2 text-sm text-[#64748b]">
+                {isSignIn ? "Don't have an account?" : "Already have an account?"}{" "}
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => onNavigate(isSignIn ? "signup" : "signin")}
+                  className="font-semibold text-[#003C66] hover:underline"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {isSignIn ? "Create one" : "Sign in"}
                 </button>
-              </div>
-              {signInForm.formState.errors.password && (
-                <p className="mt-1 pl-4 text-xs text-red-500">{signInForm.formState.errors.password.message}</p>
-              )}
+              </p>
             </div>
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => onNavigate("forgot-password")}
-                className="text-xs font-semibold text-secondary transition-colors hover:text-secondary/80"
-              >
-                Forgot password?
+
+            <div className="mx-auto max-w-xl space-y-2">
+              <button type="button" className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-white py-2.5 text-sm font-medium text-[#0f172a]">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.3-1.6 3.9-5.4 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.5 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.9 9.1-9.3 0-.6-.1-1.1-.2-1.6H12z" />
+                </svg>
+                Continue with Google
+              </button>
+              <button type="button" className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-white py-2.5 text-sm font-medium text-[#0f172a]">
+                <Github className="h-4 w-4" />
+                Continue with GitHub
               </button>
             </div>
-            {error && (
-              <p className="text-xs text-red-500 text-center">{error}</p>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {loading ? "Please wait..." : "Sign In"}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
-            <div>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  {...signUpForm.register("fullName")}
-                  className={cn(
-                    "h-12 w-full rounded-full border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
-                    signUpForm.formState.errors.fullName ? "border-red-400" : "border-border"
-                  )}
-                />
-              </div>
-              {signUpForm.formState.errors.fullName && (
-                <p className="mt-1 pl-4 text-xs text-red-500">{signUpForm.formState.errors.fullName.message}</p>
-              )}
-            </div>
-            <div>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  {...signUpForm.register("email")}
-                  className={cn(
-                    "h-12 w-full rounded-full border bg-muted pl-11 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
-                    signUpForm.formState.errors.email ? "border-red-400" : "border-border"
-                  )}
-                />
-              </div>
-              {signUpForm.formState.errors.email && (
-                <p className="mt-1 pl-4 text-xs text-red-500">{signUpForm.formState.errors.email.message}</p>
-              )}
-            </div>
-            <div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  {...signUpForm.register("password")}
-                  className={cn(
-                    "h-12 w-full rounded-full border bg-muted pl-11 pr-11 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
-                    signUpForm.formState.errors.password ? "border-red-400" : "border-border"
-                  )}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {signUpForm.formState.errors.password && (
-                <p className="mt-1 pl-4 text-xs text-red-500">{signUpForm.formState.errors.password.message}</p>
-              )}
-            </div>
-            <div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm password"
-                  {...signUpForm.register("confirmPassword")}
-                  className={cn(
-                    "h-12 w-full rounded-full border bg-muted pl-11 pr-11 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary",
-                    signUpForm.formState.errors.confirmPassword ? "border-red-400" : "border-border"
-                  )}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {signUpForm.formState.errors.confirmPassword && (
-                <p className="mt-1 pl-4 text-xs text-red-500">{signUpForm.formState.errors.confirmPassword.message}</p>
-              )}
-            </div>
-            {error && (
-              <p className="text-xs text-red-500 text-center">{error}</p>
-            )}
-            <button
-              type="submit"
-              disabled={loading}
-              className="gradient-primary w-full rounded-full py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {loading ? "Please wait..." : "Create Account"}
-            </button>
-          </form>
-        )}
 
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          {isSignIn ? "Don't have an account? " : "Already have an account? "}
-          <button
-            type="button"
-            onClick={() => onNavigate(isSignIn ? "signup" : "signin")}
-            className="font-semibold text-primary transition-colors hover:text-primary/80"
-          >
-            {isSignIn ? "Sign Up" : "Sign In"}
-          </button>
+            <div className="mx-auto my-5 flex max-w-xl items-center gap-3">
+              <div className="h-px flex-1 bg-[#d1d5db]" />
+              <span className="text-xs text-[#94a3b8]">OR</span>
+              <div className="h-px flex-1 bg-[#d1d5db]" />
+            </div>
+
+            {isSignIn ? (
+            <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="mx-auto max-w-xl space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[#334155]">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    {...signInForm.register("email")}
+                    className={cn(
+                      "h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#003C66] focus:ring-2 focus:ring-[#003C66]/20",
+                      signInForm.formState.errors.email ? "border-red-400" : "border-[#e2e8f0]"
+                    )}
+                  />
+                </div>
+                {signInForm.formState.errors.email && (
+                  <p className="mt-1 pl-2 text-xs text-red-500">{signInForm.formState.errors.email.message}</p>
+                )}
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-sm font-medium text-[#334155]">Password</label>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("forgot-password")}
+                    className="text-xs font-semibold text-[#003C66] transition-colors hover:text-[#005A99]"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    {...signInForm.register("password")}
+                    className={cn(
+                      "h-12 w-full rounded-xl border bg-white pl-11 pr-11 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#003C66] focus:ring-2 focus:ring-[#003C66]/20",
+                      signInForm.formState.errors.password ? "border-red-400" : "border-[#e2e8f0]"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748b]"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {signInForm.formState.errors.password && (
+                  <p className="mt-1 pl-2 text-xs text-red-500">{signInForm.formState.errors.password.message}</p>
+                )}
+              </div>
+              {error && (
+                <p className="text-center text-xs text-red-500">{error}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-[#003C66] py-3 text-sm font-bold text-white transition-colors hover:bg-[#005A99] disabled:opacity-50"
+              >
+                {loading ? "Please wait..." : "Sign In"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="mx-auto max-w-xl space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[#334155]">Full name</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                  <input
+                    type="text"
+                    placeholder="Full name"
+                    {...signUpForm.register("fullName")}
+                    className={cn(
+                      "h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#003C66] focus:ring-2 focus:ring-[#003C66]/20",
+                      signUpForm.formState.errors.fullName ? "border-red-400" : "border-[#e2e8f0]"
+                    )}
+                  />
+                </div>
+                {signUpForm.formState.errors.fullName && (
+                  <p className="mt-1 pl-2 text-xs text-red-500">{signUpForm.formState.errors.fullName.message}</p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[#334155]">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    {...signUpForm.register("email")}
+                    className={cn(
+                      "h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#003C66] focus:ring-2 focus:ring-[#003C66]/20",
+                      signUpForm.formState.errors.email ? "border-red-400" : "border-[#e2e8f0]"
+                    )}
+                  />
+                </div>
+                {signUpForm.formState.errors.email && (
+                  <p className="mt-1 pl-2 text-xs text-red-500">{signUpForm.formState.errors.email.message}</p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-[#334155]">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    {...signUpForm.register("password")}
+                    className={cn(
+                      "h-12 w-full rounded-xl border bg-white pl-11 pr-11 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#003C66] focus:ring-2 focus:ring-[#003C66]/20",
+                      signUpForm.formState.errors.password ? "border-red-400" : "border-[#e2e8f0]"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748b]"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {signUpForm.formState.errors.password && (
+                  <p className="mt-1 pl-2 text-xs text-red-500">{signUpForm.formState.errors.password.message}</p>
+                )}
+              </div>
+              <div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748b]" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm password"
+                    {...signUpForm.register("confirmPassword")}
+                    className={cn(
+                      "h-12 w-full rounded-xl border bg-white pl-11 pr-11 text-sm text-[#0f172a] outline-none transition-colors focus:border-[#003C66] focus:ring-2 focus:ring-[#003C66]/20",
+                      signUpForm.formState.errors.confirmPassword ? "border-red-400" : "border-[#e2e8f0]"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#64748b]"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {signUpForm.formState.errors.confirmPassword && (
+                  <p className="mt-1 pl-2 text-xs text-red-500">{signUpForm.formState.errors.confirmPassword.message}</p>
+                )}
+              </div>
+              {error && (
+                <p className="text-center text-xs text-red-500">{error}</p>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-[#003C66] py-3 text-sm font-bold text-white transition-colors hover:bg-[#005A99] disabled:opacity-50"
+              >
+                {loading ? "Please wait..." : "Create Account"}
+              </button>
+              <p className="text-center text-xs text-[#64748b]">
+                By signing up, you agree to our <span className="font-semibold text-[#0f172a]">Terms of Service</span> and <span className="font-semibold text-[#0f172a]">Privacy Policy</span>
+              </p>
+            </form>
+          )}
+          </div>
         </div>
       </div>
     </div>

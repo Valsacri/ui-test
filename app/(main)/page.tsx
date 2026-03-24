@@ -1,7 +1,7 @@
-"use client"
+import { redirect } from "next/navigation"
+import { APP_HOME_PATH } from "@/lib/constants"
 
-import { HomePage } from "@/components/sporgates/pages/home-page"
-
-export default function HomeRoute() {
-    return <HomePage />
+/** `/` is rewritten to landing when logged out or redirected to `/home` when logged in; this is a fallback. */
+export default function RootRoute() {
+    redirect(APP_HOME_PATH)
 }

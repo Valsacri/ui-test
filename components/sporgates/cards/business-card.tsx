@@ -31,13 +31,13 @@ export function BusinessCard({ business, onClick }: BusinessCardProps) {
       onClick={onClick}
       className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-left shadow-sm transition-all hover:shadow-lg"
     >
-      <div className="relative h-36 overflow-hidden">
+      <div className="relative h-36 overflow-hidden bg-muted/30">
         {business.image ? (
           <Image
             src={business.image || "/placeholder.svg"}
             alt={business.name}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-contain p-3 transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="h-full w-full gradient-primary flex items-center justify-center">

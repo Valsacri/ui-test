@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import useSWR from "swr"
 import {
   Bell,
@@ -23,7 +23,6 @@ import { usePostModal } from "@/lib/post-modal-context"
 import { useStoryModal } from "@/lib/story-modal-context"
 import { useStoryReplyModal } from "@/lib/story-reply-modal-context"
 import { useNotificationCountUpdate } from "@/lib/notification-count-context"
-import { useNotificationStream } from "@/lib/hooks/use-notification-stream"
 import { useAppRouter } from "@/lib/route-map"
 
 interface Notification {
@@ -113,9 +112,7 @@ export function NotificationsPage() {
 
   const notifications: Notification[] = rawNotifications || []
 
-  // Live-refresh the list when a new SSE notification arrives
-  const handleSseNotification = useCallback(() => { mutateNotifications() }, [mutateNotifications])
-  useNotificationStream(user?.id ?? null, handleSseNotification)
+  // Live refresh: main layout subscribes to SSE once and calls swrMutate(`/notifications/user/:id`) — no duplicate stream here (avoids double sound + double handlers).
 
   const unreadCount = notifications.filter((n) => !n.read).length
   const displayedNotifications =

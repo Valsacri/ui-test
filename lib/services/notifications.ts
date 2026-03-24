@@ -6,6 +6,54 @@ const getApiBaseUrl = () => typeof window !== 'undefined' && process.env.NEXT_PU
     : 'http://localhost:8080/api';
 
 /**
+ * One active fetch/SSE per user per tab. Prevents duplicate events when React Strict Mode
+ * remounts, effects re-run, or a new subscription starts before the previous one aborts.
+ */
+const sseAbortByUserId = new Map<string, AbortController>();
+
+/** Drop duplicate SSE frames for the same notification (overlapping connections or double flush). */
+const recentNotificationIds = new Set<string>();
+const recentIdQueue: string[] = [];
+const MAX_RECENT_IDS = 200;
+
+function rememberNotificationId(id: string): boolean {
+    if (recentNotificationIds.has(id)) return false;
+    recentNotificationIds.add(id);
+    recentIdQueue.push(id);
+    if (recentIdQueue.length > MAX_RECENT_IDS) {
+        const drop = recentIdQueue.shift();
+        if (drop) recentNotificationIds.delete(drop);
+    }
+    return true;
+}
+
+/** Same payload twice within this window counts as one (when id is missing). */
+const recentPayloadAt = new Map<string, number>();
+const PAYLOAD_DEDUPE_MS = 800;
+
+function shouldNotifyForSsePayload(data: string): boolean {
+    try {
+        const parsed = JSON.parse(data) as { id?: string };
+        if (typeof parsed?.id === 'string' && parsed.id.length > 0) {
+            return rememberNotificationId(parsed.id);
+        }
+    } catch {
+        /* not JSON — fall through */
+    }
+    const now = Date.now();
+    const last = recentPayloadAt.get(data);
+    if (last != null && now - last < PAYLOAD_DEDUPE_MS) return false;
+    recentPayloadAt.set(data, now);
+    if (recentPayloadAt.size > 300) {
+        const cutoff = now - PAYLOAD_DEDUPE_MS * 2;
+        for (const [k, t] of recentPayloadAt) {
+            if (t < cutoff) recentPayloadAt.delete(k);
+        }
+    }
+    return true;
+}
+
+/**
  * Subscribe to the notification SSE stream (real-time) with auto-reconnection.
  * Call the returned disconnect() on unmount.
  */
@@ -17,7 +65,8 @@ export function subscribeToNotificationStream(
     let aborted = false;
     let retryCount = 0;
     const MAX_RETRIES = 50;
-    const RETRY_DELAY = 5000; // 5 seconds
+    const RETRY_DELAY = 5000;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     const connect = () => {
         if (aborted) return;
@@ -28,8 +77,16 @@ export function subscribeToNotificationStream(
             return;
         }
 
-        const url = `${getApiBaseUrl()}/v1/notifications/user/${userId}/stream`;
+        const prev = sseAbortByUserId.get(userId);
+        if (prev) {
+            prev.abort();
+            sseAbortByUserId.delete(userId);
+        }
+
         const abort = new AbortController();
+        sseAbortByUserId.set(userId, abort);
+
+        const url = `${getApiBaseUrl()}/v1/notifications/user/${userId}/stream`;
 
         fetch(url, {
             signal: abort.signal,
@@ -40,7 +97,7 @@ export function subscribeToNotificationStream(
         })
             .then((res) => {
                 if (!res.ok) throw new Error(`SSE ${res.status}`);
-                retryCount = 0; // reset on successful connection
+                retryCount = 0;
                 const reader = res.body?.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
@@ -49,14 +106,16 @@ export function subscribeToNotificationStream(
                 const read = () => {
                     reader.read().then(({ done, value }) => {
                         if (done) {
-                            // Stream ended — reconnect
-                            if (!aborted) setTimeout(connect, RETRY_DELAY);
+                            if (!aborted) {
+                                reconnectTimer = setTimeout(connect, RETRY_DELAY);
+                            }
                             return;
                         }
                         buffer += decoder.decode(value, { stream: true });
                         const events = buffer.split(/\n\n+/);
                         buffer = events.pop() ?? '';
                         for (const raw of events) {
+                            if (!raw.trim()) continue;
                             let name = '';
                             const dataLines: string[] = [];
                             for (const line of raw.split('\n')) {
@@ -64,15 +123,16 @@ export function subscribeToNotificationStream(
                                 if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
                             }
                             const data = dataLines.length ? dataLines.join('\n') : null;
-                            if (name === 'notification' && data) onNotification();
+                            if (name === 'notification' && data && shouldNotifyForSsePayload(data)) {
+                                onNotification();
+                            }
                         }
                         read();
                     }).catch((err) => {
                         if (err?.name !== 'AbortError' && !aborted) {
-                            // Connection lost — reconnect
                             retryCount++;
                             if (retryCount <= MAX_RETRIES) {
-                                setTimeout(connect, RETRY_DELAY);
+                                reconnectTimer = setTimeout(connect, RETRY_DELAY);
                             }
                         }
                     });
@@ -83,22 +143,26 @@ export function subscribeToNotificationStream(
                 if (err?.name !== 'AbortError' && !aborted) {
                     retryCount++;
                     if (retryCount <= MAX_RETRIES) {
-                        setTimeout(connect, RETRY_DELAY);
+                        reconnectTimer = setTimeout(connect, RETRY_DELAY);
                     }
                 }
             });
-
-        // Store abort for disconnect
-        currentAbort = abort;
     };
 
-    let currentAbort: AbortController | null = null;
     connect();
 
     return {
         disconnect: () => {
             aborted = true;
-            currentAbort?.abort();
+            if (reconnectTimer != null) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+            const ctrl = sseAbortByUserId.get(userId);
+            if (ctrl) {
+                ctrl.abort();
+                sseAbortByUserId.delete(userId);
+            }
         },
     };
 }

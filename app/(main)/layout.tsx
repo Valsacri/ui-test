@@ -29,7 +29,7 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     // Strip trailing slash
     const p = pathname === "/" ? "/" : pathname.replace(/\/$/, "")
 
-    if (p === "/") return "home"
+    if (p === "/" || p === "/home") return "home"
     if (p === "/explore") return "explore"
     if (p === "/activities") return "activities"
     if (p.startsWith("/activities/")) return "activity-detail"
@@ -75,6 +75,7 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     if (p === "/business/athletes") return "business-athletes"
     if (p === "/business/jobs") return "business-jobs"
     if (p.startsWith("/business/jobs/")) return "business-job-detail"
+    if (p === "/business/portfolio") return "business-portfolio"
     if (p === "/business/profile") return "business-profile"
     if (p === "/business/onboarding") return "business-onboarding"
     if (p === "/business/create-activity") return "create-activity"
@@ -146,20 +147,36 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
     const audioUnlockedRef = useRef(false)
     const notificationAudioRef = useRef<HTMLAudioElement | null>(null)
     const audioContextRef = useRef<AudioContext | null>(null)
+    /** Collapse duplicate SSE (or double-parse) bursts into a single audible cue. */
+    const lastNotificationSoundAtRef = useRef(0)
 
     /** Play notification sound: try MP3 first, then fallback beep if missing or failed. */
     const playNotificationSound = useCallback(() => {
+        const now = Date.now()
+        if (now - lastNotificationSoundAtRef.current < 650) {
+            return
+        }
+        lastNotificationSoundAtRef.current = now
+
         const volume = 0.6
+        let usedFallback = false
         const tryMp3 = () => {
             const audio = notificationAudioRef.current
+            const playOrFallback = (a: HTMLAudioElement) => {
+                a.volume = volume
+                a.currentTime = 0
+                a.play().catch(() => {
+                    if (!usedFallback) {
+                        usedFallback = true
+                        tryBeep()
+                    }
+                })
+            }
             if (audio) {
-                audio.volume = volume
-                audio.currentTime = 0
-                audio.play().catch(tryBeep)
+                playOrFallback(audio)
             } else {
                 const newAudio = new Audio("/sound/notification.mp3")
-                newAudio.volume = volume
-                newAudio.play().catch(tryBeep)
+                playOrFallback(newAudio)
             }
         }
         const tryBeep = () => {
@@ -185,7 +202,10 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         try {
             tryMp3()
         } catch {
-            tryBeep()
+            if (!usedFallback) {
+                usedFallback = true
+                tryBeep()
+            }
         }
     }, [])
 
@@ -256,12 +276,15 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         []
     )
 
+    // Polling fallback: refetch unread count every 15s if SSE drops (no sound here — SSE already plays once per push; polling would duplicate sound)
+    const prevUnreadRef = useRef(0)
     useEffect(() => {
         if (user?.id) {
             notificationsService.getUnreadCount(user.id)
                 .then((data) => {
                     const count = typeof data === 'number' ? data : (data?.count ?? 0)
                     setUnreadNotifications(count)
+                    prevUnreadRef.current = count
                 })
                 .catch(() => { })
             messagesService.getUnreadCount(user.id)
@@ -272,25 +295,19 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         }
     }, [user?.id])
 
-    // Polling fallback: refetch unread count every 15s in case SSE drops
-    const prevUnreadRef = useRef(0)
     useEffect(() => {
         if (!user?.id) return
         const interval = setInterval(() => {
             notificationsService.getUnreadCount(user.id)
                 .then((data) => {
                     const count = typeof data === 'number' ? data : (data?.count ?? 0)
-                    if (count > prevUnreadRef.current) {
-                        // New notification(s) arrived — play sound (MP3 or fallback beep)
-                        playNotificationSound()
-                    }
                     prevUnreadRef.current = count
                     setUnreadNotifications(count)
                 })
                 .catch(() => { })
         }, 15000)
         return () => clearInterval(interval)
-    }, [user?.id, playNotificationSound])
+    }, [user?.id])
 
     return (
         <PostModalProvider>
@@ -315,7 +332,17 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                         {showSidebars && (
                             <ExploreSidebar
                                 currentPage={currentPage}
-                                onNavigate={navigate}
+                                onNavigate={(page) => {
+                                    if (page === "business-portfolio") {
+                                        if (isBusinessMode && activeBusinessId) {
+                                            navigate(page)
+                                        } else {
+                                            navigate("businesses")
+                                        }
+                                        return
+                                    }
+                                    navigate(page)
+                                }}
                                 isBusinessMode={isBusinessMode}
                             />
                         )}

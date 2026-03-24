@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { AUTH_COOKIE_NAME } from "@/lib/constants"
+import { APP_HOME_PATH, AUTH_COOKIE_NAME } from "@/lib/constants"
 
 const ONBOARDING_PATHS = ["/choose-sports", "/set-goals", "/onboarding-confirmation"]
 
@@ -20,7 +20,7 @@ export default function AuthLayout({
         const isOnboarding = pathname && ONBOARDING_PATHS.some((p) => pathname.startsWith(p))
         if (token && !isOnboarding) {
             document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
-            router.replace("/")
+            router.replace(APP_HOME_PATH)
         } else {
             // Set auth cookie whenever user has token (including onboarding) so "Go to Home" works
             if (token) {
@@ -38,11 +38,5 @@ export default function AuthLayout({
         )
     }
 
-    return (
-        <div className="min-h-screen bg-background">
-            <div className="mx-auto max-w-7xl px-4 py-8">
-                {children}
-            </div>
-        </div>
-    )
+    return <>{children}</>
 }

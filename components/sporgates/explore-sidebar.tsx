@@ -17,6 +17,7 @@ import {
   Megaphone,
   Package,
   Rss,
+  FolderOpen,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
@@ -55,6 +56,7 @@ const businessNavItems = [
   { label: "Resources", icon: Package, page: "business-resources" as PageRoute },
   { label: "Partners", icon: Users, page: "business-partners" as PageRoute },
   { label: "Jobs", icon: Briefcase, page: "business-jobs" as PageRoute },
+  { label: "Portfolio", icon: FolderOpen, page: "business-portfolio" as PageRoute },
 ]
 
 export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: ExploreSidebarProps) {

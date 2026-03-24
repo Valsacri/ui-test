@@ -13,14 +13,16 @@ import {
   Globe,
   Phone,
   Mail,
+  Building2,
 } from "lucide-react"
 import { toast } from "sonner"
-import { businessesService, activitiesService, servicesService, authService, postsService } from "@/lib/services"
+import { businessesService, activitiesService, servicesService, authService, postsService, messagesService } from "@/lib/services"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ServiceCard } from "@/components/sporgates/cards/service-card"
 import { PostCard } from "@/components/sporgates/cards/post-card"
 import type { PageRoute } from "@/lib/navigation"
 import { cn, formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
+import { DEFAULT_API_BASE_URL } from "@/lib/constants"
 import { useState } from "react"
 import useSWR from "swr"
 import Image from "next/image"
@@ -46,6 +48,7 @@ const reviewsData = [
 export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPageProps) {
   const [activeTab, setActiveTab] = useState("Overview")
   const [following, setFollowing] = useState(false)
+  const [messageLoading, setMessageLoading] = useState(false)
   const { openPost } = usePostModal()
   const currentUser = authService.getCurrentUser()
   const userId = currentUser?.id
@@ -164,6 +167,11 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
     type: business.type || "Business"
   } : null
 
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL
+  const businessAvatarUrl = business?.avatar
+    ? (business.avatar.startsWith("/") ? `${apiBase}${business.avatar}` : business.avatar)
+    : null
+
   if (loading) {
     return <ProfileSkeleton />
   }
@@ -201,41 +209,62 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
         Back to Businesses
       </button>
 
-      {/* Hero Image */}
-      <div className="relative h-56 overflow-hidden rounded-2xl md:h-72">
-        <Image
-          src={businessDisplay.image || "/placeholder.svg"}
-          alt={businessDisplay.name}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 66vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
-        <div className="absolute right-4 top-4 flex gap-2">
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm transition-colors hover:bg-card"
-          >
-            <Heart className="h-5 w-5 text-foreground" />
-          </button>
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm transition-colors hover:bg-card"
-          >
-            <Share2 className="h-5 w-5 text-foreground" />
-          </button>
-        </div>
-        <div className="absolute bottom-4 left-4 right-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white">{businessDisplay.name}</h1>
-            {businessDisplay.verified && <BadgeCheck className="h-6 w-6 text-white" />}
+      {/* Cover + overlapping avatar + info bar */}
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <div className="relative h-56 overflow-hidden rounded-t-2xl md:h-72">
+          <Image
+            src={businessDisplay.image || "/placeholder.svg"}
+            alt={businessDisplay.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 66vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
+          <div className="absolute right-4 top-4 flex gap-2">
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm transition-colors hover:bg-card"
+            >
+              <Heart className="h-5 w-5 text-foreground" />
+            </button>
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm transition-colors hover:bg-card"
+            >
+              <Share2 className="h-5 w-5 text-foreground" />
+            </button>
           </div>
-          <p className="text-sm text-white/80">{businessDisplay.type}</p>
         </div>
-      </div>
 
-      {/* Business Info Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <div className="relative z-10 px-4 md:px-6">
+          <div className="-mt-14 flex flex-col items-start gap-2">
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-card bg-card shadow-lg ring-1 ring-black/5">
+              {businessAvatarUrl ? (
+                <Image
+                  src={businessAvatarUrl}
+                  alt={businessDisplay.name}
+                  fill
+                  className="object-cover"
+                  sizes="96px"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center gradient-primary">
+                  <Building2 className="h-10 w-10 text-white" aria-hidden />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 space-y-0.5 pt-0.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground">{businessDisplay.name}</h1>
+                {businessDisplay.verified && <BadgeCheck className="h-6 w-6 shrink-0 text-primary" />}
+              </div>
+              <p className="text-sm text-muted-foreground">{businessDisplay.type}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-1.5">
             <Star className="h-4 w-4 fill-secondary text-secondary" />
@@ -283,11 +312,40 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
           </button>
           <button
             type="button"
+            onClick={async () => {
+              const me = authService.getCurrentUser()?.id
+              if (!me) {
+                toast.error("Please sign in to send a message.")
+                return
+              }
+
+              const targetBusinessId = businessId?.trim()
+              if (!targetBusinessId) {
+                toast.error("Business account is unavailable for messaging.")
+                return
+              }
+
+              setMessageLoading(true)
+              try {
+                const conv = await messagesService.createDirectConversation({ targetUserId: targetBusinessId })
+                if (conv?.id) {
+                  onNavigate("conversation", conv.id)
+                } else {
+                  toast.error("Could not open conversation")
+                }
+              } catch {
+                toast.error("Could not open conversation")
+              } finally {
+                setMessageLoading(false)
+              }
+            }}
+            disabled={messageLoading}
             className="rounded-full border border-border px-5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
             title="Message"
           >
             <MessageCircle className="h-4 w-4" />
           </button>
+        </div>
         </div>
       </div>
 

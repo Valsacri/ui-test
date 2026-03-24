@@ -39,6 +39,7 @@ export const messagesService = {
         type?: string
         referenceId?: string
         referenceType?: string
+        senderBusinessId?: string
     }) => {
         const response = await apiClient.post<{ id: string; conversationId: string }>(
             '/v1/conversations/direct',
@@ -48,6 +49,7 @@ export const messagesService = {
                 type: data.type ?? 'text',
                 referenceId: data.referenceId,
                 referenceType: data.referenceType,
+                senderBusinessId: data.senderBusinessId,
             }
         );
         return response.data;

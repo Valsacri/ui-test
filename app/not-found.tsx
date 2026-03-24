@@ -1,9 +1,13 @@
 import { FileQuestion } from "lucide-react"
 import Link from "next/link"
+import { SporgatesLogoText } from "@/components/sporgates/sporgates-logo-text"
 
 export default function NotFound() {
     return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-8">
+            <Link href="/" className="inline-flex shrink-0" aria-label="Sporgates home">
+                <SporgatesLogoText heightClass="h-8" />
+            </Link>
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
                 <FileQuestion className="h-10 w-10 text-primary" />
             </div>

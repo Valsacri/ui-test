@@ -27,6 +27,7 @@ import { messagesService } from "@/lib/services/messages"
 import { notificationsService } from "@/lib/services/notifications"
 import { cn, resolvePostImageUrl, isAvatarImageUrl, formatFeedTime, formatMessageTime, isOnline } from "@/lib/utils"
 import type { PageRoute } from "@/lib/navigation"
+import { SporgatesLogoText } from "@/components/sporgates/sporgates-logo-text"
 import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
 import { usePostModal } from "@/lib/post-modal-context"
 import { useStoryModal } from "@/lib/story-modal-context"
@@ -281,12 +282,14 @@ export function TopBar({
       <button
         type="button"
         onClick={() => onNavigate(isBusinessMode ? "business-dashboard" : "home")}
-        className="flex items-center gap-2"
+        className="flex min-w-0 shrink items-center"
+        aria-label="Sporgates home"
       >
-        <div className="gradient-primary flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold text-white">
-          S
-        </div>
-        <span className="hidden text-xl font-bold text-primary md:block">Sporgates</span>
+        <SporgatesLogoText
+          heightClass="h-6 sm:h-7 md:h-8"
+          priority
+          className="max-w-[min(220px,52vw)] sm:max-w-none"
+        />
       </button>
 
       {/* Search — wired to searchService (SearchController) */}
@@ -763,9 +766,9 @@ export function TopBar({
                           biz.emoji || <Building2 className="h-4 w-4" />
                         )}
                       </div>
-                      <div className="flex-1 text-left">
+                      <div className="min-w-0 flex-1 text-left">
                         <p className="text-sm font-semibold text-foreground">{biz.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{biz.type}</p>
+                        <p className="truncate text-[11px] text-muted-foreground" title={biz.type}>{biz.type}</p>
                       </div>
                       {activeBusinessId === biz.id && (
                         <div className="h-2 w-2 rounded-full bg-primary" />

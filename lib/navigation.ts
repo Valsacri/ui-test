@@ -53,6 +53,7 @@ export type PageRoute =
   | "business-athletes"
   | "business-jobs"
   | "business-job-detail"
+  | "business-portfolio"
   | "business-profile"
   | "create-activity"
   | "create-activity-steps"

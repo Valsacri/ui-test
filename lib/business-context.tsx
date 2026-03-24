@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { businessesService } from "@/lib/services/businesses"
-import { STORAGE_KEYS, DEFAULT_API_BASE_URL } from "@/lib/constants"
+import { APP_HOME_PATH, STORAGE_KEYS, DEFAULT_API_BASE_URL } from "@/lib/constants"
 
 interface BusinessItem {
     id: string
@@ -79,7 +79,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     const switchToUser = useCallback(() => {
         setActiveBusinessId(null)
         localStorage.removeItem(STORAGE_KEYS.ACTIVE_BUSINESS_ID)
-        router.push("/")
+        router.push(APP_HOME_PATH)
     }, [router])
 
     const createNewBusiness = useCallback(() => {

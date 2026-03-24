@@ -14,6 +14,8 @@ export const STORAGE_KEYS = {
 // ── Auth ───────────────────────────────────────────────────
 export const AUTH_TOKEN_TYPE = 'Bearer'
 export const AUTH_COOKIE_NAME = 'auth_logged_in'
+/** Logged-in app home; used after sign-in and for “go home” navigation */
+export const APP_HOME_PATH = '/home'
 
 // ── Public Routes (no auth required) ──────────────────────
 export const PUBLIC_ROUTES = [
