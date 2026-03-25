@@ -1,0 +1,63 @@
+# Frontend multi-environment (single Droplet).
+# Builds 3 Next.js standalone images with different NEXT_PUBLIC_API_URL baked in:
+#   - prod: https://api.sporgates.com/api
+#   - qa:   https://qa.api.sporgates.com/api
+#   - dev:  https://dev.api.sporgates.com/api
+#
+# NGINX (host) proxies:
+#   sporgates.com + www.sporgates.com -> 127.0.0.1:3100
+#   qa.sporgates.com                  -> 127.0.0.1:3101
+#   dev.sporgates.com                 -> 127.0.0.1:3102
+
+name: sporgates-frontend-multi
+
+services:
+  frontend-prod:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_PROD:-https://api.sporgates.com/api}
+    image: sporgates-frontend:prod
+    container_name: sporgates-frontend-prod
+    restart: unless-stopped
+    environment:
+      # Build-time is what matters for NEXT_PUBLIC_*; keep for clarity only.
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_PROD:-https://api.sporgates.com/api}
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "127.0.0.1:3100:3000"
+
+  frontend-qa:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_QA:-https://qa.api.sporgates.com/api}
+    image: sporgates-frontend:qa
+    container_name: sporgates-frontend-qa
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_QA:-https://qa.api.sporgates.com/api}
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "127.0.0.1:3101:3000"
+
+  frontend-dev:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_DEV:-https://dev.api.sporgates.com/api}
+    image: sporgates-frontend:dev
+    container_name: sporgates-frontend-dev
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL_DEV:-https://dev.api.sporgates.com/api}
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+    ports:
+      - "127.0.0.1:3102:3000"
+
