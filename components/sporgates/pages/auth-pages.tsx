@@ -597,9 +597,11 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#e5e7eb] px-4 py-8">
         <div className="w-full max-w-xl rounded-3xl border border-[#d1d5db] bg-white p-7 text-center shadow-lg sm:p-8">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#FC8936]">
-            <Mail className="h-8 w-8 text-white" />
-          </div>
+          <img
+            src="/logo/logo-text.svg"
+            alt="Sporgates"
+            className="mx-auto mb-5 h-10 w-auto"
+          />
           <h1 className="mb-2 text-3xl font-black text-[#003C66]">Verify Your Email</h1>
           <p className="mx-auto mb-7 max-w-lg text-lg text-[#64748b]">
             We&apos;ve sent a 6-digit verification code to{" "}
