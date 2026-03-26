@@ -135,7 +135,14 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     setError(null)
     setLoading(true)
     try {
-      await authService.login({ email: data.email, password: data.password })
+      const res = await authService.login({ email: data.email, password: data.password })
+
+      if (res?.nextStep === "VERIFY_EMAIL") {
+        localStorage.setItem("pending_verification_email", data.email)
+        setVerifyEmail(data.email)
+        onNavigate("verify-email")
+        return
+      }
       // Redirect to callbackUrl (set by middleware) or app home
       const params = new URLSearchParams(window.location.search)
       const callbackUrl = params.get('callbackUrl') || APP_HOME_PATH

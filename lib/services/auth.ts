@@ -27,6 +27,8 @@ export interface AuthResponse {
     username?: string;
     twoFactorEnabled?: boolean;
     profileCompletion?: number;
+    nextStep?: 'LOGIN' | 'VERIFY_EMAIL' | 'NONE';
+    message?: string;
 }
 
 export const authService = {
