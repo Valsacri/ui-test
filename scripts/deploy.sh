@@ -65,7 +65,18 @@ if [[ "$DO_GIT_PULL" -eq 1 ]]; then
     echo "ERROR: --pull-git requested but .git not found" >&2
     exit 1
   fi
-  branch="${GIT_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+  # Promotion flow: dev -> qa -> prod(main). Allow overrides via env vars.
+  default_branch=""
+  case "$ENVIRONMENT" in
+    dev)  default_branch="${DEV_BRANCH:-dev}" ;;
+    qa)   default_branch="${QA_BRANCH:-qa}" ;;
+    prod) default_branch="${PROD_BRANCH:-prod}" ;;
+  esac
+
+  branch="${GIT_BRANCH:-$default_branch}"
+  if [[ -z "$branch" ]]; then
+    branch="$(git rev-parse --abbrev-ref HEAD)"
+  fi
   echo ">>> git fetch $GIT_REMOTE && git pull --ff-only $GIT_REMOTE $branch"
   git fetch "$GIT_REMOTE"
   git pull --ff-only "$GIT_REMOTE" "$branch"
