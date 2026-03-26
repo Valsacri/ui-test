@@ -40,7 +40,7 @@ const ERROR_KEY_MESSAGES: Record<string, string> = {
     // Verification errors
     'verification.code.invalid': 'Invalid verification code. Please check and try again.',
     'verification.code.expired': 'Verification code has expired. Please request a new one.',
-    'email.already.verified': 'Your email is already verified. You can sign in.',
+    'email.already.verified': 'An account with this email already exists. Please sign in.',
 
     // Email errors
     'email.send.failed': 'We couldn\'t send the email. Please try again later.',
