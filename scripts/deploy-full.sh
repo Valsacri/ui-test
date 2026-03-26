@@ -1,38 +1,30 @@
 #!/usr/bin/env bash
-# Full deploy for frontend multi-env (pull -> build -> run).
+# Full deploy: pull latest git changes, then build image and recreate frontend container(s).
+# Wrapper around deploy.sh with --pull-git always enabled.
 #
-# Run on the Droplet from the Sporgates-frontend repo root (e.g. /home/deploy/sporgates-frontend):
-#   chmod +x scripts/deploy-full.sh
-#   ./scripts/deploy-full.sh
+# Usage (on the Droplet, from repo root):
+#   chmod +x scripts/deploy-full.sh scripts/deploy.sh
+#   ./scripts/deploy-full.sh prod
+#   ./scripts/deploy-full.sh qa
+#   ./scripts/deploy-full.sh dev
 #
-# Requires an env file at:
-#   infra/frontend-multi-env/.env.frontend-multi
+# Optional (passed through to deploy.sh):
+#   --no-build   skip docker build (still runs git pull)
 #
-# Notes:
-# - NEXT_PUBLIC_* values are baked at build time; this script rebuilds images each run.
+# To deploy all 3 tiers:
+#   ./scripts/deploy-full.sh all
+#
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_ROOT"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-ENV_FILE="infra/frontend-multi-env/.env.frontend-multi"
-COMPOSE_FILE="infra/frontend-multi-env/docker-compose.yml"
-
-if [[ ! -f "$ENV_FILE" ]]; then
-  echo "ERROR: missing $ENV_FILE (copy from infra/frontend-multi-env/env/.env.frontend-multi.example)" >&2
-  exit 1
+if [[ "${1:-}" == "all" ]]; then
+  shift || true
+  "$SCRIPT_DIR/deploy.sh" prod --pull-git "$@"
+  "$SCRIPT_DIR/deploy.sh" qa --pull-git "$@" || true
+  "$SCRIPT_DIR/deploy.sh" dev --pull-git "$@" || true
+  exit 0
 fi
 
-echo ">>> git pull --ff-only"
-git fetch origin
-git pull --ff-only
-
-echo ">>> docker compose up -d --build (prod/qa/dev frontends)"
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
-
-echo ">>> docker compose ps"
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
-
-echo ">>> done"
-
+exec "$SCRIPT_DIR/deploy.sh" "$@" --pull-git
