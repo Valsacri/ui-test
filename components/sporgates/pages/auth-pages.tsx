@@ -603,11 +603,13 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             className="mx-auto mb-5 h-10 w-auto"
           />
           <h1 className="mb-2 text-3xl font-black text-[#003C66]">Verify Your Email</h1>
-          <p className="mx-auto mb-7 max-w-lg text-lg text-[#64748b]">
-            We&apos;ve sent a 6-digit verification code to{" "}
-            {verifyEmail ? <span className="font-semibold text-[#003C66]">{verifyEmail}</span> : "your email"}.
-            {" "}Enter the code below to verify your account.
-          </p>
+          <div className="mx-auto mb-7 max-w-lg text-lg text-[#64748b]">
+            <p>We&apos;ve sent a 6-digit verification code to:</p>
+            <p className="mt-1 font-semibold text-[#003C66]">
+              {verifyEmail || "your email"}
+            </p>
+            <p className="mt-2">Enter the code below to verify your account.</p>
+          </div>
 
           <div className="mb-8 flex justify-center gap-2 sm:gap-3">
             {verificationCode.map((digit, index) => (
