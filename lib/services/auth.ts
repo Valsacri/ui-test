@@ -27,13 +27,6 @@ export interface AuthResponse {
     username?: string;
     twoFactorEnabled?: boolean;
     profileCompletion?: number;
-    /** Present when backend uses AUTH_EXPOSE_VERIFICATION_CODE (dev only). */
-    verificationCode?: string;
-}
-
-export interface ResendVerificationResponse {
-    message: string;
-    verificationCode?: string;
 }
 
 export const authService = {
@@ -51,9 +44,6 @@ export const authService = {
         const d = response.data;
         if (d.accessToken) {
             authService._saveTokens(d);
-        }
-        if (d.verificationCode && typeof window !== 'undefined') {
-            console.info('[Sporgates] Email verification code (dev):', d.verificationCode);
         }
         return d;
     },
@@ -100,13 +90,9 @@ export const authService = {
         return data;
     },
 
-    resendVerification: async (email: string): Promise<ResendVerificationResponse> => {
-        const response = await apiClient.post<ResendVerificationResponse>('/auth/resend-verification', { email });
-        const data = response.data;
-        if (data?.verificationCode && typeof window !== 'undefined') {
-            console.info('[Sporgates] Email verification code (dev):', data.verificationCode);
-        }
-        return data;
+    resendVerification: async (email: string): Promise<string> => {
+        const response = await apiClient.post('/auth/resend-verification', { email });
+        return response.data;
     },
 
     forgotPassword: async (email: string): Promise<string> => {
