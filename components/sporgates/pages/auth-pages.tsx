@@ -630,14 +630,25 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             <p className="mb-4 text-sm font-semibold text-green-600">Email verified successfully! Redirecting...</p>
           )}
 
+          {(() => {
+            const verifyDisabled = loading || verifySuccess || verificationCode.join("").length !== 6
+
+            return (
           <button
             type="button"
             onClick={handleVerifyEmail}
-            disabled={loading || verifySuccess || verificationCode.join("").length !== 6}
-            className="w-full rounded-2xl bg-[#7aa0b8] py-3 text-lg font-bold text-white transition-colors hover:bg-[#688fa8] disabled:opacity-50"
+            disabled={verifyDisabled}
+            className={cn(
+              "w-full rounded-2xl py-3 text-lg font-bold text-white transition-colors",
+              verifyDisabled
+                ? "cursor-not-allowed bg-[#7aa0b8]/70 opacity-60"
+                : "bg-[#003C66] hover:bg-[#002f52]"
+            )}
           >
             {loading ? "Verifying..." : verifySuccess ? "Verified ✓" : "Verify Email"}
           </button>
+            )
+          })()}
 
           <button
             type="button"
