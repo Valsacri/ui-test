@@ -143,6 +143,7 @@ export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps
             userDisplayName={activeBusiness?.name ?? "Your business"}
             userAvatar={activeBusiness?.avatar}
             placeholder="Share an update with your followers..."
+            businessId={activeBusinessId}
             onSubmit={handleCreatePost}
             onSuccess={() => mutatePosts()}
             className="max-w-2xl"
@@ -159,6 +160,7 @@ export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps
                   time: formatFeedTime(p.createdAt),
                   content: p.content ?? "",
                   image: resolvePostImageUrl(p.image) || p.image,
+                  images: (p.images as string[] | undefined)?.map((img: string) => resolvePostImageUrl(img) || img),
                   likes: p.likes ?? 0,
                   comments: p.comments ?? 0,
                   shares: p.shares ?? 0,
@@ -167,6 +169,11 @@ export function BusinessDashboardPage({ onNavigate }: BusinessDashboardPageProps
                   sport: p.sport,
                   authorType: p.authorType,
                   businessId: p.businessId,
+                  postKind: p.postKind,
+                  linkedProductId: p.linkedProductId,
+                  linkedServiceListingId: p.linkedServiceListingId,
+                  linkedFacilityId: p.linkedFacilityId,
+                  linkedActivityId: p.linkedActivityId,
                 }
                 return (
                   <PostCard

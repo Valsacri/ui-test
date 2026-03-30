@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { STORAGE_KEYS } from "@/lib/constants"
+import { authService } from "@/lib/services/auth"
 
 /**
  * Client-side auth guard — fallback for the server middleware.
- * Checks localStorage for a valid token and redirects if missing.
- * Preserves callbackUrl so user returns to the page they were on after login.
+ * Session is indicated by stored user profile; API auth uses HttpOnly cookies.
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter()
@@ -15,8 +14,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const [checked, setChecked] = useState(false)
 
     useEffect(() => {
-        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)
-        if (!token) {
+        if (!authService.isAuthenticated()) {
             const signin = pathname && pathname !== "/" ? `/signin?callbackUrl=${encodeURIComponent(pathname)}` : "/signin"
             router.replace(signin)
         } else {

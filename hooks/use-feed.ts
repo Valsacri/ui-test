@@ -124,6 +124,11 @@ export function useFeed({ pageSize = 20 }: UseFeedOptions = {}): UseFeedReturn {
             createdAt: new Date().toISOString(),
             likedByCurrentUser: false,
             savedByCurrentUser: false,
+            postKind: payload.postKind,
+            linkedProductId: payload.linkedProductId,
+            linkedServiceListingId: payload.linkedServiceListingId,
+            linkedFacilityId: payload.linkedFacilityId,
+            linkedActivityId: payload.linkedActivityId,
         }
 
         // 1. Prepend immediately
@@ -148,6 +153,11 @@ export function useFeed({ pageSize = 20 }: UseFeedOptions = {}): UseFeedReturn {
                 createdAt: created.createdAt,
                 likedByCurrentUser: false,
                 savedByCurrentUser: false,
+                postKind: created.postKind,
+                linkedProductId: created.linkedProductId,
+                linkedServiceListingId: created.linkedServiceListingId,
+                linkedFacilityId: created.linkedFacilityId,
+                linkedActivityId: created.linkedActivityId,
             }
             setItems(prev => prev.map(item => item.id === tempId ? realItem : item))
         } catch {

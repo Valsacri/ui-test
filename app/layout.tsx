@@ -10,6 +10,12 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 export const metadata: Metadata = {
   title: 'Sporgates - Sports Community Platform',
   description: 'Discover sports activities, book facilities, connect with athletes, and grow your sports business.',
+  icons: {
+    icon: [{ url: '/favicon/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon/favicon.svg',
+    apple: '/favicon/favicon.svg',
+  },
+  manifest: '/favicon/site.webmanifest',
 }
 
 export const viewport: Viewport = {

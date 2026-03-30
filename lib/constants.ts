@@ -20,6 +20,7 @@ export const APP_HOME_PATH = '/home'
 // ── Public Routes (no auth required) ──────────────────────
 export const PUBLIC_ROUTES = [
     '/landing',
+    '/auth',
     '/signin',
     '/signup',
     '/forgot-password',
@@ -34,4 +35,13 @@ export const PUBLIC_ROUTES = [
 export const API_TIMEOUT_MS = 15000
 /** Story media upload (larger files); slightly longer than default API timeout */
 export const STORY_UPLOAD_TIMEOUT_MS = 60 * 1000 // 1 minute
-export const DEFAULT_API_BASE_URL = 'http://localhost:8080/api'
+/** Server-side / non-browser callers (e.g. tests). Browser uses same-origin '' + rewrites. */
+export const DEFAULT_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+
+/** Next.js app origin for server-side fetch to same-origin API rewrites (RSC, server actions). */
+export const INTERNAL_APP_ORIGIN =
+  process.env.INTERNAL_APP_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (typeof process.env.VERCEL_URL === "string" && process.env.VERCEL_URL.length > 0
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000")

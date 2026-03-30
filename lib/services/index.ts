@@ -20,3 +20,4 @@ export { leagueService } from './league';
 export { feedService } from './feed';
 export { storiesService } from './stories';
 export { campaignsService } from './campaigns';
+export { campaignDeliveryService } from './campaign-delivery';

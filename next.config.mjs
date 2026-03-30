@@ -36,6 +36,10 @@ const nextConfig = {
         destination: `${apiUrl}/uploads/:path*`,
       },
       {
+        source: '/auth/:path*',
+        destination: `${apiUrl}/auth/:path*`,
+      },
+      {
         source: '/v1/:path*',
         destination: `${apiUrl}/v1/:path*`,
       },

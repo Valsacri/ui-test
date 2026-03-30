@@ -120,6 +120,20 @@ export function AddCampaignModal({ isOpen, businessId, onClose, onCreate }: AddC
         ageMax,
         gender,
         sports: selectedSports,
+        utmSource: "sporgates",
+        utmMedium: "paid_placement",
+        utmCampaign: (campaignName.trim() || "draft_campaign").toLowerCase().replace(/\s+/g, "_").slice(0, 50),
+        utmContent: "campaign_builder",
+        utmTerm: selectedSports[0]?.toLowerCase(),
+        primaryConversionEvent:
+          objective === "AWARENESS"
+            ? "PROFILE_VISIT"
+            : objective === "EVENT_ATTENDEES"
+              ? "EVENT_RSVP_CONFIRMED"
+              : objective === "PARTNER_LEADS"
+                ? "PARTNER_LEAD_SUBMITTED"
+                : "ACTIVITY_BOOKED",
+        attributionModel: "LAST_TOUCH",
       })
       .then((forecast) => {
         setServerForecastDailyBudget(forecast.dailyBudget)

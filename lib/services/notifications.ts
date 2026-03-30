@@ -1,9 +1,13 @@
 import apiClient from '../api';
-import { STORAGE_KEYS } from '../constants';
+import { authService } from './auth';
 
-const getApiBaseUrl = () => typeof window !== 'undefined' && process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL
-    : 'http://localhost:8080/api';
+/** Browser: same-origin `/v1/...` so Next rewrites apply and HttpOnly cookies are sent. */
+function getNotificationStreamBaseUrl(): string {
+    if (typeof window !== 'undefined') {
+        return '';
+    }
+    return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+}
 
 /**
  * One active fetch/SSE per user per tab. Prevents duplicate events when React Strict Mode
@@ -71,9 +75,8 @@ export function subscribeToNotificationStream(
     const connect = () => {
         if (aborted) return;
 
-        const token = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) : null;
-        if (!token) {
-            onError?.(new Error('No auth token'));
+        if (typeof window !== 'undefined' && !authService.isAuthenticated()) {
+            onError?.(new Error('Not authenticated'));
             return;
         }
 
@@ -86,12 +89,13 @@ export function subscribeToNotificationStream(
         const abort = new AbortController();
         sseAbortByUserId.set(userId, abort);
 
-        const url = `${getApiBaseUrl()}/v1/notifications/user/${userId}/stream`;
+        const base = getNotificationStreamBaseUrl();
+        const url = `${base}/v1/notifications/user/${userId}/stream`;
 
         fetch(url, {
             signal: abort.signal,
+            credentials: 'include',
             headers: {
-                Authorization: `Bearer ${token}`,
                 Accept: 'text/event-stream',
             },
         })

@@ -41,6 +41,12 @@ import { toast } from "sonner"
 
 import { QRScanner } from "@/components/sporgates/attendance/qr-scanner"
 import { DateTimePicker } from "@/components/sporgates/date-time-picker"
+import {
+  CampaignCreateTour,
+  CampaignTourHelpButton,
+  CAMPAIGN_CREATE_TOUR_STEPS,
+  useCampaignCreateTour,
+} from "@/components/sporgates/campaign/campaign-create-tour"
 import { CommunicationPhaseContent } from "@/components/sporgates/business/communication-phase-content"
 import { MapView } from "@/components/sporgates/map-view"
 import { SponsorshipTierBuilder, type SponsorshipTier } from "@/components/sporgates/business/sponsorship-tier-builder"
@@ -456,6 +462,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
     staffAssignments: [] as Array<{ id: string; roleType: string; userId?: string; userName: string; notes: string }>,
   })
   const [skipMapGeocode, setSkipMapGeocode] = useState(false)
+  const minScheduleDate = useMemo(() => new Date().toISOString().split("T")[0], [])
 
   // Fetch activity if in Edit mode
   useEffect(() => {
@@ -525,12 +532,20 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
           coverImage: activity.coverImage || "",
           visibility: "public",
           scheduleMode: (activity.sessions && activity.sessions.length > 0) ? "multiple" : "single",
-          sessions: (activity.sessions || []).map((s: any) => ({
-            id: s.id || crypto.randomUUID(),
-            date: s.startDateTime ? s.startDateTime.split("T")[0] : "",
-            startTime: s.startDateTime ? s.startDateTime.split("T")[1]?.slice(0, 5) : "",
-            endTime: s.endDateTime ? s.endDateTime.split("T")[1]?.slice(0, 5) : "",
-          })),
+          sessions: (activity.sessions || []).map((s: { id?: string; startDateTime?: unknown; endDateTime?: unknown }) => {
+            const startD = parseActivityDate(s.startDateTime)
+            const endD = parseActivityDate(s.endDateTime)
+            return {
+              id: s.id || crypto.randomUUID(),
+              date: startD ? startD.toISOString().split("T")[0] : "",
+              startTime: startD
+                ? startD.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })
+                : "",
+              endTime: endD
+                ? endD.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" })
+                : "",
+            }
+          }),
           staffAssignments: (activity.staffAssignments || []).map((sa: any) => ({
             id: sa.id || crypto.randomUUID(),
             roleType: sa.roleType || "",
@@ -829,7 +844,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
         toast.success("Activity updated successfully!")
       } else {
         await activitiesService.create(payload)
-        toast.success("Activity published successfully!")
+        toast.success("Activity saved as draft. Publish it from your activities list when you are ready.")
       }
       onNavigate("business-activities")
     } catch (err: unknown) {
@@ -849,7 +864,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
         </button>
         <div>
           <h1 className="text-xl font-bold text-foreground">{activityId ? "Edit Activity" : "Create New Activity"}</h1>
-          <p className="text-xs text-muted-foreground">{activityId ? "Update your activity details" : "Follow the steps to publish a new event"}</p>
+          <p className="text-xs text-muted-foreground">{activityId ? "Update your activity details" : "Follow the steps to create your event (saved as draft until you publish)"}</p>
         </div>
       </div>
 
@@ -1098,7 +1113,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                           type="date"
                           value={formData.date}
                           onChange={(value) => setFormData({ ...formData, date: value })}
-                          minDate={new Date().toISOString().split('T')[0]}
+                          minDate={minScheduleDate}
                         />
                         <DateTimePicker
                           label="Start Time"
@@ -1136,38 +1151,39 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                           <div key={session.id} className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
                             <span className="mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{idx + 1}</span>
                             <div className="grid flex-1 gap-2 sm:grid-cols-3">
-                              <input
+                              <DateTimePicker
+                                label="Date"
                                 type="date"
                                 value={session.date}
-                                onChange={(e) => {
+                                minDate={minScheduleDate}
+                                onChange={(value) => {
                                   const updated = [...formData.sessions]
-                                  updated[idx] = { ...updated[idx], date: e.target.value }
+                                  updated[idx] = { ...updated[idx], date: value }
                                   setFormData({ ...formData, sessions: updated })
                                 }}
-                                min={new Date().toISOString().split('T')[0]}
-                                className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
+                                id={`session-${session.id}-date`}
                               />
-                              <input
+                              <DateTimePicker
+                                label="Start"
                                 type="time"
                                 value={session.startTime}
-                                onChange={(e) => {
+                                onChange={(value) => {
                                   const updated = [...formData.sessions]
-                                  updated[idx] = { ...updated[idx], startTime: e.target.value }
+                                  updated[idx] = { ...updated[idx], startTime: value }
                                   setFormData({ ...formData, sessions: updated })
                                 }}
-                                className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
-                                placeholder="Start"
+                                id={`session-${session.id}-start`}
                               />
-                              <input
+                              <DateTimePicker
+                                label="End"
                                 type="time"
                                 value={session.endTime}
-                                onChange={(e) => {
+                                onChange={(value) => {
                                   const updated = [...formData.sessions]
-                                  updated[idx] = { ...updated[idx], endTime: e.target.value }
+                                  updated[idx] = { ...updated[idx], endTime: value }
                                   setFormData({ ...formData, sessions: updated })
                                 }}
-                                className="h-9 rounded-lg border border-border bg-muted px-3 text-xs outline-none focus:border-primary"
-                                placeholder="End"
+                                id={`session-${session.id}-end`}
                               />
                             </div>
                             <button
@@ -1930,7 +1946,9 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                 disabled={submitting}
                 className="gradient-primary rounded-full px-8 py-2.5 text-xs font-semibold text-white shadow-md transition-all hover:opacity-90 disabled:opacity-50"
               >
-                {submitting ? "Publishing..." : "Publish Activity"}
+                {submitting
+                  ? (activityId ? "Saving..." : "Creating...")
+                  : (activityId ? "Save changes" : "Create activity")}
               </button>
             )}
           </div>
@@ -1988,6 +2006,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
 
 // ==================== CreateCampaign ====================
 export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
+  const { tourActive, hydrated, startTour, endTour } = useCampaignCreateTour()
   const [formData, setFormData] = useState({
     name: "",
     goal: "awareness",
@@ -2013,18 +2032,26 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      <div className="flex items-center gap-3">
+      {hydrated && (
+        <CampaignCreateTour
+          active={tourActive}
+          steps={CAMPAIGN_CREATE_TOUR_STEPS}
+          onClose={endTour}
+        />
+      )}
+      <div className="flex items-center gap-3" data-campaign-tour="header">
         <button type="button" onClick={() => onNavigate("business-campaigns")} className="rounded-full p-2 hover:bg-muted">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-foreground">Create Campaign</h1>
           <p className="text-sm text-muted-foreground">Launch a marketing campaign</p>
         </div>
+        <CampaignTourHelpButton onClick={startTour} />
       </div>
 
       <div className="space-y-6">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm" data-campaign-tour="details">
           <h3 className="mb-4 text-sm font-bold text-foreground">Campaign Details</h3>
           <div className="space-y-4">
             <div>
@@ -2077,7 +2104,7 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm" data-campaign-tour="budget">
           <h3 className="mb-4 text-sm font-bold text-foreground">Budget & Schedule</h3>
           <div className="space-y-4">
             <div>
@@ -2116,7 +2143,7 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm" data-campaign-tour="audience">
           <h3 className="mb-4 text-sm font-bold text-foreground">Target Audience</h3>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
@@ -2142,7 +2169,7 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm" data-campaign-tour="communication">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-foreground">Communication Plan</h3>
@@ -2189,7 +2216,7 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
           />
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3" data-campaign-tour="actions">
           <button type="button" onClick={() => onNavigate("business-campaigns")} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
             Cancel
           </button>

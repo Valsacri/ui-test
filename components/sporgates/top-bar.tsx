@@ -215,8 +215,8 @@ export function TopBar({
       .finally(() => setNotificationsLoading(false))
   }, [showNotifications, user?.id])
 
-  const handleLogout = () => {
-    authService.logout()
+  const handleLogout = async () => {
+    await authService.logout()
     // Force full page reload to clear state and trigger AuthGuard
     window.location.href = "/signin"
   }

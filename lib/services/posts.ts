@@ -1,5 +1,22 @@
 import apiClient from '../api';
 import type { Post, PostsPage, CreatePostPayload } from '@/lib/types/post';
+import { z } from 'zod';
+
+const createPostSchema = z.object({
+  content: z.string().min(1).max(20000),
+  image: z.string().optional(),
+  images: z.array(z.string()).optional(),
+  sport: z.string().max(120).optional(),
+  visibility: z.enum(['PUBLIC', 'FOLLOWERS_ONLY', 'PRIVATE']).optional(),
+  businessId: z.string().optional(),
+  postKind: z
+    .enum(['STANDARD', 'NEW_PRODUCT', 'NEW_SERVICE', 'NEW_FACILITY', 'UPCOMING_EVENT'])
+    .optional(),
+  linkedProductId: z.string().optional(),
+  linkedServiceListingId: z.string().optional(),
+  linkedFacilityId: z.string().optional(),
+  linkedActivityId: z.string().optional(),
+});
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
@@ -50,7 +67,11 @@ export const postsService = {
   },
 
   create: async (payload: CreatePostPayload): Promise<Post> => {
-    const { data } = await apiClient.post<Post>('/v1/posts', payload);
+    const parsed = createPostSchema.safeParse(payload);
+    if (!parsed.success) {
+      throw new Error(parsed.error.flatten().formErrors.join(', ') || 'Invalid post');
+    }
+    const { data } = await apiClient.post<Post>('/v1/posts', parsed.data);
     return data;
   },
 

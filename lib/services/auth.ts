@@ -31,30 +31,46 @@ export interface AuthResponse {
     message?: string;
 }
 
+function clearLegacyTokenStorage() {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    } catch {
+        /* ignore */
+    }
+}
+
+clearLegacyTokenStorage();
+
 export const authService = {
     login: async (data: LoginRequest): Promise<AuthResponse> => {
-        const response = await apiClient.post('/auth/login', data);
+        const response = await apiClient.post<AuthResponse>('/auth/login', data);
         const d = response.data;
         if (d.accessToken) {
-            authService._saveTokens(d);
+            authService._saveSession(d);
         }
         return d;
     },
 
     register: async (data: RegisterRequest): Promise<AuthResponse> => {
-        const response = await apiClient.post('/auth/signup', data);
+        const response = await apiClient.post<AuthResponse>('/auth/signup', data);
         const d = response.data;
         if (d.accessToken) {
-            authService._saveTokens(d);
+            authService._saveSession(d);
         }
         return d;
     },
 
-    logout: () => {
-        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    logout: async () => {
+        try {
+            await apiClient.post('/auth/logout');
+        } catch {
+            /* still clear client state */
+        }
         localStorage.removeItem(STORAGE_KEYS.USER);
         document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0`;
+        clearLegacyTokenStorage();
     },
 
     getCurrentUser: () => {
@@ -65,29 +81,24 @@ export const authService = {
         return null;
     },
 
+    /** @deprecated Tokens live in HttpOnly cookies; do not use for API auth. */
     getToken: () => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-        }
         return null;
     },
 
     getRefreshToken: () => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-        }
         return null;
     },
 
     isAuthenticated: () => {
-        return !!authService.getToken();
+        return !!authService.getCurrentUser();
     },
 
     verifyEmail: async (email: string, code: string): Promise<AuthResponse> => {
         const response = await apiClient.post<AuthResponse>('/auth/verify-email', { email, code });
         const data = response.data;
         if (data?.accessToken) {
-            authService._saveTokens(data);
+            authService._saveSession(data);
         }
         return data;
     },
@@ -107,29 +118,22 @@ export const authService = {
         return response.data;
     },
 
-    refreshToken: async (refreshToken: string): Promise<AuthResponse> => {
-        const response = await apiClient.post('/auth/refresh', { refreshToken });
+    refreshToken: async (): Promise<AuthResponse> => {
+        const response = await apiClient.post<AuthResponse>('/auth/refresh', {});
         if (response.data.accessToken) {
-            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, response.data.accessToken);
-            if (response.data.refreshToken) {
-                localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
-            }
+            authService._saveSession(response.data);
         }
         return response.data;
     },
 
-    /** Internal helper — saves tokens + user + sets auth cookie marker */
-    _saveTokens: (d: AuthResponse) => {
-        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, d.accessToken);
-        if (d.refreshToken) {
-            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, d.refreshToken);
-        }
+    /** Persist non-sensitive profile for UI; JWTs remain HttpOnly cookies only. */
+    _saveSession: (d: AuthResponse) => {
+        clearLegacyTokenStorage();
         localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify({
             id: d.userId, email: d.email,
             firstName: d.firstName, lastName: d.lastName,
             username: d.username,
         }));
-        // Set cookie marker for middleware auth check (365 days)
         document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     },
 };

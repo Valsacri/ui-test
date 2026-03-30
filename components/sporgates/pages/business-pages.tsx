@@ -53,6 +53,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
+import type { CampaignConversionEvent } from "@/lib/types/campaign"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 
 interface BusinessSubPageProps {
@@ -1027,6 +1031,7 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false)
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null)
   const [timeWindowDays, setTimeWindowDays] = useState<7 | 14 | 30>(30)
+  const [exclusionInput, setExclusionInput] = useState("")
   const { activeBusinessId } = useBusinessContext()
   const { data: campaigns = [], isLoading: campaignsLoading, mutate } = useSWR(
     activeBusinessId ? `/business/${activeBusinessId}/campaigns` : null,
@@ -1073,6 +1078,15 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
     { budget: 0, spent: 0, reach: 0, conversions: 0 }
   )
 
+  const getPrimaryConversionEvent = (objective: "AWARENESS" | "ACTIVITY_BOOKINGS" | "EVENT_ATTENDEES" | "PARTNER_LEADS"): CampaignConversionEvent => {
+    if (objective === "AWARENESS") return "PROFILE_VISIT"
+    if (objective === "EVENT_ATTENDEES") return "EVENT_RSVP_CONFIRMED"
+    if (objective === "PARTNER_LEADS") return "PARTNER_LEAD_SUBMITTED"
+    return "ACTIVITY_BOOKED"
+  }
+
+  const toUtmCampaign = (name: string) => name.trim().toLowerCase().replace(/\s+/g, "_").slice(0, 50) || "campaign"
+
   const handleLaunchCampaign = async (campaignId: string) => {
     if (!activeBusinessId) return
     try {
@@ -1106,6 +1120,133 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
     } catch (error) {
       console.error("Failed to archive campaign", error)
       toast.error("Failed to archive campaign")
+    }
+  }
+
+  const handleAddCreative = async (campaignId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.addCreative(activeBusinessId, campaignId, {
+        angle: "Outcome",
+        hook: "Get more bookings this week",
+        headline: "Fill your sports sessions faster",
+        primaryText: "Launch a focused campaign and convert active local athletes into bookings.",
+        cta: "Book Now",
+        control: false,
+      })
+      await mutate()
+      if (activeCampaignId === campaignId) {
+        setActiveCampaignId(campaignId)
+      }
+      toast.success("Creative added")
+    } catch (error) {
+      console.error("Failed to add creative", error)
+      toast.error("Failed to add creative")
+    }
+  }
+
+  const handleMarkCreativeWinner = async (campaignId: string, creativeId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.updateCreativeStatus(activeBusinessId, campaignId, creativeId, { status: "WINNER" })
+      await mutate()
+      setActiveCampaignId(campaignId)
+      toast.success("Creative marked as winner")
+    } catch (error) {
+      console.error("Failed to update creative status", error)
+      toast.error("Failed to update creative status")
+    }
+  }
+
+  const handleStartCreativeTest = async (campaignId: string) => {
+    if (!activeBusinessId) return
+    if (!activeCampaignDetails || activeCampaignDetails.id !== campaignId) {
+      toast.error("Open KPI Review first to load creatives")
+      setActiveCampaignId(campaignId)
+      return
+    }
+    const creatives = activeCampaignDetails.creatives || []
+    const control = creatives.find((item) => item.control)
+    const variants = creatives.filter((item) => !item.control).map((item) => item.id)
+    if (!control || variants.length === 0) {
+      toast.error("Need one control and at least one variant creative")
+      return
+    }
+    try {
+      const start = new Date().toISOString().slice(0, 10)
+      const endDate = new Date()
+      endDate.setDate(endDate.getDate() + 14)
+      await campaignsService.addExperiment(activeBusinessId, campaignId, {
+        hypothesis: "Variant creative should improve conversion rate over control",
+        controlCreativeId: control.id,
+        variantCreativeIds: variants,
+        minSampleSize: 1000,
+        startDate: start,
+        endDate: endDate.toISOString().slice(0, 10),
+      })
+      await mutate()
+      setActiveCampaignId(campaignId)
+      toast.success("Creative test started")
+    } catch (error) {
+      console.error("Failed to start creative test", error)
+      toast.error("Failed to start creative test")
+    }
+  }
+
+  const handlePromoteExperimentWinner = async (campaignId: string, experimentId: string, winnerCreativeId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.promoteExperimentWinner(activeBusinessId, campaignId, experimentId, { winnerCreativeId })
+      await mutate()
+      setActiveCampaignId(campaignId)
+      toast.success("Experiment winner promoted")
+    } catch (error) {
+      console.error("Failed to promote experiment winner", error)
+      toast.error("Failed to promote experiment winner")
+    }
+  }
+
+  const handleSaveCurrentAudience = async (campaignId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.saveAudience(activeBusinessId, campaignId, { name: `Audience ${new Date().toISOString().slice(0, 10)}` })
+      await mutate()
+      setActiveCampaignId(campaignId)
+      toast.success("Audience saved")
+    } catch (error) {
+      console.error("Failed to save audience", error)
+      toast.error("Failed to save audience")
+    }
+  }
+
+  const handleApplySavedAudience = async (campaignId: string, audienceProfileId: string) => {
+    if (!activeBusinessId) return
+    try {
+      await campaignsService.applySavedAudience(activeBusinessId, campaignId, audienceProfileId)
+      await mutate()
+      setActiveCampaignId(campaignId)
+      toast.success("Saved audience applied")
+    } catch (error) {
+      console.error("Failed to apply saved audience", error)
+      toast.error("Failed to apply saved audience")
+    }
+  }
+
+  const handleAddExclusion = async (campaignId: string) => {
+    if (!activeBusinessId || !activeCampaignDetails) return
+    const normalized = exclusionInput.trim().toLowerCase().replace(/\s+/g, "_")
+    if (!normalized) return
+    const current = activeCampaignDetails.audience?.excludedAudienceIds || []
+    const next = Array.from(new Set([...current, normalized]))
+    try {
+      await campaignsService.updateAudienceExclusions(activeBusinessId, campaignId, { excludedAudienceIds: next })
+      await mutate()
+      setExclusionInput("")
+      setActiveCampaignId(campaignId)
+      toast.success("Exclusion updated")
+    } catch (error) {
+      console.error("Failed to update exclusions", error)
+      toast.error("Failed to update exclusions")
     }
   }
 
@@ -1234,6 +1375,22 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleAddCreative(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Creative
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartCreativeTest(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Start Test
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveCampaignId(campaign.id)}
                   className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
                 >
@@ -1244,6 +1401,22 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
             )}
             {(campaign.status === "LEARNING" || campaign.status === "ACTIVE" || campaign.status === "LEARNING_LIMITED") && (
               <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleAddCreative(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Creative
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartCreativeTest(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Start Test
+                </button>
                 <button
                   type="button"
                   onClick={() => setActiveCampaignId(campaign.id)}
@@ -1312,24 +1485,6 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
               ))}
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="rounded-xl border border-border bg-background p-3">
-              <p className="text-[10px] text-muted-foreground">CTR</p>
-              <p className="text-sm font-bold text-foreground">{(((activeCampaignDetails.performance.clickThroughRate || 0) * 100)).toFixed(2)}%</p>
-            </div>
-            <div className="rounded-xl border border-border bg-background p-3">
-              <p className="text-[10px] text-muted-foreground">CPC</p>
-              <p className="text-sm font-bold text-foreground">${(activeCampaignDetails.performance.costPerClick || 0).toFixed(2)}</p>
-            </div>
-            <div className="rounded-xl border border-border bg-background p-3">
-              <p className="text-[10px] text-muted-foreground">CPA</p>
-              <p className="text-sm font-bold text-foreground">${(activeCampaignDetails.performance.costPerConversion || 0).toFixed(2)}</p>
-            </div>
-            <div className="rounded-xl border border-border bg-background p-3">
-              <p className="text-[10px] text-muted-foreground">ROAS</p>
-              <p className="text-sm font-bold text-foreground">{(activeCampaignDetails.performance.roas || 0).toFixed(2)}x</p>
-            </div>
-          </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", getHealthClass(activeCampaignDetails.performance.health))}>
               {(activeCampaignDetails.performance.health || "UNKNOWN").toLowerCase().replaceAll("_", " ")}
@@ -1343,6 +1498,178 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
               </span>
             )}
           </div>
+
+          <Tabs defaultValue="kpi" className="mt-4">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="kpi" className="text-xs">KPIs</TabsTrigger>
+              <TabsTrigger value="creatives" className="text-xs">Creatives</TabsTrigger>
+              <TabsTrigger value="experiments" className="text-xs">Experiments</TabsTrigger>
+              <TabsTrigger value="audience" className="text-xs">Audience</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="kpi">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="text-[10px] text-muted-foreground">CTR</p>
+                  <p className="text-sm font-bold text-foreground">{(((activeCampaignDetails.performance.clickThroughRate || 0) * 100)).toFixed(2)}%</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="text-[10px] text-muted-foreground">CPC</p>
+                  <p className="text-sm font-bold text-foreground">${(activeCampaignDetails.performance.costPerClick || 0).toFixed(2)}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="text-[10px] text-muted-foreground">CPA</p>
+                  <p className="text-sm font-bold text-foreground">${(activeCampaignDetails.performance.costPerConversion || 0).toFixed(2)}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="text-[10px] text-muted-foreground">ROAS</p>
+                  <p className="text-sm font-bold text-foreground">{(activeCampaignDetails.performance.roas || 0).toFixed(2)}x</p>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="creatives">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-foreground">Creatives</p>
+                <span className="text-[11px] text-muted-foreground">{activeCampaignDetails.creatives?.length || 0} variants</span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {(activeCampaignDetails.creatives || []).map((creative) => (
+                  <div key={creative.id} className="rounded-xl border border-border bg-background p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-foreground">{creative.headline}</p>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", creative.status === "WINNER" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                        {creative.status.toLowerCase()}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{creative.hook}</p>
+                    {creative.status !== "WINNER" && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMarkCreativeWinner(activeCampaignDetails.id, creative.id)}
+                        className="mt-2 h-7 rounded-md px-2 text-[10px]"
+                      >
+                        Mark Winner
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="experiments">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-foreground">Experiments</p>
+                <span className="text-[11px] text-muted-foreground">{activeCampaignDetails.experiments?.length || 0} tests</span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {(activeCampaignDetails.experiments || []).map((experiment) => (
+                  <div key={experiment.id} className="rounded-xl border border-border bg-background p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-foreground">{experiment.hypothesis}</p>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", experiment.status === "COMPLETED" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700")}>
+                        {experiment.status.toLowerCase()}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Control + {experiment.variantCreativeIds.length} variant(s), sample target {experiment.minSampleSize}
+                    </p>
+                    {experiment.status === "RUNNING" && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {activeCampaignDetails.creatives
+                          ?.filter((creative) =>
+                            [experiment.controlCreativeId, ...experiment.variantCreativeIds].includes(creative.id)
+                          )
+                          .map((creative) => (
+                            <Button
+                              key={creative.id}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePromoteExperimentWinner(activeCampaignDetails.id, experiment.id, creative.id)}
+                              className="h-7 rounded-md px-2 text-[10px]"
+                            >
+                              Promote: {creative.headline}
+                            </Button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="audience">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-foreground">Saved Audiences</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSaveCurrentAudience(activeCampaignDetails.id)}
+                      className="h-7 rounded-md px-2 text-[10px]"
+                    >
+                      Save Current
+                    </Button>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {(activeCampaignDetails.audience?.savedAudiences || []).map((audience) => (
+                      <Button
+                        key={audience.id}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleApplySavedAudience(activeCampaignDetails.id, audience.id)}
+                        className="h-7 w-full justify-start rounded-md px-2 text-[10px]"
+                      >
+                        {audience.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-3">
+                  <p className="text-xs font-semibold text-foreground">Exclusions</p>
+                  <div className="mt-2 flex gap-2">
+                    <Input
+                      value={exclusionInput}
+                      onChange={(e) => setExclusionInput(e.target.value)}
+                      placeholder="e.g. recent_bookers_7d"
+                      className="h-8 rounded-md text-[10px]"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleAddExclusion(activeCampaignDetails.id)}
+                      className="h-8 rounded-md px-3 text-[10px]"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(activeCampaignDetails.audience?.excludedAudienceIds || []).map((item) => (
+                      <span key={item} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-xl border border-border bg-background p-3">
+                <p className="text-xs font-semibold text-foreground">Weekly Optimization Checklist</p>
+                <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                  <li>- Review CPA/ROAS against objective target and pause weakest creative if needed.</li>
+                  <li>- Refresh at least one creative hook when health is underperforming.</li>
+                  <li>- Validate audience exclusions and retargeting windows before scaling budget.</li>
+                </ul>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       )}
 
@@ -1368,6 +1695,13 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
               ageMax: campaign.ageMax,
               gender: campaign.gender,
               sports: campaign.sports,
+              utmSource: "sporgates",
+              utmMedium: "paid_placement",
+              utmCampaign: toUtmCampaign(campaign.name),
+              utmContent: "business_campaigns",
+              utmTerm: campaign.sports?.[0]?.toLowerCase(),
+              primaryConversionEvent: getPrimaryConversionEvent(campaign.objective),
+              attributionModel: "LAST_TOUCH",
             })
             await mutate()
             toast.success("Campaign created successfully")

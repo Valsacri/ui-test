@@ -15,6 +15,5 @@ node_modules/
 # Playwright
 playwright-report/
 test-results/
-DEPLOYMENT.md
-next-env.d.ts
+DEPLOYMENT.m
 next-env.d.ts

@@ -7,7 +7,7 @@ import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll"
 import { resolvePostImageUrl, formatFeedTime } from "@/lib/utils"
 import { toast } from "sonner"
-import type { PostCardData } from "@/lib/types/post"
+import type { PostCardData, PostKind } from "@/lib/types/post"
 import type { FeedTab, UseFeedReturn } from "@/hooks/use-feed"
 import { useAppRouter } from "@/lib/route-map"
 import { usePostModal } from "@/lib/post-modal-context"
@@ -73,6 +73,12 @@ export function FeedSection({ feed, userId, currentUser, composer }: FeedSection
                                 images: payload.images,
                                 sport: payload.sport,
                                 visibility: payload.visibility,
+                                businessId: payload.businessId,
+                                postKind: payload.postKind,
+                                linkedProductId: payload.linkedProductId,
+                                linkedServiceListingId: payload.linkedServiceListingId,
+                                linkedFacilityId: payload.linkedFacilityId,
+                                linkedActivityId: payload.linkedActivityId,
                             })
                         }}
                         onSuccess={() => toast.success("Post shared")}
@@ -172,6 +178,14 @@ export function FeedSection({ feed, userId, currentUser, composer }: FeedSection
                             liked: item.likedByCurrentUser ?? false,
                             saved: item.savedByCurrentUser ?? false,
                             sport: item.sport,
+                            postKind: item.postKind as PostKind | undefined,
+                            linkedProductId: item.linkedProductId,
+                            linkedServiceListingId: item.linkedServiceListingId,
+                            linkedFacilityId: item.linkedFacilityId,
+                            linkedActivityId: item.linkedActivityId,
+                            sponsored: item.sponsored,
+                            sponsoredCampaignId: item.sponsoredCampaignId,
+                            sponsoredCreativeId: item.sponsoredCreativeId,
                         }
                         const canDeletePost = !!userId && item.authorId === userId
                         return (

@@ -1,0 +1,15 @@
+{
+  "name": "Sporgates",
+  "short_name": "Sporgates",
+  "icons": [
+    {
+      "src": "/favicon/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#003C66",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}

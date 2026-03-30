@@ -1,27 +1,29 @@
 import axios from 'axios';
 import { STORAGE_KEYS, AUTH_COOKIE_NAME, API_TIMEOUT_MS, DEFAULT_API_BASE_URL } from './constants';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL;
+/** Browser: same-origin paths proxied to Spring (`/v1`, `/auth`). Server: full backend base when needed. */
+function getApiBaseUrl(): string {
+    if (typeof window !== 'undefined') {
+        return '';
+    }
+    return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL;
+}
 
 const apiClient = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: getApiBaseUrl(),
     headers: {
         'Content-Type': 'application/json',
     },
     timeout: API_TIMEOUT_MS,
+    withCredentials: true,
 });
 
-// Request interceptor: attach JWT token; for FormData, drop Content-Type so browser sets multipart boundary
+// Request interceptor: for FormData, drop Content-Type so browser sets multipart boundary.
+// Auth: HttpOnly cookies (sporgates_access_token) — do not attach Bearer from localStorage.
 apiClient.interceptors.request.use(
     (config) => {
         if (config.data instanceof FormData) {
             delete config.headers['Content-Type'];
-        }
-        if (typeof window !== 'undefined') {
-            const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
-            }
         }
         return config;
     },
@@ -30,9 +32,9 @@ apiClient.interceptors.request.use(
 
 // Queue to hold requests while refreshing token
 let isRefreshing = false;
-let failedQueue: any[] = [];
+let failedQueue: { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }[] = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
     failedQueue.forEach((prom) => {
         if (error) {
             prom.reject(error);
@@ -44,20 +46,27 @@ const processQueue = (error: any, token: string | null = null) => {
     failedQueue = [];
 };
 
-// Response interceptor: handle 401 (token expired)
+// Response interceptor: handle 401 (token expired) — refresh via HttpOnly refresh cookie
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        if (!originalRequest) {
+            return Promise.reject(error);
+        }
+
+        const reqUrl = String(originalRequest.url ?? '');
+        if (reqUrl.includes('/auth/refresh')) {
+            return Promise.reject(error);
+        }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             if (isRefreshing) {
                 return new Promise(function (resolve, reject) {
                     failedQueue.push({ resolve, reject });
-                }).then(token => {
-                    originalRequest.headers.Authorization = 'Bearer ' + token;
+                }).then(() => {
                     return apiClient(originalRequest);
-                }).catch(err => {
+                }).catch((err) => {
                     return Promise.reject(err);
                 });
             }
@@ -66,48 +75,34 @@ apiClient.interceptors.response.use(
             isRefreshing = true;
 
             if (typeof window !== 'undefined') {
-                const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-                if (refreshToken) {
-                    try {
-                        // Use raw axios to bypass interceptors for refresh call
-                        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+                try {
+                    const base = getApiBaseUrl();
+                    await axios.post(`${base}/auth/refresh`, {}, {
+                        withCredentials: true,
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: API_TIMEOUT_MS,
+                    });
 
-                        const { accessToken, refreshToken: newRefreshToken } = response.data;
+                    processQueue(null, null);
 
-                        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
-                        if (newRefreshToken) {
-                            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-                        }
+                    return apiClient(originalRequest);
+                } catch (refreshError) {
+                    processQueue(refreshError, null);
 
-                        apiClient.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
-                        originalRequest.headers.Authorization = 'Bearer ' + accessToken;
+                    localStorage.removeItem(STORAGE_KEYS.USER);
+                    document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0`;
+                    document.dispatchEvent(new CustomEvent('auth:logout'));
 
-                        processQueue(null, accessToken);
-
-                        return apiClient(originalRequest);
-                    } catch (refreshError) {
-                        processQueue(refreshError, null);
-
-                        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-                        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-                        localStorage.removeItem(STORAGE_KEYS.USER);
-                        document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0`;
-                        window.dispatchEvent(new CustomEvent('auth:logout'));
-
-                        return Promise.reject(refreshError);
-                    } finally {
-                        isRefreshing = false;
-                    }
+                    return Promise.reject(refreshError);
+                } finally {
+                    isRefreshing = false;
                 }
             }
 
-            // If no refresh token or not browser env, logout
             if (typeof window !== 'undefined') {
-                localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-                localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
                 localStorage.removeItem(STORAGE_KEYS.USER);
                 document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0`;
-                window.dispatchEvent(new CustomEvent('auth:logout'));
+                document.dispatchEvent(new CustomEvent('auth:logout'));
             }
         }
         return Promise.reject(error);

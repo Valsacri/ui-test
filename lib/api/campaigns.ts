@@ -1,10 +1,16 @@
 import apiClient from "@/lib/api";
 import type {
   Campaign,
+  CreateCampaignCreativeCommand,
+  CreateCampaignExperimentCommand,
   CampaignForecast,
   CampaignListItem,
   CreateCampaignCommand,
+  PromoteCampaignExperimentWinnerCommand,
+  SaveCampaignAudienceCommand,
+  UpdateCampaignCreativeStatusCommand,
   UpdateCampaignAudienceCommand,
+  UpdateCampaignExclusionsCommand,
 } from "@/lib/types/campaign";
 
 export const campaignsApi = {
@@ -37,6 +43,66 @@ export const campaignsApi = {
 
   async archive(businessId: string, campaignId: string): Promise<Campaign> {
     const response = await apiClient.post(`/v1/businesses/${businessId}/campaigns/${campaignId}/archive`);
+    return response.data;
+  },
+
+  async addCreative(businessId: string, campaignId: string, command: CreateCampaignCreativeCommand): Promise<Campaign> {
+    const response = await apiClient.post(`/v1/businesses/${businessId}/campaigns/${campaignId}/creatives`, command);
+    return response.data;
+  },
+
+  async updateCreativeStatus(
+    businessId: string,
+    campaignId: string,
+    creativeId: string,
+    command: UpdateCampaignCreativeStatusCommand
+  ): Promise<Campaign> {
+    const response = await apiClient.patch(
+      `/v1/businesses/${businessId}/campaigns/${campaignId}/creatives/${creativeId}/status`,
+      command
+    );
+    return response.data;
+  },
+
+  async addExperiment(businessId: string, campaignId: string, command: CreateCampaignExperimentCommand): Promise<Campaign> {
+    const response = await apiClient.post(`/v1/businesses/${businessId}/campaigns/${campaignId}/experiments`, command);
+    return response.data;
+  },
+
+  async promoteExperimentWinner(
+    businessId: string,
+    campaignId: string,
+    experimentId: string,
+    command: PromoteCampaignExperimentWinnerCommand
+  ): Promise<Campaign> {
+    const response = await apiClient.patch(
+      `/v1/businesses/${businessId}/campaigns/${campaignId}/experiments/${experimentId}/winner`,
+      command
+    );
+    return response.data;
+  },
+
+  async saveAudience(businessId: string, campaignId: string, command: SaveCampaignAudienceCommand): Promise<Campaign> {
+    const response = await apiClient.post(`/v1/businesses/${businessId}/campaigns/${campaignId}/audience/saved`, command);
+    return response.data;
+  },
+
+  async applySavedAudience(businessId: string, campaignId: string, audienceProfileId: string): Promise<Campaign> {
+    const response = await apiClient.post(
+      `/v1/businesses/${businessId}/campaigns/${campaignId}/audience/saved/${audienceProfileId}/apply`
+    );
+    return response.data;
+  },
+
+  async updateAudienceExclusions(
+    businessId: string,
+    campaignId: string,
+    command: UpdateCampaignExclusionsCommand
+  ): Promise<Campaign> {
+    const response = await apiClient.patch(
+      `/v1/businesses/${businessId}/campaigns/${campaignId}/audience/exclusions`,
+      command
+    );
     return response.data;
   },
 

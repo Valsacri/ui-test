@@ -7,6 +7,14 @@ export type PostVisibility = 'PUBLIC' | 'FOLLOWERS_ONLY' | 'PRIVATE'
 
 export type AuthorType = 'USER' | 'BUSINESS'
 
+/** Mirrors backend PostKind — business catalog-linked surfaces. */
+export type PostKind =
+  | 'STANDARD'
+  | 'NEW_PRODUCT'
+  | 'NEW_SERVICE'
+  | 'NEW_FACILITY'
+  | 'UPCOMING_EVENT'
+
 export interface Post {
   id: string
   authorId?: string
@@ -25,6 +33,12 @@ export interface Post {
   likedByCurrentUser?: boolean
   savedByCurrentUser?: boolean
   createdAt?: string
+  postKind?: PostKind
+  linkedProductId?: string
+  linkedServiceListingId?: string
+  linkedFacilityId?: string
+  linkedActivityId?: string
+  boostCampaignId?: string
 }
 
 export interface Comment {
@@ -53,6 +67,11 @@ export interface CreatePostPayload {
   visibility?: PostVisibility
   /** When set, post is created as the business (owner/staff only). */
   businessId?: string
+  postKind?: PostKind
+  linkedProductId?: string
+  linkedServiceListingId?: string
+  linkedFacilityId?: string
+  linkedActivityId?: string
 }
 
 /**
@@ -103,4 +122,12 @@ export interface PostCardData {
   visibility?: PostVisibility
   authorType?: AuthorType
   businessId?: string
+  postKind?: PostKind
+  linkedProductId?: string
+  linkedServiceListingId?: string
+  linkedFacilityId?: string
+  linkedActivityId?: string
+  sponsored?: boolean
+  sponsoredCampaignId?: string
+  sponsoredCreativeId?: string
 }

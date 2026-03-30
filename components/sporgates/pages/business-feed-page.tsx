@@ -61,6 +61,7 @@ export function BusinessFeedPage({ onNavigate }: BusinessFeedPageProps) {
             userDisplayName={activeBusiness?.name ?? "Your business"}
             userAvatar={activeBusiness?.avatar}
             placeholder="Share an update with your followers..."
+            businessId={activeBusinessId}
             onSubmit={handleCreatePost}
             onSuccess={() => mutatePosts()}
           />
@@ -85,6 +86,11 @@ export function BusinessFeedPage({ onNavigate }: BusinessFeedPageProps) {
                   sport: p.sport as string | undefined,
                   authorType: p.authorType,
                   businessId: p.businessId as string | undefined,
+                  postKind: p.postKind,
+                  linkedProductId: p.linkedProductId,
+                  linkedServiceListingId: p.linkedServiceListingId,
+                  linkedFacilityId: p.linkedFacilityId,
+                  linkedActivityId: p.linkedActivityId,
                 }
                 return (
                   <PostCard

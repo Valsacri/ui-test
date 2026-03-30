@@ -1,4 +1,5 @@
 import apiClient from '../api';
+import type { PostKind } from '@/lib/types/post';
 
 export interface FeedItem {
     id: string;
@@ -18,6 +19,14 @@ export interface FeedItem {
     activityStatus?: string;
     likedByCurrentUser?: boolean;
     savedByCurrentUser?: boolean;
+    postKind?: PostKind;
+    linkedProductId?: string;
+    linkedServiceListingId?: string;
+    linkedFacilityId?: string;
+    linkedActivityId?: string;
+    sponsored?: boolean;
+    sponsoredCampaignId?: string;
+    sponsoredCreativeId?: string;
 }
 
 export interface FeedPage {

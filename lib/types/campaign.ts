@@ -15,6 +15,13 @@ export type CampaignObjective =
   | "PARTNER_LEADS";
 
 export type CampaignBudgetType = "DAILY" | "LIFETIME";
+export type CampaignConversionEvent =
+  | "ACTIVITY_BOOKED"
+  | "EVENT_RSVP_CONFIRMED"
+  | "PARTNER_LEAD_SUBMITTED"
+  | "PROFILE_VISIT"
+  | "MESSAGE_SENT";
+export type CampaignAttributionModel = "LAST_TOUCH" | "FIRST_TOUCH" | "LINEAR";
 
 export interface CampaignAudience {
   location: string;
@@ -28,6 +35,14 @@ export interface CampaignAudience {
   lookalikeEnabled?: boolean;
   lookalikeSeed?: string;
   audienceQualityScore?: number;
+  excludedAudienceIds?: string[];
+  savedAudiences?: CampaignAudienceProfile[];
+}
+
+export interface CampaignAudienceProfile {
+  id: string;
+  name: string;
+  audience: CampaignAudience;
 }
 
 export interface CreateCampaignCommand {
@@ -43,6 +58,13 @@ export interface CreateCampaignCommand {
   ageMax: number;
   gender: string;
   sports: string[];
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  utmContent?: string;
+  utmTerm?: string;
+  primaryConversionEvent: CampaignConversionEvent;
+  attributionModel: CampaignAttributionModel;
 }
 
 export interface UpdateCampaignAudienceCommand extends CampaignAudience {}
@@ -81,11 +103,83 @@ export interface CampaignAdNetworkSync {
   lastSyncAt?: string;
 }
 
+export interface CampaignMeasurement {
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  utmContent?: string;
+  utmTerm?: string;
+  primaryConversionEvent: CampaignConversionEvent;
+  attributionModel: CampaignAttributionModel;
+}
+
+export type CampaignCreativeStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "WINNER" | "LOSER";
+
+export interface CampaignCreative {
+  id: string;
+  angle: string;
+  hook: string;
+  headline: string;
+  primaryText: string;
+  cta: string;
+  control: boolean;
+  status: CampaignCreativeStatus;
+}
+
+export interface CreateCampaignCreativeCommand {
+  angle: string;
+  hook: string;
+  headline: string;
+  primaryText: string;
+  cta: string;
+  control: boolean;
+}
+
+export interface UpdateCampaignCreativeStatusCommand {
+  status: CampaignCreativeStatus;
+}
+
+export type CampaignExperimentStatus = "DRAFT" | "RUNNING" | "COMPLETED" | "CANCELLED";
+
+export interface CampaignExperiment {
+  id: string;
+  hypothesis: string;
+  controlCreativeId: string;
+  variantCreativeIds: string[];
+  minSampleSize: number;
+  startDate: string;
+  endDate: string;
+  winnerCreativeId?: string;
+  status: CampaignExperimentStatus;
+}
+
+export interface CreateCampaignExperimentCommand {
+  hypothesis: string;
+  controlCreativeId: string;
+  variantCreativeIds: string[];
+  minSampleSize: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface PromoteCampaignExperimentWinnerCommand {
+  winnerCreativeId: string;
+}
+
+export interface SaveCampaignAudienceCommand {
+  name: string;
+}
+
+export interface UpdateCampaignExclusionsCommand {
+  excludedAudienceIds: string[];
+}
+
 export interface CampaignListItem {
   id: string;
   name: string;
   objective: CampaignObjective;
   status: CampaignStatus;
+  primaryConversionEvent?: CampaignConversionEvent;
   budgetAmount: number;
   spent: number;
   reach: number;
@@ -106,8 +200,11 @@ export interface Campaign {
   endDate: string;
   significantEditCount: number;
   audience: CampaignAudience;
+  measurement?: CampaignMeasurement;
   performance: CampaignPerformance;
   adNetworkSync?: CampaignAdNetworkSync;
+  creatives?: CampaignCreative[];
+  experiments?: CampaignExperiment[];
   snapshots?: Array<{
     snapshotDate: string;
     spend: number;

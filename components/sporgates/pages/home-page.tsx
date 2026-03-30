@@ -19,6 +19,8 @@ import { HeroBanner } from "@/components/sporgates/feed/hero-banner"
 import { QuickStats } from "@/components/sporgates/feed/quick-stats"
 import { FeedSection } from "@/components/sporgates/feed/feed-section"
 import { FeaturedContent } from "@/components/sporgates/feed/featured-content"
+import { CampaignHomeFeedPlacement } from "@/components/sporgates/campaign/campaign-home-feed-placement"
+import type { ServedCampaignPlacement } from "@/lib/types/campaign-delivery"
 
 // ─── Types ───────────────────────────────────────────────────────
 interface ActivityCardItem {
@@ -57,7 +59,11 @@ interface UserProfile {
   avgRating?: number
 }
 
-export function HomePage() {
+type HomePageProps = {
+  initialCampaignPlacement?: ServedCampaignPlacement | null
+}
+
+export function HomePage({ initialCampaignPlacement = null }: HomePageProps) {
   const { navigate } = useAppRouter()
   // ─── Feed state (centralized hook) ──────────────────────────────
   const feed = useFeed({ pageSize: 20 })
@@ -193,6 +199,8 @@ export function HomePage() {
       </div>
 
       <QuickStats {...stats} />
+
+      <CampaignHomeFeedPlacement served={initialCampaignPlacement} />
 
       <ErrorBoundary>
         <FeedSection

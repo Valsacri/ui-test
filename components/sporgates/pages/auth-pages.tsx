@@ -901,7 +901,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
           <button
             type="button"
             onClick={() => {
-              if (authService.getToken()) {
+              if (authService.isAuthenticated()) {
                 document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
               }
               onNavigate("home")
