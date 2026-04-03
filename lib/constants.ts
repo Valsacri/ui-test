@@ -45,14 +45,16 @@ export const STORY_UPLOAD_TIMEOUT_MS = 60 * 1000 // 1 minute
 export const DEFAULT_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
 
 /**
- * Google OAuth browser entry (GET). Prefer an absolute API base when NEXT_PUBLIC_API_URL is set
- * so dev/prod work even if Next rewrites were built with the wrong default (localhost).
- * Local dev: leave NEXT_PUBLIC_API_URL unset and use same-origin `/auth/google/start` + rewrites.
+ * Google OAuth browser entry (GET). Default: same-origin `/auth/google/start` so the URL bar stays
+ * on the app host (e.g. dev.sporgates.com); next.config rewrites proxy to Spring.
+ * Set NEXT_PUBLIC_OAUTH_USE_API_ORIGIN=true only if you must bypass rewrites (e.g. debugging).
  */
 export function getGoogleOAuthStartUrl(): string {
-  const base = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_API_URL : ""
-  if (base && base.trim().length > 0) {
-    return `${base.replace(/\/$/, "")}/auth/google/start`
+  if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_OAUTH_USE_API_ORIGIN === "true") {
+    const base = process.env.NEXT_PUBLIC_API_URL
+    if (base && base.trim().length > 0) {
+      return `${base.replace(/\/$/, "")}/auth/google/start`
+    }
   }
   return "/auth/google/start"
 }

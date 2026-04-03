@@ -9,8 +9,7 @@ type GoogleSignInButtonProps = {
 
 /**
  * Starts Google OAuth 2.0 on the API (authorization code + client secret on server).
- * Uses NEXT_PUBLIC_API_URL + `/auth/google/start` when set (recommended on dev/prod droplets);
- * otherwise same-origin `/auth/google/start` (Next rewrite → local API).
+ * Link is same-origin `/auth/google/start` → Next rewrites to the API (keeps user on app domain).
  */
 export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
   return (
