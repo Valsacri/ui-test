@@ -57,6 +57,27 @@ export const userService = {
         return response.data;
     },
 
+    updateOnboardingLocation: async (
+        id: string,
+        data: { city: string; country: string; timezone?: string }
+    ) => {
+        const response = await apiClient.put(`/v1/users/${id}/onboarding/location`, data);
+        return response.data;
+    },
+
+    updateOnboardingParticipation: async (
+        id: string,
+        data: { participantRoles: string[]; preferredTimes?: string[]; availableDays?: string[] }
+    ) => {
+        const response = await apiClient.put(`/v1/users/${id}/onboarding/participation`, data);
+        return response.data;
+    },
+
+    acknowledgeOnboardingNotifications: async (id: string) => {
+        const response = await apiClient.put(`/v1/users/${id}/onboarding/notifications-acknowledgment`);
+        return response.data;
+    },
+
     followUser: async (currentUserId: string, targetUserId: string) => {
         await apiClient.post(`/v1/users/${currentUserId}/follow/${targetUserId}`);
     },

@@ -4,7 +4,14 @@ import React, { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { APP_HOME_PATH, AUTH_COOKIE_NAME } from "@/lib/constants"
 
-const ONBOARDING_PATHS = ["/choose-sports", "/set-goals", "/onboarding-confirmation"]
+const ONBOARDING_PATHS = [
+    "/choose-sports",
+    "/set-goals",
+    "/onboarding-location",
+    "/onboarding-activity",
+    "/onboarding-notifications",
+    "/onboarding-confirmation",
+]
 
 export default function AuthLayout({
     children,

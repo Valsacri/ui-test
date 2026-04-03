@@ -79,6 +79,9 @@ export type PageRoute =
   | "verify-email"
   | "choose-sports"
   | "set-goals"
+  | "onboarding-location"
+  | "onboarding-activity"
+  | "onboarding-notifications"
   | "onboarding-confirmation"
   | "checkout"
 

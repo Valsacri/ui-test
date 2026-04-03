@@ -89,6 +89,9 @@ const authPages: PageRoute[] = [
   "verify-email",
   "choose-sports",
   "set-goals",
+  "onboarding-location",
+  "onboarding-activity",
+  "onboarding-notifications",
   "onboarding-confirmation",
 ]
 
@@ -364,6 +367,9 @@ export function AppShell() {
       case "verify-email":
       case "choose-sports":
       case "set-goals":
+      case "onboarding-location":
+      case "onboarding-activity":
+      case "onboarding-notifications":
       case "onboarding-confirmation":
         return <AuthPages page={currentPage} onNavigate={navigate} />
       default:

@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Eye,
   EyeOff,
-  Github,
   ArrowLeft,
   Mail,
   Lock,
@@ -22,15 +21,27 @@ import {
   Clock,
   ChevronUp,
   ChevronDown,
+  MapPin,
+  CalendarDays,
+  Bell,
+  Crosshair,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { SporgatesLogoText } from "@/components/sporgates/sporgates-logo-text"
+import { GoogleSignInButton } from "@/components/sporgates/google-sign-in-button"
 import { cn } from "@/lib/utils"
 import { authService } from "@/lib/services"
-import { APP_HOME_PATH, AUTH_COOKIE_NAME } from "@/lib/constants"
+import { APP_HOME_PATH, AUTH_COOKIE_NAME, STORAGE_KEYS } from "@/lib/constants"
+import { getPostOnboardingPageRoute } from "@/lib/post-onboarding-destination"
 import { userService } from "@/lib/services/user"
 import { sportService } from "@/lib/services/sport"
 import { getApiErrorMessage, isApiError } from "@/lib/api-errors"
+import {
+  geolocationErrorMessage,
+  getBrowserIanaTimezone,
+  getCurrentPosition,
+  reverseGeocode,
+} from "@/lib/geolocation"
 import {
   signInSchema,
   signUpSchema,
@@ -50,6 +61,46 @@ const experienceLevels = [
   { id: "professional", label: "Professional", description: "Competitive level" },
 ]
 
+const ONBOARDING_STEPS = 6
+
+const PARTICIPANT_ROLES = [
+  { id: "PLAYER", label: "Player", description: "Train and compete" },
+  { id: "COACH", label: "Coach", description: "Coach or instruct" },
+  { id: "ORGANIZER", label: "Organizer", description: "Run events & leagues" },
+  { id: "FAN", label: "Fan", description: "Follow sports & events" },
+  { id: "SPONSOR", label: "Sponsor", description: "Brands, campaigns & partnerships" },
+  { id: "BUSINESS", label: "Business", description: "Venues, clubs & companies" },
+] as const
+
+const TIME_SLOTS = [
+  { id: "morning", label: "Morning" },
+  { id: "afternoon", label: "Afternoon" },
+  { id: "evening", label: "Evening" },
+] as const
+
+const WEEK_DAYS = [
+  { id: "monday", label: "Mon" },
+  { id: "tuesday", label: "Tue" },
+  { id: "wednesday", label: "Wed" },
+  { id: "thursday", label: "Thu" },
+  { id: "friday", label: "Fri" },
+  { id: "saturday", label: "Sat" },
+  { id: "sunday", label: "Sun" },
+] as const
+
+function OnboardingProgressBar({ current }: { current: number }) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1">
+      {Array.from({ length: ONBOARDING_STEPS }, (_, i) => (
+        <div
+          key={i}
+          className={cn("h-1 flex-1 rounded-full", i < current ? "bg-primary" : "bg-muted")}
+        />
+      ))}
+    </div>
+  )
+}
+
 interface AuthPageProps {
   page:
   | "signin"
@@ -59,6 +110,9 @@ interface AuthPageProps {
   | "verify-email"
   | "choose-sports"
   | "set-goals"
+  | "onboarding-location"
+  | "onboarding-activity"
+  | "onboarding-notifications"
   | "onboarding-confirmation"
   onNavigate: (page: PageRoute) => void
 }
@@ -80,6 +134,21 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
   const [tokenExpired, setTokenExpired] = useState(false)
   const [verifyEmail, setVerifyEmail] = useState("")
   const codeInputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const [onboardingCity, setOnboardingCity] = useState("")
+  const [onboardingCountry, setOnboardingCountry] = useState("")
+  const [onboardingTimezone, setOnboardingTimezone] = useState("")
+  const [participantRoleIds, setParticipantRoleIds] = useState<string[]>([])
+  const [preferredTimeIds, setPreferredTimeIds] = useState<string[]>([])
+  const [availableDayIds, setAvailableDayIds] = useState<string[]>([])
+  const [notifEmail, setNotifEmail] = useState(true)
+  const [notifPush, setNotifPush] = useState(true)
+  const [notifActivity, setNotifActivity] = useState(true)
+  const [notifFollow, setNotifFollow] = useState(true)
+  const [notifMessage, setNotifMessage] = useState(true)
+  const [notifMarketing, setNotifMarketing] = useState(false)
+  const [notifDigest, setNotifDigest] = useState(true)
+  const [locationDetectLoading, setLocationDetectLoading] = useState(false)
+  const [locationDetectInfo, setLocationDetectInfo] = useState<string | null>(null)
 
   // ── react-hook-form instances ──────────────────────────────────────────────
   const signInForm = useForm<SignInFormData>({
@@ -131,6 +200,12 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     }
   }, [page, verifyEmail])
 
+  const redirectAfterSession = () => {
+    const params = new URLSearchParams(window.location.search)
+    const callbackUrl = params.get("callbackUrl") || APP_HOME_PATH
+    window.location.href = callbackUrl
+  }
+
   const handleSignIn = async (data: SignInFormData) => {
     setError(null)
     setLoading(true)
@@ -143,10 +218,19 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
         onNavigate("verify-email")
         return
       }
-      // Redirect to callbackUrl (set by middleware) or app home
-      const params = new URLSearchParams(window.location.search)
-      const callbackUrl = params.get('callbackUrl') || APP_HOME_PATH
-      window.location.href = callbackUrl
+      if (res?.nextStep === "ONBOARDING") {
+        const h = res?.onboardingHint
+        const routeByHint: Record<string, PageRoute> = {
+          goals: "set-goals",
+          location: "onboarding-location",
+          roles: "onboarding-activity",
+          availability: "onboarding-activity",
+          notifications: "onboarding-notifications",
+        }
+        onNavigate(h && routeByHint[h] ? routeByHint[h] : "choose-sports")
+        return
+      }
+      redirectAfterSession()
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, "Login failed. Please try again."))
     } finally {
@@ -229,20 +313,12 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <div className="flex-1">
-              <div className="flex gap-2">
-                {[1, 2].map((step) => (
-                  <div
-                    key={step}
-                    className={cn(
-                      "h-1 flex-1 rounded-full",
-                      step === 1 ? "bg-primary" : "bg-muted"
-                    )}
-                  />
-                ))}
-              </div>
+            <div className="min-w-0 flex-1">
+              <OnboardingProgressBar current={1} />
             </div>
-            <span className="text-xs font-semibold text-muted-foreground">Step 1 of 2</span>
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+              Step 1 of {ONBOARDING_STEPS}
+            </span>
           </div>
         </div>
 
@@ -409,20 +485,12 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <div className="flex-1">
-              <div className="flex gap-2">
-                {[1, 2].map((step) => (
-                  <div
-                    key={step}
-                    className={cn(
-                      "h-1 flex-1 rounded-full",
-                      "bg-primary"
-                    )}
-                  />
-                ))}
-              </div>
+            <div className="min-w-0 flex-1">
+              <OnboardingProgressBar current={2} />
             </div>
-            <span className="text-xs font-semibold text-muted-foreground">Step 2 of 2</span>
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+              Step 2 of {ONBOARDING_STEPS}
+            </span>
           </div>
         </div>
 
@@ -511,13 +579,458 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
                     setLoading(false)
                   }
                 }
-                onNavigate("onboarding-confirmation")
+                onNavigate("onboarding-location")
               }}
               disabled={selectedGoals.length === 0 || loading}
               className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Saving..." : "Get Started"}
             </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (page === "onboarding-location") {
+    return (
+      <div className="min-h-[80vh]">
+        <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
+          <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-4">
+            <button
+              type="button"
+              onClick={() => onNavigate("set-goals")}
+              className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <OnboardingProgressBar current={3} />
+            </div>
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+              Step 3 of {ONBOARDING_STEPS}
+            </span>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-2xl px-4 py-10">
+          <div className="mb-8 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <MapPin className="h-7 w-7" />
+            </div>
+          </div>
+          <div className="space-y-2 text-center">
+            <h1 className="text-2xl font-bold text-foreground">Where are you based?</h1>
+            <p className="text-sm text-muted-foreground">
+              We use this to show nearby venues, events, and people. You can refine it later in settings.
+            </p>
+          </div>
+
+          <div className="mt-6">
+            <button
+              type="button"
+              disabled={locationDetectLoading}
+              onClick={async () => {
+                setLocationDetectInfo(null)
+                setError(null)
+                setLocationDetectLoading(true)
+                try {
+                  const pos = await getCurrentPosition()
+                  const { latitude, longitude } = pos.coords
+                  try {
+                    const place = await reverseGeocode(latitude, longitude)
+                    setOnboardingCity(place.city)
+                    setOnboardingCountry(place.country)
+                    const tz = getBrowserIanaTimezone()
+                    if (tz) setOnboardingTimezone(tz)
+                    setLocationDetectInfo(
+                      "Filled from your location — feel free to edit before continuing."
+                    )
+                  } catch {
+                    const tz = getBrowserIanaTimezone()
+                    if (tz) setOnboardingTimezone(tz)
+                    setLocationDetectInfo(
+                      "We detected your position but could not resolve the address. Enter city and country below."
+                    )
+                  }
+                } catch (e: unknown) {
+                  if (
+                    e &&
+                    typeof e === "object" &&
+                    "code" in e &&
+                    typeof (e as GeolocationPositionError).code === "number"
+                  ) {
+                    setLocationDetectInfo(geolocationErrorMessage((e as GeolocationPositionError).code))
+                  } else if (e instanceof Error && e.message === "not_supported") {
+                    setLocationDetectInfo(
+                      "Location is not available in this browser. Enter your city and country below."
+                    )
+                  } else {
+                    setLocationDetectInfo("Could not use your location. Enter your city and country below.")
+                  }
+                } finally {
+                  setLocationDetectLoading(false)
+                }
+              }}
+              className={cn(
+                "flex w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/40 bg-card py-3 text-sm font-semibold text-primary transition-colors",
+                "hover:bg-primary/5 disabled:opacity-60"
+              )}
+            >
+              {locationDetectLoading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  Getting location…
+                </>
+              ) : (
+                <>
+                  <Crosshair className="h-4 w-4 shrink-0" />
+                  Use my current location
+                </>
+              )}
+            </button>
+            {locationDetectInfo && (
+              <p className="mt-3 text-center text-xs text-muted-foreground">{locationDetectInfo}</p>
+            )}
+          </div>
+
+          <div className="mt-8 space-y-4">
+            <p className="text-center text-xs font-medium text-muted-foreground">Or enter manually</p>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">City</label>
+              <input
+                type="text"
+                value={onboardingCity}
+                onChange={(e) => setOnboardingCity(e.target.value)}
+                placeholder="e.g. Casablanca"
+                className="h-12 w-full rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">Country</label>
+              <input
+                type="text"
+                value={onboardingCountry}
+                onChange={(e) => setOnboardingCountry(e.target.value)}
+                placeholder="e.g. Morocco"
+                className="h-12 w-full rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-foreground">Timezone (optional)</label>
+              <input
+                type="text"
+                value={onboardingTimezone}
+                onChange={(e) => setOnboardingTimezone(e.target.value)}
+                placeholder="e.g. Africa/Casablanca"
+                className="h-12 w-full rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 border-t border-border bg-background/95 p-4 backdrop-blur">
+          <div className="mx-auto max-w-2xl">
+            <button
+              type="button"
+              onClick={async () => {
+                const userId = getUserId()
+                if (!userId || !onboardingCity.trim() || !onboardingCountry.trim()) {
+                  setError("Please enter city and country.")
+                  return
+                }
+                setError(null)
+                setLoading(true)
+                try {
+                  await userService.updateOnboardingLocation(userId, {
+                    city: onboardingCity.trim(),
+                    country: onboardingCountry.trim(),
+                    ...(onboardingTimezone.trim() ? { timezone: onboardingTimezone.trim() } : {}),
+                  })
+                  onNavigate("onboarding-activity")
+                } catch (err: unknown) {
+                  setError(getApiErrorMessage(err, "Could not save location."))
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading || locationDetectLoading}
+              className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Continue"}
+            </button>
+            {error && <p className="mt-2 text-center text-xs text-red-500">{error}</p>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (page === "onboarding-activity") {
+    const toggleRole = (id: string) => {
+      setParticipantRoleIds((prev) =>
+        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      )
+    }
+    const toggleTime = (id: string) => {
+      setPreferredTimeIds((prev) =>
+        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      )
+    }
+    const toggleDay = (id: string) => {
+      setAvailableDayIds((prev) =>
+        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      )
+    }
+    const canContinueActivity =
+      participantRoleIds.length > 0 &&
+      (preferredTimeIds.length > 0 || availableDayIds.length > 0)
+
+    return (
+      <div className="min-h-[80vh]">
+        <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
+          <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-4">
+            <button
+              type="button"
+              onClick={() => onNavigate("onboarding-location")}
+              className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <OnboardingProgressBar current={4} />
+            </div>
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+              Step 4 of {ONBOARDING_STEPS}
+            </span>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-2xl px-4 py-10">
+          <div className="mb-6 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <CalendarDays className="h-7 w-7" />
+            </div>
+          </div>
+          <div className="space-y-2 text-center">
+            <h1 className="text-2xl font-bold text-foreground">How do you participate?</h1>
+            <p className="text-sm text-muted-foreground">
+              Pick your roles and when you are usually free — we will match you with the right activities.
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-6">
+            <div>
+              <p className="mb-3 text-sm font-semibold text-foreground">Roles</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PARTICIPANT_ROLES.map((r) => {
+                  const on = participantRoleIds.includes(r.id)
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => toggleRole(r.id)}
+                      className={cn(
+                        "rounded-xl border p-4 text-left text-sm transition-colors",
+                        on ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"
+                      )}
+                    >
+                      <span className="font-semibold text-foreground">{r.label}</span>
+                      <span className="mt-1 block text-xs text-muted-foreground">{r.description}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-3 text-sm font-semibold text-foreground">Preferred times</p>
+              <div className="flex flex-wrap gap-2">
+                {TIME_SLOTS.map((t) => {
+                  const on = preferredTimeIds.includes(t.id)
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => toggleTime(t.id)}
+                      className={cn(
+                        "rounded-full border px-4 py-2 text-xs font-medium",
+                        on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card text-muted-foreground"
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-3 text-sm font-semibold text-foreground">Available days</p>
+              <div className="flex flex-wrap gap-2">
+                {WEEK_DAYS.map((d) => {
+                  const on = availableDayIds.includes(d.id)
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => toggleDay(d.id)}
+                      className={cn(
+                        "min-w-[2.75rem] rounded-lg border px-2 py-2 text-xs font-medium",
+                        on
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card text-muted-foreground"
+                      )}
+                    >
+                      {d.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 border-t border-border bg-background/95 p-4 backdrop-blur">
+          <div className="mx-auto max-w-2xl">
+            <button
+              type="button"
+              onClick={async () => {
+                const userId = getUserId()
+                if (!userId || !canContinueActivity) return
+                setError(null)
+                setLoading(true)
+                try {
+                  await userService.updateOnboardingParticipation(userId, {
+                    participantRoles: participantRoleIds,
+                    preferredTimes: preferredTimeIds,
+                    availableDays: availableDayIds,
+                  })
+                  if (typeof window !== "undefined") {
+                    try {
+                      sessionStorage.setItem(
+                        STORAGE_KEYS.ONBOARDING_PARTICIPANT_ROLES,
+                        JSON.stringify(participantRoleIds)
+                      )
+                    } catch {
+                      /* ignore */
+                    }
+                  }
+                  onNavigate("onboarding-notifications")
+                } catch (err: unknown) {
+                  setError(getApiErrorMessage(err, "Could not save preferences."))
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={!canContinueActivity || loading}
+              className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Continue"}
+            </button>
+            {error && <p className="mt-2 text-center text-xs text-red-500">{error}</p>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (page === "onboarding-notifications") {
+    return (
+      <div className="min-h-[80vh]">
+        <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
+          <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 py-4">
+            <button
+              type="button"
+              onClick={() => onNavigate("onboarding-activity")}
+              className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <OnboardingProgressBar current={5} />
+            </div>
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+              Step 5 of {ONBOARDING_STEPS}
+            </span>
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-2xl px-4 py-10">
+          <div className="mb-6 flex justify-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Bell className="h-7 w-7" />
+            </div>
+          </div>
+          <div className="space-y-2 text-center">
+            <h1 className="text-2xl font-bold text-foreground">Stay in the loop</h1>
+            <p className="text-sm text-muted-foreground">
+              Choose what you want to hear about. You can change this anytime in settings.
+            </p>
+          </div>
+
+          <div className="mt-8 space-y-4 rounded-2xl border border-border bg-card p-5">
+            {[
+              { label: "Email updates", value: notifEmail, set: setNotifEmail },
+              { label: "Push notifications", value: notifPush, set: setNotifPush },
+              { label: "Activity reminders", value: notifActivity, set: setNotifActivity },
+              { label: "New followers", value: notifFollow, set: setNotifFollow },
+              { label: "Messages", value: notifMessage, set: setNotifMessage },
+              { label: "Marketing & tips", value: notifMarketing, set: setNotifMarketing },
+              { label: "Weekly digest", value: notifDigest, set: setNotifDigest },
+            ].map((row) => (
+              <label
+                key={row.label}
+                className="flex cursor-pointer items-center justify-between gap-4 border-b border-border/60 pb-4 last:border-0 last:pb-0"
+              >
+                <span className="text-sm text-foreground">{row.label}</span>
+                <input
+                  type="checkbox"
+                  checked={row.value}
+                  onChange={(e) => row.set(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-primary"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 border-t border-border bg-background/95 p-4 backdrop-blur">
+          <div className="mx-auto max-w-2xl">
+            <button
+              type="button"
+              onClick={async () => {
+                const userId = getUserId()
+                if (!userId) return
+                setError(null)
+                setLoading(true)
+                try {
+                  await userService.updateNotificationPreferences(userId, {
+                    emailNotifications: notifEmail,
+                    pushNotifications: notifPush,
+                    activityReminders: notifActivity,
+                    followNotifications: notifFollow,
+                    messageNotifications: notifMessage,
+                    marketingEmails: notifMarketing,
+                    weeklyDigest: notifDigest,
+                  })
+                  await userService.acknowledgeOnboardingNotifications(userId)
+                  await authService.refreshToken()
+                  onNavigate("onboarding-confirmation")
+                } catch (err: unknown) {
+                  setError(getApiErrorMessage(err, "Could not save notification settings."))
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              disabled={loading}
+              className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Continue"}
+            </button>
+            {error && <p className="mt-2 text-center text-xs text-red-500">{error}</p>}
           </div>
         </div>
       </div>
@@ -891,6 +1404,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
     return (
       <div className="flex min-h-[80vh] items-center justify-center">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-lg">
+          <p className="mb-3 text-xs font-semibold text-muted-foreground">Step {ONBOARDING_STEPS} of {ONBOARDING_STEPS}</p>
           <div className="gradient-secondary mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
             <CheckCircle className="h-8 w-8 text-white" />
           </div>
@@ -900,15 +1414,48 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
           </p>
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (authService.isAuthenticated()) {
                 document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`
               }
-              onNavigate("home")
+              let roles: string[] = []
+              if (typeof window !== "undefined") {
+                try {
+                  const raw = sessionStorage.getItem(STORAGE_KEYS.ONBOARDING_PARTICIPANT_ROLES)
+                  if (raw) roles = JSON.parse(raw) as string[]
+                } catch {
+                  roles = []
+                }
+              }
+              if (roles.length === 0) {
+                const uid = getUserId()
+                if (uid) {
+                  try {
+                    const u = (await userService.getUserById(uid)) as { participantRoles?: string[] }
+                    if (Array.isArray(u?.participantRoles)) roles = u.participantRoles
+                  } catch {
+                    /* fall through to home */
+                  }
+                }
+              }
+              if (typeof window !== "undefined") {
+                try {
+                  sessionStorage.removeItem(STORAGE_KEYS.ONBOARDING_PARTICIPANT_ROLES)
+                } catch {
+                  /* ignore */
+                }
+              }
+              const destination = getPostOnboardingPageRoute(roles)
+              try {
+                await authService.refreshToken()
+              } catch {
+                /* still continue */
+              }
+              onNavigate(destination)
             }}
             className="gradient-primary w-full rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
           >
-            Go to Home
+            Continue
           </button>
         </div>
       </div>
@@ -992,25 +1539,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               </p>
             </div>
 
-            <div className="mx-auto max-w-xl space-y-2">
-              <button type="button" className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-white py-2.5 text-sm font-medium text-[#0f172a]">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#EA4335" d="M12 10.2v3.9h5.4c-.2 1.3-1.6 3.9-5.4 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.5 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.9 9.1-9.3 0-.6-.1-1.1-.2-1.6H12z" />
-                </svg>
-                Continue with Google
-              </button>
-              <button type="button" className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-white py-2.5 text-sm font-medium text-[#0f172a]">
-                <Github className="h-4 w-4" />
-                Continue with GitHub
-              </button>
-            </div>
-
-            <div className="mx-auto my-5 flex max-w-xl items-center gap-3">
-              <div className="h-px flex-1 bg-[#d1d5db]" />
-              <span className="text-xs text-[#94a3b8]">OR</span>
-              <div className="h-px flex-1 bg-[#d1d5db]" />
-            </div>
-
+            <>
             {isSignIn ? (
             <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="mx-auto max-w-xl space-y-4">
               <div>
@@ -1178,6 +1707,15 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
               </p>
             </form>
           )}
+            <div className="mx-auto my-5 flex max-w-xl items-center gap-3">
+              <div className="h-px flex-1 bg-[#d1d5db]" />
+              <span className="text-xs text-[#94a3b8]">OR</span>
+              <div className="h-px flex-1 bg-[#d1d5db]" />
+            </div>
+            <div className="mx-auto max-w-xl space-y-2">
+              <GoogleSignInButton disabled={loading} />
+            </div>
+            </>
           </div>
         </div>
       </div>

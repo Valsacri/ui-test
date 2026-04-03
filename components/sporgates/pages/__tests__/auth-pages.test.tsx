@@ -5,6 +5,7 @@ import { AuthPages } from "../auth-pages"
 vi.mock("@/lib/services", () => ({
   authService: {
     login: vi.fn().mockResolvedValue({ user: {}, token: "token" }),
+    loginWithGoogle: vi.fn().mockResolvedValue({ userId: "u1", accessToken: "at" }),
     verifyEmail: vi.fn().mockResolvedValue(undefined),
   },
 }))
@@ -12,6 +13,10 @@ vi.mock("@/lib/services", () => ({
 vi.mock("@/lib/services/user", () => ({
   userService: {
     getCurrentUser: vi.fn().mockResolvedValue(null),
+    updateOnboardingLocation: vi.fn().mockResolvedValue({}),
+    updateOnboardingParticipation: vi.fn().mockResolvedValue({}),
+    updateNotificationPreferences: vi.fn().mockResolvedValue({}),
+    acknowledgeOnboardingNotifications: vi.fn().mockResolvedValue({}),
   },
 }))
 
@@ -82,20 +87,20 @@ describe("AuthPages", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: /what sports interest you\?/i })).toBeInTheDocument()
     })
-    expect(screen.getByText(/step 1 of 2/i)).toBeInTheDocument()
+    expect(screen.getByText(/step 1 of 6/i)).toBeInTheDocument()
   })
 
   it("renders set-goals onboarding page", () => {
     render(<AuthPages page="set-goals" onNavigate={mockOnNavigate} />)
 
     expect(screen.getByRole("heading", { name: /what are your goals\?/i })).toBeInTheDocument()
-    expect(screen.getByText(/step 2 of 2/i)).toBeInTheDocument()
+    expect(screen.getByText(/step 2 of 6/i)).toBeInTheDocument()
   })
 
   it("renders onboarding-confirmation page", () => {
     render(<AuthPages page="onboarding-confirmation" onNavigate={mockOnNavigate} />)
 
     expect(screen.getByRole("heading", { name: /you're all set/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /go to home/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^continue$/i })).toBeInTheDocument()
   })
 })

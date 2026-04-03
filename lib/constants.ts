@@ -9,6 +9,8 @@ export const STORAGE_KEYS = {
     REFRESH_TOKEN: 'refresh_token',
     USER: 'user',
     ACTIVE_BUSINESS_ID: 'activeBusinessId',
+    /** Session-only: onboarding participation roles until confirmation redirect (cleared after use). */
+    ONBOARDING_PARTICIPANT_ROLES: 'sporgates_onboarding_participant_roles',
 } as const
 
 // ── Auth ───────────────────────────────────────────────────
@@ -28,7 +30,11 @@ export const PUBLIC_ROUTES = [
     '/verify-email',
     '/choose-sports',
     '/set-goals',
+    '/onboarding-location',
+    '/onboarding-activity',
+    '/onboarding-notifications',
     '/onboarding-confirmation',
+    '/oauth/google',
 ] as const
 
 // ── API Config ────────────────────────────────────────────

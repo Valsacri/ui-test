@@ -32,6 +32,14 @@ const ERROR_KEY_MESSAGES: Record<string, string> = {
     // Login errors
     'login.failed.unexpected': 'An unexpected error occurred during login. Please try again.',
 
+    // Google OAuth
+    'oauth.google.not.configured': 'Google sign-in is not available. Please use email and password or contact support.',
+    'oauth.google.id_token.invalid': 'Google sign-in failed. Please try again.',
+    'oauth.google.email.not.verified': 'Your Google account email is not verified. Please verify it with Google first.',
+    'oauth.google.account.conflict': 'This email is already linked to a different Google account.',
+    'oauth.google.state.invalid': 'This sign-in link expired or was already used. Please try Google sign-in again.',
+    'oauth.google.code.exchange.failed': 'Google sign-in could not be completed. Please try again.',
+
     // Token errors
     'reset.token.invalid': 'This reset link is invalid or has already been used.',
     'reset.token.expired': 'This reset link has expired. Please request a new one.',

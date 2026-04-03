@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { TopBar } from "@/components/sporgates/top-bar"
+import { ExtendedOnboardingBanner } from "@/components/sporgates/extended-onboarding-banner"
 import { ExploreSidebar } from "@/components/sporgates/explore-sidebar"
 import { FeedSidebar } from "@/components/sporgates/feed-sidebar"
 import { BottomNav } from "@/components/sporgates/bottom-nav"
@@ -316,6 +317,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 <NotificationCountProvider value={onUnreadNotificationsChange}>
                 <MessageCountProvider value={refetchMessagesCount}>
                 <div className="min-h-screen bg-background">
+                    <ExtendedOnboardingBanner isBusinessMode={isBusinessMode} />
                     <TopBar
                         onNavigate={navigate}
                         isBusinessMode={isBusinessMode}

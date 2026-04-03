@@ -27,7 +27,15 @@ export interface AuthResponse {
     username?: string;
     twoFactorEnabled?: boolean;
     profileCompletion?: number;
-    nextStep?: 'LOGIN' | 'VERIFY_EMAIL' | 'NONE';
+    nextStep?: 'LOGIN' | 'VERIFY_EMAIL' | 'ONBOARDING' | 'NONE';
+    /**
+     * When nextStep is ONBOARDING: core steps — goals or undefined for choose-sports.
+     */
+    onboardingHint?: string | null;
+    /** True when sports+goals are done but extended profile steps remain (soft prompt; not blocking). */
+    extendedOnboardingPending?: boolean | null;
+    /** Suggested extended step: location, roles, availability, notifications. */
+    extendedOnboardingHint?: string | null;
     message?: string;
 }
 
@@ -46,6 +54,16 @@ clearLegacyTokenStorage();
 export const authService = {
     login: async (data: LoginRequest): Promise<AuthResponse> => {
         const response = await apiClient.post<AuthResponse>('/auth/login', data);
+        const d = response.data;
+        if (d.accessToken) {
+            authService._saveSession(d);
+        }
+        return d;
+    },
+
+    /** Google Sign-In: ID token is verified server-side; HttpOnly cookies are set like email/password login. */
+    loginWithGoogle: async (idToken: string): Promise<AuthResponse> => {
+        const response = await apiClient.post<AuthResponse>('/auth/google', { idToken });
         const d = response.data;
         if (d.accessToken) {
             authService._saveSession(d);
@@ -133,6 +151,8 @@ export const authService = {
             id: d.userId, email: d.email,
             firstName: d.firstName, lastName: d.lastName,
             username: d.username,
+            extendedOnboardingPending: d.extendedOnboardingPending ?? false,
+            extendedOnboardingHint: d.extendedOnboardingHint ?? null,
         }));
         document.cookie = `${AUTH_COOKIE_NAME}=1; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     },
