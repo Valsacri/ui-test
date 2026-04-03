@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Calendar, Target, Users } from "lucide-react"
+import { AlertTriangle, Calendar, Target, Users } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as DateCalendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { campaignsService } from "@/lib/services/campaigns"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
+export type CampaignEditWarningContext = "none" | "paused" | "live"
 
 interface AddCampaignModalProps {
   isOpen: boolean
@@ -22,6 +25,8 @@ interface AddCampaignModalProps {
   submitLabel?: string
   title?: string
   subtitle?: string
+  /** Shown when editing a campaign that may lose learning signal after significant changes */
+  editWarningContext?: CampaignEditWarningContext
   initialValues?: {
     name: string
     objective: "AWARENESS" | "ACTIVITY_BOOKINGS" | "EVENT_ATTENDEES" | "PARTNER_LEADS"
@@ -79,6 +84,7 @@ export function AddCampaignModal({
   submitLabel = "Save Campaign",
   title = "Create Campaign",
   subtitle = "Target the right audience for your events",
+  editWarningContext = "none",
 }: AddCampaignModalProps) {
   const [campaignName, setCampaignName] = useState("")
   const [budget, setBudget] = useState(1200)
@@ -406,6 +412,27 @@ export function AddCampaignModal({
             </Button>
           </div>
         </div>
+
+        {editWarningContext !== "none" && (
+          <Alert
+            className={cn(
+              "rounded-none border-x-0 border-t-0",
+              editWarningContext === "live"
+                ? "border-amber-200 bg-amber-50 text-amber-950 [&>svg]:text-amber-800"
+                : "border-orange-200 bg-orange-50 text-orange-950 [&>svg]:text-orange-800"
+            )}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>
+              {editWarningContext === "live" ? "Live campaign" : "Paused campaign"}
+            </AlertTitle>
+            <AlertDescription>
+              {editWarningContext === "live"
+                ? "Significant changes to audience, budget, or schedule can reset or disrupt learning. Prefer smaller adjustments when possible."
+                : "After you save, resuming may re-enter learning if targeting or budget shifts materially. Review changes before resuming."}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid lg:grid-cols-[1.35fr_0.65fr]">
           <div className="space-y-5 border-b border-border px-4 py-4 sm:px-6 sm:py-5 lg:border-b-0 lg:border-r">

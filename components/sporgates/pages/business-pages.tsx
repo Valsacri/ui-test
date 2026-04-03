@@ -61,7 +61,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import type { CampaignBudgetType, CampaignConversionEvent } from "@/lib/types/campaign"
+import type { CampaignBudgetType, CampaignConversionEvent, CampaignStatus } from "@/lib/types/campaign"
+import type { CampaignEditWarningContext } from "@/components/sporgates/business/add-campaign-modal"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -1058,6 +1059,7 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
     audienceQualityScore: number
     budgetType: CampaignBudgetType
   } | null>(null)
+  const [editingCampaignStatus, setEditingCampaignStatus] = useState<CampaignStatus | null>(null)
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null)
   const [timeWindowDays, setTimeWindowDays] = useState<7 | 14 | 30>(30)
   const [exclusionInput, setExclusionInput] = useState("")
@@ -1129,7 +1131,24 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
   const handleOpenCreateCampaign = () => {
     setEditingCampaignId(null)
     setEditingInitialValues(null)
+    setEditingCampaignStatus(null)
     setIsAddCampaignOpen(true)
+  }
+
+  const getEditWarningContext = (status: CampaignStatus | null): CampaignEditWarningContext => {
+    if (!status) return "none"
+    if (status === "PAUSED") return "paused"
+    if (status === "LEARNING" || status === "ACTIVE" || status === "LEARNING_LIMITED") return "live"
+    return "none"
+  }
+
+  const getEditCampaignSubtitle = (status: CampaignStatus | null) => {
+    if (!status) return "Target the right audience for your events"
+    if (status === "PAUSED") return "Review settings before you resume"
+    if (status === "LEARNING" || status === "ACTIVE" || status === "LEARNING_LIMITED") {
+      return "Changes may affect delivery and learning"
+    }
+    return "Update campaign settings before launch"
   }
 
   const handleOpenEditCampaign = async (campaignId: string) => {
@@ -1141,6 +1160,7 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
       const duration = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
 
       setEditingCampaignId(campaignId)
+      setEditingCampaignStatus(details.status)
       setEditingInitialValues({
         name: details.name,
         objective: details.objective,
@@ -1487,6 +1507,14 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
               <div className="mt-4 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
+                  onClick={() => handleOpenEditCampaign(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Edit Campaign
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleAddCreative(campaign.id)}
                   className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
                 >
@@ -1522,14 +1550,24 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
             {(campaign.status === "PAUSED" || campaign.status === "ENDED") && (
               <div className="mt-4 flex flex-wrap justify-end gap-2">
                 {campaign.status === "PAUSED" && (
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchCampaign(campaign.id)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    Resume
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCampaign(campaign.id)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      Edit Campaign
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleLaunchCampaign(campaign.id)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      Resume
+                    </button>
+                  </>
                 )}
                 <button
                   type="button"
@@ -1782,13 +1820,15 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
         isOpen={isAddCampaignOpen}
         businessId={activeBusinessId || undefined}
         title={editingCampaignId ? "Edit Campaign" : "Create Campaign"}
-        subtitle={editingCampaignId ? "Update campaign settings before launch" : "Target the right audience for your events"}
+        subtitle={editingCampaignId ? getEditCampaignSubtitle(editingCampaignStatus) : "Target the right audience for your events"}
         submitLabel={editingCampaignId ? "Update Campaign" : "Save Campaign"}
+        editWarningContext={getEditWarningContext(editingCampaignStatus)}
         initialValues={editingInitialValues || undefined}
         onClose={() => {
           setIsAddCampaignOpen(false)
           setEditingCampaignId(null)
           setEditingInitialValues(null)
+          setEditingCampaignStatus(null)
         }}
         onCreate={async (campaign) => {
           if (!activeBusinessId) return
@@ -1851,6 +1891,7 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
             toast.success(editingCampaignId ? "Campaign updated successfully" : "Campaign created successfully")
             setEditingCampaignId(null)
             setEditingInitialValues(null)
+            setEditingCampaignStatus(null)
           } catch (error) {
             console.error("Failed to save campaign", error)
             toast.error(editingCampaignId ? "Failed to update campaign" : "Failed to create campaign")
