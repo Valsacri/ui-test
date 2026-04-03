@@ -35,6 +35,7 @@ describe("Campaigns service API contracts", () => {
       objective: "AWARENESS",
       budgetType: "LIFETIME",
       budgetAmount: 1000,
+      budgetCurrency: "MAD",
       startDate: "2026-01-01",
       endDate: "2026-01-31",
       location: "Casablanca",
@@ -43,6 +44,10 @@ describe("Campaigns service API contracts", () => {
       ageMax: 40,
       gender: "all",
       sports: ["Running"],
+      segmentType: "cold",
+      retargetingSources: [],
+      lookalikeEnabled: false,
+      audienceQualityScore: 50,
       utmSource: "sporgates",
       utmMedium: "paid_placement",
       utmCampaign: "test_campaign",
@@ -75,6 +80,8 @@ describe("Campaigns service API contracts", () => {
       primaryText: "Reach nearby athletes and convert faster.",
       cta: "Book Now",
       control: false,
+      destinationType: "BUSINESS_PROFILE",
+      destinationId: "business-3",
     })
     await campaignsService.updateCreativeStatus("business-3", "campaign-2", "creative-1", { status: "WINNER" })
 

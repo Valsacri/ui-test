@@ -1,4 +1,11 @@
 export type CampaignPlacement = "HOME_FEED" | "BUSINESS_FEED"
+export type CampaignCreativeDestinationType =
+  | "BUSINESS_PROFILE"
+  | "ACTIVITY"
+  | "POST"
+  | "PRODUCT"
+  | "SERVICE"
+  | "FACILITY"
 
 export type CampaignDeliveryEventType = "IMPRESSION" | "CLICK"
 
@@ -10,6 +17,8 @@ export type ServedCampaignPlacement = {
   headline: string
   primaryText: string
   cta: string
+  destinationType?: CampaignCreativeDestinationType
+  destinationId?: string
 }
 
 export type RecordCampaignDeliveryEventCommand = {

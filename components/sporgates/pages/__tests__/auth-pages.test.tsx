@@ -45,7 +45,7 @@ describe("AuthPages", () => {
   it("renders sign-up page with heading and form", () => {
     render(<AuthPages page="signup" onNavigate={mockOnNavigate} />)
 
-    expect(screen.getByRole("heading", { name: /create account/i })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /create your account/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/full name/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/email address/i)).toBeInTheDocument()
     expect(screen.getAllByPlaceholderText(/password/i).length).toBeGreaterThanOrEqual(1)

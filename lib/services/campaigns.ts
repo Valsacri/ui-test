@@ -1,4 +1,5 @@
 import { campaignsApi } from "@/lib/api/campaigns";
+import type { LocationSuggestion } from "@/lib/api/campaigns";
 import type {
   Campaign,
   CampaignForecast,
@@ -8,6 +9,8 @@ import type {
   CreateCampaignCommand,
   PromoteCampaignExperimentWinnerCommand,
   SaveCampaignAudienceCommand,
+  UpdateCampaignBudgetCommand,
+  UpdateCampaignDetailsCommand,
   UpdateCampaignCreativeStatusCommand,
   UpdateCampaignAudienceCommand,
   UpdateCampaignExclusionsCommand,
@@ -19,6 +22,12 @@ export const campaignsService = {
     campaignsApi.getById(businessId, campaignId, windowDays),
   create: (businessId: string, command: CreateCampaignCommand): Promise<Campaign> =>
     campaignsApi.create(businessId, command),
+  updateDetails: (businessId: string, campaignId: string, command: UpdateCampaignDetailsCommand): Promise<Campaign> =>
+    campaignsApi.updateDetails(businessId, campaignId, command),
+  updateBudget: (businessId: string, campaignId: string, command: UpdateCampaignBudgetCommand): Promise<Campaign> =>
+    campaignsApi.updateBudget(businessId, campaignId, command),
+  updateAudience: (businessId: string, campaignId: string, command: UpdateCampaignAudienceCommand): Promise<Campaign> =>
+    campaignsApi.updateAudience(businessId, campaignId, command),
   launch: (businessId: string, campaignId: string): Promise<Campaign> =>
     campaignsApi.launch(businessId, campaignId),
   pause: (businessId: string, campaignId: string): Promise<Campaign> =>
@@ -57,4 +66,6 @@ export const campaignsService = {
   ): Promise<CampaignForecast> => campaignsApi.forecast(businessId, campaignId, command),
   draftForecast: (businessId: string, command: CreateCampaignCommand): Promise<CampaignForecast> =>
     campaignsApi.draftForecast(businessId, command),
+  locationSuggestions: (businessId: string, query: string): Promise<LocationSuggestion[]> =>
+    campaignsApi.locationSuggestions(businessId, query),
 };

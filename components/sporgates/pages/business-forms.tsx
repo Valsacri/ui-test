@@ -60,6 +60,7 @@ import { facilitiesService } from "@/lib/services/facilities"
 import { marketplaceService } from "@/lib/services/marketplace"
 import { servicesService } from "@/lib/services/services"
 import { useBusinessContext } from "@/lib/business-context"
+import { TourGuide, type TourStep, TourHelpButton, useTour } from "@/components/ui/tour-guide"
 import {
   Select,
   SelectContent,
@@ -419,6 +420,31 @@ interface CreateActivityStepsPageProps extends BusinessFormPageProps {
 }
 
 export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivityStepsPageProps) {
+  const CREATE_ACTIVITY_TOUR_STORAGE_KEY = "sporgates.createActivityTour.v1"
+  const CREATE_ACTIVITY_TOUR_STEPS: TourStep[] = [
+    {
+      target: "header",
+      title: "Create an activity (step-by-step)",
+      body: "This wizard saves your activity as a draft while you fill it out. Use the steps at the top to move through info, schedule, location, resources, sponsorship, and review.",
+    },
+    {
+      target: "stepper",
+      title: "Step tracker",
+      body: "Click completed steps to jump back and edit. The current step is highlighted so you always know where you are.",
+    },
+    {
+      target: "content",
+      title: "Fill in the details",
+      body: "Complete the fields for the current step. Keep the title and description clear—this is what athletes will see when deciding to join.",
+    },
+    {
+      target: "actions",
+      title: "Save and continue",
+      body: "Use Back/Next to move through steps, and save/publish from the review step when everything looks right.",
+    },
+  ]
+  const { tourActive, hydrated, startTour, endTour } = useTour(CREATE_ACTIVITY_TOUR_STORAGE_KEY)
+
   const steps = [
     { id: 1, label: "Basic Info", icon: ImageIcon },
     { id: 2, label: "Schedule", icon: Calendar },
@@ -682,14 +708,24 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
     }
   }
 
+  const parseLocalDateTime = (dateStr: string, timeStr: string) => {
+    // Avoid Date parsing timezone quirks: construct as local time.
+    // Expected inputs: dateStr = "YYYY-MM-DD", timeStr = "HH:mm" (or "HH:mm:ss").
+    const [y, m, d] = dateStr.split("-").map((x) => Number(x))
+    const [hh, mm, ss] = timeStr.split(":").map((x) => Number(x))
+    return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, ss || 0, 0)
+  }
+
   const handleNext = () => {
     if (!canProceed()) return
 
     if (currentStep === 2) {
+      const now = new Date()
+      // Small grace window so "this minute" doesn't fail due to seconds.
+      const minFutureMs = 30 * 1000
       if (formData.scheduleMode === "single") {
         if (!formData.date || !formData.time) return
-        const startDateTime = new Date(`${formData.date}T${formData.time}`)
-        const now = new Date()
+        const startDateTime = parseLocalDateTime(formData.date, `${formData.time}:00`)
         if (startDateTime < now) {
           toast.error("Activity start time must be in the future")
           return
@@ -698,10 +734,49 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
           toast.error("Duration must be greater than 0")
           return
         }
+        const endDateTime = new Date(startDateTime.getTime() + formData.duration * 60000)
+        if (endDateTime < now) {
+          toast.error("Activity end time must be in the future")
+          return
+        }
+        if (endDateTime <= startDateTime) {
+          toast.error("End time must be after start time")
+          return
+        }
+        if (startDateTime.getTime() < now.getTime() + minFutureMs) {
+          toast.error("Start time must be at least 1 minute from now")
+          return
+        }
       } else {
         if (formData.sessions.length === 0) {
           toast.error("Add at least one session")
           return
+        }
+        // Validate each session (future + end-after-start) before allowing the user to proceed.
+        for (let i = 0; i < formData.sessions.length; i++) {
+          const s = formData.sessions[i]
+          if (!s?.date || !s?.startTime || !s?.endTime) {
+            toast.error(`Session ${i + 1}: date and times are required`)
+            return
+          }
+          const start = parseLocalDateTime(s.date, `${s.startTime}:00`)
+          const end = parseLocalDateTime(s.date, `${s.endTime}:00`)
+          if (start < now) {
+            toast.error(`Session ${i + 1}: start time must be in the future`)
+            return
+          }
+          if (end < now) {
+            toast.error(`Session ${i + 1}: end time must be in the future`)
+            return
+          }
+          if (end <= start) {
+            toast.error(`Session ${i + 1}: end time must be after start time`)
+            return
+          }
+          if (start.getTime() < now.getTime() + minFutureMs) {
+            toast.error(`Session ${i + 1}: start time must be at least 1 minute from now`)
+            return
+          }
         }
       }
       if (formData.maxParticipants <= 0) {
@@ -770,6 +845,31 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
           const startDate = new Date(startDateTime)
           const endDate = new Date(startDate.getTime() + formData.duration * 60000)
           endDateTime = endDate.toISOString().slice(0, 19)
+        }
+      }
+
+      // Frontend guardrails (mirror backend validation): start/end must be in the future.
+      const now = new Date()
+      if (startDateTime) {
+        const start = parseLocalDateTime(startDateTime.slice(0, 10), startDateTime.slice(11, 19))
+        if (start < now) {
+          toast.error("Activity start time must be in the future")
+          return
+        }
+      }
+      if (endDateTime) {
+        const end = parseLocalDateTime(endDateTime.slice(0, 10), endDateTime.slice(11, 19))
+        if (end < now) {
+          toast.error("Activity end time must be in the future")
+          return
+        }
+      }
+      if (startDateTime && endDateTime) {
+        const start = parseLocalDateTime(startDateTime.slice(0, 10), startDateTime.slice(11, 19))
+        const end = parseLocalDateTime(endDateTime.slice(0, 10), endDateTime.slice(11, 19))
+        if (end <= start) {
+          toast.error("End time must be after start time")
+          return
         }
       }
 
@@ -858,20 +958,30 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      <div className="flex items-center gap-3 mb-6">
+      {hydrated && (
+        <TourGuide
+          active={tourActive}
+          steps={CREATE_ACTIVITY_TOUR_STEPS}
+          onClose={endTour}
+          storageKey={CREATE_ACTIVITY_TOUR_STORAGE_KEY}
+          targetAttribute="data-tour"
+        />
+      )}
+      <div className="flex items-center gap-3 mb-6" data-tour="header">
         <button type="button" onClick={handleBack} className="rounded-full p-2 hover:bg-muted">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold text-foreground">{activityId ? "Edit Activity" : "Create New Activity"}</h1>
           <p className="text-xs text-muted-foreground">{activityId ? "Update your activity details" : "Follow the steps to create your event (saved as draft until you publish)"}</p>
         </div>
+        <TourHelpButton onClick={startTour} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3" data-tour="content">
         <div className="space-y-6 lg:col-span-2">
           {/* Stepper */}
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm mb-8 relative overflow-hidden">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm mb-8 relative overflow-hidden" data-tour="stepper">
             <div className="absolute top-[45px] left-0 w-full h-[2px] bg-border/50 z-0" />
             <div className="relative z-10 flex justify-between w-full px-4">
               {steps.map((step, index) => {
@@ -1920,7 +2030,7 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
             )
           }
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3" data-tour="actions">
             {currentStep > 1 && (
               <button
                 type="button"
@@ -2616,6 +2726,44 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
   const { activeBusinessId } = useBusinessContext()
   const isEditMode = !!resourceId
   const [resourceType, setResourceType] = useState<AddResourceType>(editResourceType || "facility")
+  const resourceTourKey = `sporgates.addResourceTour.${resourceType}.v1`
+  const { tourActive, hydrated, startTour, endTour } = useTour(resourceTourKey)
+  const resourceTypeLabel = resourceType === "facility" ? "Facility" : resourceType === "product" ? "Product" : "Service"
+  const resourceTourSteps = useMemo<TourStep[]>(() => {
+    const typeSummary =
+      resourceType === "facility"
+        ? "Facilities are bookable places with location, hours, and amenities."
+        : resourceType === "product"
+          ? "Products are items you sell with pricing, category, stock, and features."
+          : "Services are offerings you provide with pricing, category, duration, and address."
+    return [
+      {
+        target: "resource-header",
+        title: `Create a ${resourceTypeLabel}`,
+        body: `Use this flow to add a new ${resourceType.toLowerCase()} to your business. ${typeSummary}`,
+      },
+      {
+        target: "resource-type",
+        title: "Choose the resource type",
+        body: "Pick Facility, Product, or Service before filling details. In edit mode, type is locked to avoid invalid data transitions.",
+      },
+      {
+        target: "resource-basic",
+        title: "Basic details",
+        body: "Add clear name, description, and key pricing/category fields. This information powers how users discover and understand your offering.",
+      },
+      {
+        target: "resource-images",
+        title: "Upload images",
+        body: "Add quality visuals. The first image is used as cover and strongly affects click-through and bookings/purchases.",
+      },
+      {
+        target: "resource-actions",
+        title: "Save your resource",
+        body: "Use Cancel to discard or Create to publish this resource to your business catalog.",
+      },
+    ]
+  }, [resourceType, resourceTypeLabel])
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [imageFiles, setImageFiles] = useState<{ file: File; preview: string }[]>([])
@@ -2941,12 +3089,21 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
+      {!isEditMode && hydrated && (
+        <TourGuide
+          active={tourActive}
+          steps={resourceTourSteps}
+          onClose={endTour}
+          storageKey={resourceTourKey}
+          targetAttribute="data-tour"
+        />
+      )}
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" data-tour="resource-header">
         <button type="button" onClick={() => onNavigate("business-resources", resourceType)} className="rounded-full p-2 hover:bg-muted">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-foreground">{isEditMode ? "Edit Resource" : "Add New Resource"}</h1>
           <p className="text-sm text-muted-foreground">
             {isEditMode
@@ -2954,10 +3111,11 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
               : "Create a new facility, product, or service"}
           </p>
         </div>
+        {!isEditMode && <TourHelpButton onClick={startTour} />}
       </div>
 
       {/* Resource Type Selection — locked in edit mode */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm" data-tour="resource-type">
         <h3 className="mb-4 text-sm font-bold text-foreground">Resource Type</h3>
         <div className="grid grid-cols-3 gap-3">
           {addResourceTypes.map((rt) => {
@@ -2984,7 +3142,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
       </div>
 
       {/* Basic Information */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm" data-tour="resource-basic">
         <h3 className="mb-4 text-sm font-bold text-foreground">Basic Information</h3>
         <div className="space-y-4">
           <div>
@@ -3183,7 +3341,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
       </div>
 
       {/* Image Upload (multi) */}
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm" data-tour="resource-images">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-bold text-foreground">Images</h3>
           {(existingImages.length + imageFiles.length) > 0 && (
@@ -3608,7 +3766,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex gap-3" data-tour="resource-actions">
         <button type="button" onClick={() => onNavigate("business-resources", resourceType)} className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted">
           Cancel
         </button>

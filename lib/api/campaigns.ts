@@ -8,10 +8,17 @@ import type {
   CreateCampaignCommand,
   PromoteCampaignExperimentWinnerCommand,
   SaveCampaignAudienceCommand,
+  UpdateCampaignBudgetCommand,
+  UpdateCampaignDetailsCommand,
   UpdateCampaignCreativeStatusCommand,
   UpdateCampaignAudienceCommand,
   UpdateCampaignExclusionsCommand,
 } from "@/lib/types/campaign";
+
+export type LocationSuggestion = {
+  id: string;
+  label: string;
+};
 
 export const campaignsApi = {
   async list(businessId: string): Promise<CampaignListItem[]> {
@@ -28,6 +35,21 @@ export const campaignsApi = {
 
   async create(businessId: string, command: CreateCampaignCommand): Promise<Campaign> {
     const response = await apiClient.post(`/v1/businesses/${businessId}/campaigns`, command);
+    return response.data;
+  },
+
+  async updateDetails(businessId: string, campaignId: string, command: UpdateCampaignDetailsCommand): Promise<Campaign> {
+    const response = await apiClient.patch(`/v1/businesses/${businessId}/campaigns/${campaignId}/details`, command);
+    return response.data;
+  },
+
+  async updateBudget(businessId: string, campaignId: string, command: UpdateCampaignBudgetCommand): Promise<Campaign> {
+    const response = await apiClient.patch(`/v1/businesses/${businessId}/campaigns/${campaignId}/budget`, command);
+    return response.data;
+  },
+
+  async updateAudience(businessId: string, campaignId: string, command: UpdateCampaignAudienceCommand): Promise<Campaign> {
+    const response = await apiClient.patch(`/v1/businesses/${businessId}/campaigns/${campaignId}/audience`, command);
     return response.data;
   },
 
@@ -120,6 +142,13 @@ export const campaignsApi = {
 
   async draftForecast(businessId: string, command: CreateCampaignCommand): Promise<CampaignForecast> {
     const response = await apiClient.post(`/v1/businesses/${businessId}/campaigns/forecast`, command);
+    return response.data;
+  },
+
+  async locationSuggestions(businessId: string, query: string): Promise<LocationSuggestion[]> {
+    const response = await apiClient.get(`/v1/businesses/${businessId}/campaigns/location-suggestions`, {
+      params: { query },
+    });
     return response.data;
   },
 };

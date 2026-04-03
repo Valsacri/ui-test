@@ -50,6 +50,7 @@ export interface CreateCampaignCommand {
   objective: CampaignObjective;
   budgetType: CampaignBudgetType;
   budgetAmount: number;
+  budgetCurrency: string;
   startDate: string;
   endDate: string;
   location: string;
@@ -58,6 +59,11 @@ export interface CreateCampaignCommand {
   ageMax: number;
   gender: string;
   sports: string[];
+  segmentType: "cold" | "warm" | "retargeting" | string;
+  retargetingSources?: string[];
+  lookalikeEnabled: boolean;
+  lookalikeSeed?: string;
+  audienceQualityScore: number;
   utmSource: string;
   utmMedium: string;
   utmCampaign: string;
@@ -65,6 +71,19 @@ export interface CreateCampaignCommand {
   utmTerm?: string;
   primaryConversionEvent: CampaignConversionEvent;
   attributionModel: CampaignAttributionModel;
+}
+
+export interface UpdateCampaignDetailsCommand {
+  name: string;
+  objective: CampaignObjective;
+  startDate: string;
+  endDate: string;
+}
+
+export interface UpdateCampaignBudgetCommand {
+  budgetType: CampaignBudgetType;
+  budgetAmount: number;
+  budgetCurrency?: string;
 }
 
 export interface UpdateCampaignAudienceCommand extends CampaignAudience {}
@@ -114,6 +133,13 @@ export interface CampaignMeasurement {
 }
 
 export type CampaignCreativeStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "WINNER" | "LOSER";
+export type CampaignCreativeDestinationType =
+  | "BUSINESS_PROFILE"
+  | "ACTIVITY"
+  | "POST"
+  | "PRODUCT"
+  | "SERVICE"
+  | "FACILITY";
 
 export interface CampaignCreative {
   id: string;
@@ -124,6 +150,8 @@ export interface CampaignCreative {
   cta: string;
   control: boolean;
   status: CampaignCreativeStatus;
+  destinationType: CampaignCreativeDestinationType;
+  destinationId?: string;
 }
 
 export interface CreateCampaignCreativeCommand {
@@ -133,6 +161,8 @@ export interface CreateCampaignCreativeCommand {
   primaryText: string;
   cta: string;
   control: boolean;
+  destinationType: CampaignCreativeDestinationType;
+  destinationId?: string;
 }
 
 export interface UpdateCampaignCreativeStatusCommand {
@@ -196,6 +226,7 @@ export interface Campaign {
   status: CampaignStatus;
   budgetType: CampaignBudgetType;
   budgetAmount: number;
+  budgetCurrency?: string;
   startDate: string;
   endDate: string;
   significantEditCount: number;

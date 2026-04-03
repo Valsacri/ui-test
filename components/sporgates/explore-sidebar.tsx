@@ -61,7 +61,9 @@ const businessNavItems = [
 
 export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: ExploreSidebarProps) {
   const mainItems = isBusinessMode ? businessNavItems : userNavItems
-  const secondaryItems = isBusinessMode ? userSecondaryItems.slice(0, 2) : userSecondaryItems
+  const secondaryItems = isBusinessMode
+    ? userSecondaryItems.filter((item) => item.page !== "profile")
+    : userSecondaryItems
 
   // Check if current page matches item page, including detail pages
   const isActive = (itemPage: PageRoute, current: PageRoute) => {

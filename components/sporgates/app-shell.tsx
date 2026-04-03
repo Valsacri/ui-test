@@ -37,7 +37,7 @@ import { SettingsLanguagePage } from "@/components/sporgates/pages/settings-lang
 import { SettingsBlockedPage } from "@/components/sporgates/pages/settings-blocked-page"
 import { SettingsTermsPage } from "@/components/sporgates/pages/settings-terms-page"
 import { SettingsPrivacyPolicyPage } from "@/components/sporgates/pages/settings-privacy-policy-page"
-import { SettingsHelpPage } from "@/components/sporgates/pages/settings-help-page"
+import { DocsHelpCenterPage } from "@/components/sporgates/pages/docs-help-center-page"
 import { AuthPages } from "@/components/sporgates/pages/auth-pages"
 import { BusinessFeedPage } from "@/components/sporgates/pages/business-feed-page"
 import { FacilityDetailPage } from "@/components/sporgates/pages/facility-detail-page"
@@ -280,7 +280,7 @@ export function AppShell() {
       case "settings-privacy-policy":
         return <SettingsPrivacyPolicyPage onBack={() => navigate("settings")} />
       case "settings-help":
-        return <SettingsHelpPage onBack={() => navigate("settings")} />
+        return <DocsHelpCenterPage onBack={() => navigate("settings")} />
       case "business-feed":
         return <BusinessFeedPage onNavigate={navigate} />
       case "business-dashboard":

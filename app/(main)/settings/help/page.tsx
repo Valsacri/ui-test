@@ -1,9 +1,9 @@
 "use client"
 
-import { SettingsHelpPage } from "@/components/sporgates/pages/settings-help-page"
+import { DocsHelpCenterPage } from "@/components/sporgates/pages/docs-help-center-page"
 import { useAppRouter } from "@/lib/route-map"
 
 export default function SettingsHelpRoute() {
     const { navigate } = useAppRouter()
-    return <SettingsHelpPage onBack={() => navigate("settings")} />
+    return <DocsHelpCenterPage onBack={() => navigate("settings")} />
 }

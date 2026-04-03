@@ -114,7 +114,30 @@ export function CampaignHomeFeedPlacement({ served, className }: Props) {
     if (!result.ok) {
       // no-op
     }
-    navigate("business-detail", served.businessId)
+
+    const destinationType = served.destinationType ?? "BUSINESS_PROFILE"
+    const destinationId = served.destinationId
+    if (destinationType === "ACTIVITY" && destinationId) {
+      navigate("activity-detail", destinationId)
+      return
+    }
+    if (destinationType === "POST" && destinationId) {
+      navigate("post-detail", destinationId)
+      return
+    }
+    if (destinationType === "PRODUCT" && destinationId) {
+      navigate("product-detail", destinationId)
+      return
+    }
+    if (destinationType === "SERVICE" && destinationId) {
+      navigate("service-detail", destinationId)
+      return
+    }
+    if (destinationType === "FACILITY" && destinationId) {
+      navigate("facility-detail", destinationId)
+      return
+    }
+    navigate("business-detail", destinationId || served.businessId)
   }
 
   return (

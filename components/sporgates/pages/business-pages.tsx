@@ -29,6 +29,7 @@ import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { AddCampaignModal } from "@/components/sporgates/business/add-campaign-modal"
+import { AddCampaignCreativeModal } from "@/components/sporgates/business/add-campaign-creative-modal"
 
 import { AddTeamMemberModal } from "@/components/sporgates/business/add-team-member-modal"
 import { PersonCardSkeleton } from "@/components/sporgates/ux/page-skeleton"
@@ -41,6 +42,13 @@ import { activitiesService } from "@/lib/services/activities"
 import { businessesService } from "@/lib/services/businesses"
 import { campaignsService } from "@/lib/services/campaigns"
 import { useBusinessContext } from "@/lib/business-context"
+import {
+  CAMPAIGNS_DASHBOARD_TOUR_STEPS,
+  CAMPAIGNS_DASHBOARD_TOUR_STORAGE_KEY,
+  CampaignCreateTour,
+  CampaignTourHelpButton,
+  useCampaignDashboardTour,
+} from "@/components/sporgates/campaign/campaign-create-tour"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -53,7 +61,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import type { CampaignConversionEvent } from "@/lib/types/campaign"
+import type { CampaignBudgetType, CampaignConversionEvent } from "@/lib/types/campaign"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -1028,10 +1036,33 @@ export function BusinessAnalyticsPage({ onNavigate }: BusinessSubPageProps) {
 }
 
 export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
+  const { tourActive, hydrated, startTour, endTour } = useCampaignDashboardTour()
   const [isAddCampaignOpen, setIsAddCampaignOpen] = useState(false)
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null)
+  const [editingInitialValues, setEditingInitialValues] = useState<{
+    name: string
+    objective: "AWARENESS" | "ACTIVITY_BOOKINGS" | "EVENT_ATTENDEES" | "PARTNER_LEADS"
+    budget: number
+    budgetCurrency: string
+    duration: number
+    startDate: string
+    location: string
+    radiusMiles: number
+    ageMin: number
+    ageMax: number
+    gender: "all" | "male" | "female"
+    sports: string[]
+    segmentType: "cold" | "warm" | "retargeting"
+    retargetingSources: string[]
+    lookalikeEnabled: boolean
+    audienceQualityScore: number
+    budgetType: CampaignBudgetType
+  } | null>(null)
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null)
   const [timeWindowDays, setTimeWindowDays] = useState<7 | 14 | 30>(30)
   const [exclusionInput, setExclusionInput] = useState("")
+  const [creativeModalOpen, setCreativeModalOpen] = useState(false)
+  const [creativeModalCampaignId, setCreativeModalCampaignId] = useState<string | null>(null)
   const { activeBusinessId } = useBusinessContext()
   const { data: campaigns = [], isLoading: campaignsLoading, mutate } = useSWR(
     activeBusinessId ? `/business/${activeBusinessId}/campaigns` : null,
@@ -1065,7 +1096,15 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
     if (health === "ON_TRACK") return "bg-emerald-100 text-emerald-700"
     if (health === "UNDERPERFORMING") return "bg-red-100 text-red-700"
     if (health === "NEEDS_CREATIVE_REFRESH") return "bg-blue-100 text-blue-700"
+    if (health === "PENDING_DATA") return "bg-yellow-100 text-yellow-700"
     return "bg-muted text-muted-foreground"
+  }
+  const getListHealth = (campaign: { status: string; reach: number; conversions: number; spent: number }) => {
+    if (campaign.status === "READY" || campaign.status === "DRAFT") return "PENDING_DATA"
+    if ((campaign.reach ?? 0) === 0 && (campaign.conversions ?? 0) === 0 && (campaign.spent ?? 0) === 0) {
+      return "PENDING_DATA"
+    }
+    return "ON_TRACK"
   }
   const totals = campaigns.reduce(
     (acc, campaign) => {
@@ -1086,6 +1125,47 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
   }
 
   const toUtmCampaign = (name: string) => name.trim().toLowerCase().replace(/\s+/g, "_").slice(0, 50) || "campaign"
+
+  const handleOpenCreateCampaign = () => {
+    setEditingCampaignId(null)
+    setEditingInitialValues(null)
+    setIsAddCampaignOpen(true)
+  }
+
+  const handleOpenEditCampaign = async (campaignId: string) => {
+    if (!activeBusinessId) return
+    try {
+      const details = await campaignsService.getById(activeBusinessId, campaignId, timeWindowDays)
+      const start = new Date(details.startDate)
+      const end = new Date(details.endDate)
+      const duration = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)))
+
+      setEditingCampaignId(campaignId)
+      setEditingInitialValues({
+        name: details.name,
+        objective: details.objective,
+        budget: details.budgetAmount,
+        budgetCurrency: details.budgetCurrency || "USD",
+        duration,
+        startDate: details.startDate,
+        location: details.audience?.location || "Casablanca",
+        radiusMiles: details.audience?.radiusMiles || 20,
+        ageMin: details.audience?.ageMin || 18,
+        ageMax: details.audience?.ageMax || 45,
+        gender: (details.audience?.gender as "all" | "male" | "female") || "all",
+        sports: details.audience?.sports || [],
+        segmentType: (details.audience?.segmentType as "cold" | "warm" | "retargeting") || "cold",
+        retargetingSources: details.audience?.retargetingSources || [],
+        lookalikeEnabled: !!details.audience?.lookalikeEnabled,
+        audienceQualityScore: details.audience?.audienceQualityScore ?? 50,
+        budgetType: details.budgetType || "LIFETIME",
+      })
+      setIsAddCampaignOpen(true)
+    } catch (error) {
+      console.error("Failed to load campaign for edit", error)
+      toast.error("Failed to open campaign editor")
+    }
+  }
 
   const handleLaunchCampaign = async (campaignId: string) => {
     if (!activeBusinessId) return
@@ -1125,24 +1205,8 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
 
   const handleAddCreative = async (campaignId: string) => {
     if (!activeBusinessId) return
-    try {
-      await campaignsService.addCreative(activeBusinessId, campaignId, {
-        angle: "Outcome",
-        hook: "Get more bookings this week",
-        headline: "Fill your sports sessions faster",
-        primaryText: "Launch a focused campaign and convert active local athletes into bookings.",
-        cta: "Book Now",
-        control: false,
-      })
-      await mutate()
-      if (activeCampaignId === campaignId) {
-        setActiveCampaignId(campaignId)
-      }
-      toast.success("Creative added")
-    } catch (error) {
-      console.error("Failed to add creative", error)
-      toast.error("Failed to add creative")
-    }
+    setCreativeModalCampaignId(campaignId)
+    setCreativeModalOpen(true)
   }
 
   const handleMarkCreativeWinner = async (campaignId: string, creativeId: string) => {
@@ -1252,22 +1316,34 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      <div className="flex items-center justify-between">
+      {hydrated && (
+        <CampaignCreateTour
+          active={tourActive}
+          steps={CAMPAIGNS_DASHBOARD_TOUR_STEPS}
+          onClose={endTour}
+          storageKey={CAMPAIGNS_DASHBOARD_TOUR_STORAGE_KEY}
+        />
+      )}
+      <div className="flex items-center justify-between" data-campaign-tour="dashboard-header">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
           <p className="text-sm text-muted-foreground">Manage your marketing campaigns</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsAddCampaignOpen(true)}
-          className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" />
-          New Campaign
-        </button>
+        <div className="flex items-center gap-2">
+          <CampaignTourHelpButton onClick={startTour} />
+          <button
+            type="button"
+            onClick={handleOpenCreateCampaign}
+            className="gradient-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90"
+            data-campaign-tour="dashboard-new"
+          >
+            <Plus className="h-4 w-4" />
+            New Campaign
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4" data-campaign-tour="dashboard-metrics">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
           <p className="text-[11px] text-muted-foreground">Total Budget</p>
           <p className="mt-1 text-xl font-bold text-foreground">${totals.budget.toLocaleString()}</p>
@@ -1299,7 +1375,7 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
       )}
 
       {!campaignsLoading && campaigns.length > 0 && (
-      <div className="space-y-3">
+      <div className="space-y-3" data-campaign-tour="dashboard-list">
         {campaigns.map((campaign) => (
           <div
             key={campaign.id}
@@ -1346,8 +1422,8 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
             </div>
             <p className="mt-3 text-xs text-muted-foreground">{getStatusGuidance(campaign.status)}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", getHealthClass((campaign as { performance?: { health?: string } }).performance?.health))}>
-                {((campaign as { performance?: { health?: string } }).performance?.health || "UNKNOWN").toLowerCase().replaceAll("_", " ")}
+              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", getHealthClass(getListHealth(campaign)))}>
+                {getListHealth(campaign).toLowerCase().replaceAll("_", " ")}
               </span>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                 Next: {campaign.status === "READY" ? "launch" : campaign.status === "LEARNING" ? "stabilize" : campaign.status === "ACTIVE" ? "optimize" : "review"}
@@ -1365,6 +1441,14 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
             )}
             {campaign.status === "READY" && (
               <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditCampaign(campaign.id)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Edit Campaign
+                </button>
                 <button
                   type="button"
                   onClick={() => handleLaunchCampaign(campaign.id)}
@@ -1531,7 +1615,18 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
             <TabsContent value="creatives">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-foreground">Creatives</p>
-                <span className="text-[11px] text-muted-foreground">{activeCampaignDetails.creatives?.length || 0} variants</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground">{activeCampaignDetails.creatives?.length || 0} variants</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddCreative(activeCampaignDetails.id)}
+                    className="h-7 rounded-md px-2 text-[10px]"
+                  >
+                    Add creative
+                  </Button>
+                </div>
               </div>
               <div className="mt-2 space-y-2">
                 {(activeCampaignDetails.creatives || []).map((creative) => (
@@ -1543,6 +1638,16 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-muted-foreground">{creative.hook}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        {(creative as any).destinationType ? String((creative as any).destinationType).toLowerCase().replaceAll("_", " ") : "business profile"}
+                      </span>
+                      {((creative as any).destinationId) && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          id: {String((creative as any).destinationId).slice(0, 10)}…
+                        </span>
+                      )}
+                    </div>
                     {creative.status !== "WINNER" && (
                       <Button
                         type="button"
@@ -1676,41 +1781,96 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
       <AddCampaignModal
         isOpen={isAddCampaignOpen}
         businessId={activeBusinessId || undefined}
-        onClose={() => setIsAddCampaignOpen(false)}
+        title={editingCampaignId ? "Edit Campaign" : "Create Campaign"}
+        subtitle={editingCampaignId ? "Update campaign settings before launch" : "Target the right audience for your events"}
+        submitLabel={editingCampaignId ? "Update Campaign" : "Save Campaign"}
+        initialValues={editingInitialValues || undefined}
+        onClose={() => {
+          setIsAddCampaignOpen(false)
+          setEditingCampaignId(null)
+          setEditingInitialValues(null)
+        }}
         onCreate={async (campaign) => {
           if (!activeBusinessId) return
           const endDate = new Date(campaign.startDate)
           endDate.setDate(endDate.getDate() + campaign.duration)
           try {
-            await campaignsService.create(activeBusinessId, {
-              name: campaign.name,
-              objective: campaign.objective,
-              budgetType: "LIFETIME",
-              budgetAmount: campaign.budget,
-              startDate: campaign.startDate,
-              endDate: endDate.toISOString().slice(0, 10),
-              location: campaign.location,
-              radiusMiles: campaign.radius,
-              ageMin: campaign.ageMin,
-              ageMax: campaign.ageMax,
-              gender: campaign.gender,
-              sports: campaign.sports,
-              utmSource: "sporgates",
-              utmMedium: "paid_placement",
-              utmCampaign: toUtmCampaign(campaign.name),
-              utmContent: "business_campaigns",
-              utmTerm: campaign.sports?.[0]?.toLowerCase(),
-              primaryConversionEvent: getPrimaryConversionEvent(campaign.objective),
-              attributionModel: "LAST_TOUCH",
-            })
+            if (editingCampaignId && editingInitialValues) {
+              await campaignsService.updateDetails(activeBusinessId, editingCampaignId, {
+                name: campaign.name,
+                objective: campaign.objective,
+                startDate: campaign.startDate,
+                endDate: endDate.toISOString().slice(0, 10),
+              })
+              await campaignsService.updateAudience(activeBusinessId, editingCampaignId, {
+                location: campaign.location,
+                radiusMiles: campaign.radiusMiles,
+                ageMin: campaign.ageMin,
+                ageMax: campaign.ageMax,
+                gender: campaign.gender,
+                sports: campaign.sports,
+                segmentType: campaign.segmentType,
+                retargetingSources: campaign.retargetingSources,
+                lookalikeEnabled: campaign.lookalikeEnabled,
+                audienceQualityScore: campaign.audienceQualityScore,
+              })
+              await campaignsService.updateBudget(activeBusinessId, editingCampaignId, {
+                budgetType: editingInitialValues.budgetType,
+                budgetAmount: campaign.budget,
+                budgetCurrency: campaign.budgetCurrency,
+              })
+            } else {
+              await campaignsService.create(activeBusinessId, {
+                name: campaign.name,
+                objective: campaign.objective,
+                budgetType: "LIFETIME",
+                budgetAmount: campaign.budget,
+                budgetCurrency: campaign.budgetCurrency,
+                startDate: campaign.startDate,
+                endDate: endDate.toISOString().slice(0, 10),
+                location: campaign.location,
+                radiusMiles: campaign.radiusMiles,
+                ageMin: campaign.ageMin,
+                ageMax: campaign.ageMax,
+                gender: campaign.gender,
+                sports: campaign.sports,
+                segmentType: campaign.segmentType,
+                retargetingSources: campaign.retargetingSources,
+                lookalikeEnabled: campaign.lookalikeEnabled,
+                audienceQualityScore: campaign.audienceQualityScore,
+                utmSource: "sporgates",
+                utmMedium: "paid_placement",
+                utmCampaign: toUtmCampaign(campaign.name),
+                utmContent: "business_campaigns",
+                utmTerm: campaign.sports?.[0]?.toLowerCase(),
+                primaryConversionEvent: getPrimaryConversionEvent(campaign.objective),
+                attributionModel: "LAST_TOUCH",
+              })
+            }
             await mutate()
-            toast.success("Campaign created successfully")
+            toast.success(editingCampaignId ? "Campaign updated successfully" : "Campaign created successfully")
+            setEditingCampaignId(null)
+            setEditingInitialValues(null)
           } catch (error) {
-            console.error("Failed to create campaign", error)
-            toast.error("Failed to create campaign")
+            console.error("Failed to save campaign", error)
+            toast.error(editingCampaignId ? "Failed to update campaign" : "Failed to create campaign")
           }
         }}
       />
+
+      {activeBusinessId && creativeModalCampaignId && (
+        <AddCampaignCreativeModal
+          open={creativeModalOpen}
+          onClose={() => setCreativeModalOpen(false)}
+          businessId={activeBusinessId}
+          campaignId={creativeModalCampaignId}
+          activeBusinessId={activeBusinessId}
+          onCreated={async () => {
+            await mutate()
+            setActiveCampaignId(creativeModalCampaignId)
+          }}
+        />
+      )}
     </div>
   )
 }
