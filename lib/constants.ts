@@ -44,6 +44,19 @@ export const STORY_UPLOAD_TIMEOUT_MS = 60 * 1000 // 1 minute
 /** Server-side / non-browser callers (e.g. tests). Browser uses same-origin '' + rewrites. */
 export const DEFAULT_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
 
+/**
+ * Google OAuth browser entry (GET). Prefer an absolute API base when NEXT_PUBLIC_API_URL is set
+ * so dev/prod work even if Next rewrites were built with the wrong default (localhost).
+ * Local dev: leave NEXT_PUBLIC_API_URL unset and use same-origin `/auth/google/start` + rewrites.
+ */
+export function getGoogleOAuthStartUrl(): string {
+  const base = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_API_URL : ""
+  if (base && base.trim().length > 0) {
+    return `${base.replace(/\/$/, "")}/auth/google/start`
+  }
+  return "/auth/google/start"
+}
+
 /** Next.js app origin for server-side fetch to same-origin API rewrites (RSC, server actions). */
 export const INTERNAL_APP_ORIGIN =
   process.env.INTERNAL_APP_URL ||

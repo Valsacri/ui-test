@@ -1,5 +1,6 @@
 "use client"
 
+import { getGoogleOAuthStartUrl } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 
 type GoogleSignInButtonProps = {
@@ -8,12 +9,13 @@ type GoogleSignInButtonProps = {
 
 /**
  * Starts Google OAuth 2.0 on the API (authorization code + client secret on server).
- * Same-origin `/auth/google/start` is proxied to the Spring backend.
+ * Uses NEXT_PUBLIC_API_URL + `/auth/google/start` when set (recommended on dev/prod droplets);
+ * otherwise same-origin `/auth/google/start` (Next rewrite → local API).
  */
 export function GoogleSignInButton({ disabled }: GoogleSignInButtonProps) {
   return (
     <a
-      href="/auth/google/start"
+      href={getGoogleOAuthStartUrl()}
       aria-disabled={disabled}
       className={cn(
         "flex w-full items-center justify-center gap-2 rounded-lg border border-[#e2e8f0] bg-white py-2.5 text-sm font-medium text-[#0f172a] transition-colors hover:bg-[#f8fafc]",
