@@ -26,6 +26,12 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      // DigitalOcean Spaces public URLs (add your bucket host if different)
+      {
+        protocol: 'https',
+        hostname: 'imagesstorage.fra1.digitaloceanspaces.com',
+        pathname: '/**',
+      },
     ],
   },
   async rewrites() {
