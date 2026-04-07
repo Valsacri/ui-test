@@ -305,7 +305,7 @@ export function SquadDashboardPage({ onNavigate }: SquadDashboardPageProps) {
                 className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-muted"
               >
                 {activity.image && (
-                  <img src={activity.image} alt={activity.title} className="h-10 w-10 rounded-lg object-cover" crossOrigin="anonymous" />
+                  <img src={activity.image} alt={activity.title} className="h-10 w-10 rounded-lg object-cover" />
                 )}
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-foreground">{activity.title || activity.name}</p>

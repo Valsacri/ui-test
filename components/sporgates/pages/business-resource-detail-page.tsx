@@ -187,7 +187,6 @@ export function BusinessResourceDetailPage({ resourceId, resourceType, onNavigat
                 src={img}
                 alt={`${name} ${idx + 1}`}
                 className="h-full w-full object-cover"
-                crossOrigin="anonymous"
               />
             </button>
           ))}

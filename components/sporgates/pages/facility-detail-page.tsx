@@ -153,7 +153,6 @@ export function FacilityDetailPage({ facilityId, onNavigate }: FacilityDetailPag
                 src={img}
                 alt={`${facility.name} thumbnail ${idx + 1}`}
                 className="h-full w-full object-cover"
-                crossOrigin="anonymous"
               />
             </button>
           ))}

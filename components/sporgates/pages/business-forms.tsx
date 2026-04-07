@@ -1413,7 +1413,6 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                                 src={f.coverImage || f.image || "/placeholder.svg"}
                                 alt={f.name}
                                 className="h-12 w-12 rounded-xl object-cover bg-muted"
-                                crossOrigin="anonymous"
                               />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-foreground truncate">{f.name}</p>
@@ -1597,7 +1596,6 @@ export function CreateActivityStepsPage({ onNavigate, activityId }: CreateActivi
                                 src={resource.image || resource.coverImage || "/placeholder.svg"}
                                 alt={resource.name}
                                 className="h-12 w-12 rounded-xl object-cover bg-muted"
-                                crossOrigin="anonymous"
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-0.5">
@@ -3352,7 +3350,7 @@ export function AddResourcePage({ onNavigate, resourceId, editResourceType }: Ad
           <div className="mb-4 grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
             {existingImages.map((url, idx) => (
               <div key={`existing-${idx}`} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
-                <img src={url} alt={`Existing ${idx + 1}`} className="h-full w-full object-cover" crossOrigin="anonymous" />
+                <img src={url} alt={`Existing ${idx + 1}`} className="h-full w-full object-cover" />
                 {idx === 0 && imageFiles.length === 0 && (
                   <span className="absolute left-1 top-1 rounded bg-primary/80 px-1 py-0.5 text-[8px] font-bold leading-none text-white">Cover</span>
                 )}
@@ -4107,7 +4105,7 @@ export function ManageResourcesPage({ onNavigate }: BusinessFormPageProps) {
               <tr key={resource.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <img src={resource.image} alt={resource.name} className="h-10 w-10 rounded-lg object-cover" crossOrigin="anonymous" />
+                    <img src={resource.image} alt={resource.name} className="h-10 w-10 rounded-lg object-cover" />
                     <span className="text-xs font-semibold text-foreground">{resource.name}</span>
                   </div>
                 </td>

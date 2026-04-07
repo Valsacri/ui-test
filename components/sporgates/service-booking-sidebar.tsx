@@ -111,7 +111,7 @@ export function ServiceBookingSidebar({
     <aside className="sticky top-20 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-lg">
       <div className="flex gap-3">
         <div className="h-16 w-16 overflow-hidden rounded-xl bg-muted">
-          <img src={serviceImage} alt={serviceName} className="h-full w-full object-cover" crossOrigin="anonymous" />
+          <img src={serviceImage} alt={serviceName} className="h-full w-full object-cover" />
         </div>
         <div className="flex-1">
           <p className="text-sm font-semibold text-foreground">{serviceName}</p>

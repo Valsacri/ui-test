@@ -164,7 +164,6 @@ export function ServiceDetailPage({ serviceId, onNavigate }: ServiceDetailPagePr
                     src={img}
                     alt={`${service.name} thumbnail ${idx + 1}`}
                     className="h-full w-full object-cover"
-                    crossOrigin="anonymous"
                   />
                 </button>
               ))}

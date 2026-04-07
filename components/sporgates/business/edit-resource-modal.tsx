@@ -199,7 +199,7 @@ export function EditResourceModal({ isOpen, onClose, resource, resourceType, onD
             <label className="text-xs font-semibold text-muted-foreground">Image</label>
             {imagePreview ? (
               <div className="relative mt-1">
-                <img src={imagePreview} alt={name} className="h-40 w-full rounded-xl object-cover" crossOrigin="anonymous" />
+                <img src={imagePreview} alt={name} className="h-40 w-full rounded-xl object-cover" />
                 <button
                   type="button"
                   onClick={() => { setImageFile(null); setImagePreview(null); setImage("") }}

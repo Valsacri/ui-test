@@ -188,7 +188,6 @@ export function BusinessActivitiesPage({ onNavigate }: BusinessSubPageProps) {
                     src={activity.coverImage || "/placeholder.svg"}
                     alt={activity.name}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    crossOrigin="anonymous"
                   />
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#003C66]/90 via-[#003C66]/20 to-transparent" />
@@ -568,7 +567,10 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
         resourceType: "product" as ResourceType,
         status: p.inStock ? "available" : "inactive",
         bookingsToday: 0, revenue: 0,
-        image: (p.image as string) || "/placeholder.svg",
+        image:
+          (p.image as string) ||
+          ((p.imageUrls as string[])?.find((u) => Boolean(u))) ||
+          "/placeholder.svg",
         description: p.description as string | undefined,
         price: p.price as number | undefined,
         brand: p.brand as string | undefined,
@@ -714,7 +716,6 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
                 src={resource.image}
                 alt={resource.name}
                 className="h-16 w-16 rounded-xl object-cover"
-                crossOrigin="anonymous"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">{resource.name}</p>

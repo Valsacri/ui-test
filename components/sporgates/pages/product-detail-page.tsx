@@ -176,7 +176,6 @@ export function ProductDetailPage({ productId, onNavigate }: ProductDetailPagePr
                     src={img}
                     alt={`${product.name} thumbnail ${idx + 1}`}
                     className="h-full w-full object-cover"
-                    crossOrigin="anonymous"
                   />
                 </button>
               ))}
