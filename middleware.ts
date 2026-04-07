@@ -9,7 +9,9 @@ const LANDING_HOSTS = ['www.sporgates.com', 'sporgates.com']
  *
  * - www.sporgates.com / sporgates.com → landing page at /
  * - app.sporgates.com → app (auth required for protected routes)
- * - JWT lives in localStorage; we use cookie marker `auth_logged_in` for server-side auth check.
+ * - API auth uses HttpOnly cookies (access/refresh tokens from the backend). Middleware cannot read those
+ *   for routing; it uses the non-HttpOnly marker cookie `auth_logged_in` to infer “has a session” for
+ *   redirects. The browser still sends HttpOnly tokens to `/auth` and `/v1` via `withCredentials`.
  */
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
@@ -52,6 +54,7 @@ export function middleware(request: NextRequest) {
         pathname.startsWith('/api') ||
         pathname.startsWith('/uploads') ||
         pathname.startsWith('/v1') ||
+        pathname.startsWith('/favicon') ||
         pathname.includes('.')
     ) {
         return NextResponse.next()

@@ -11,9 +11,14 @@ export const metadata: Metadata = {
   title: 'Sporgates - Sports Community Platform',
   description: 'Discover sports activities, book facilities, connect with athletes, and grow your sports business.',
   icons: {
-    icon: [{ url: '/favicon/favicon.svg', type: 'image/svg+xml' }],
-    shortcut: '/favicon/favicon.svg',
-    apple: '/favicon/favicon.svg',
+    /** ICO first: browsers request `/favicon.ico` by default; PNG/SVG are fallbacks. */
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon/favicon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/favicon/apple-touch-icon.png',
   },
   manifest: '/favicon/site.webmanifest',
 }
