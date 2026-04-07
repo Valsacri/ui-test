@@ -50,4 +50,23 @@ export const leagueService = {
         const response = await apiClient.get('/v1/leagues/search', { params: { query } });
         return response.data;
     },
+
+    getStandings: async (leagueId: string) => {
+        const response = await apiClient.get(`/v1/leagues/${leagueId}/standings`);
+        return response.data;
+    },
+
+    replaceStandings: async (leagueId: string, standings: Record<string, unknown>[]) => {
+        const response = await apiClient.put(`/v1/leagues/${leagueId}/standings`, standings);
+        return response.data;
+    },
+
+    uploadLogo: async (file: File) => {
+        const form = new FormData();
+        form.append('file', file);
+        const response = await apiClient.post('/v1/upload/league/logo', form, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data as { url: string; message: string };
+    },
 };

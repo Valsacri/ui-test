@@ -41,6 +41,8 @@ export function useExplore() {
   const [activeTab, setActiveTab] = useState("All")
   const [activeSport, setActiveSport] = useState("All Sports")
   const [sidebarFilters, setSidebarFilters] = useState<ExploreFilterState>(DEFAULT_FILTERS)
+  /** When set, Explore activities are limited to this host squad. */
+  const [hostSquadId, setHostSquadId] = useState<string | null>(null)
 
   // Debounce search query
   useEffect(() => {
@@ -53,7 +55,8 @@ export function useExplore() {
     query: debouncedQuery || undefined,
     sport: activeSport,
     rating: sidebarFilters.rating,
-  }), [debouncedQuery, activeSport, sidebarFilters.rating])
+    hostSquadId: hostSquadId || undefined,
+  }), [debouncedQuery, activeSport, sidebarFilters.rating, hostSquadId])
 
   // Determine which content types to show
   const visibleTypes = useMemo(() => {
@@ -106,6 +109,7 @@ export function useExplore() {
     setSearchQuery("")
     setActiveSport("All Sports")
     setActiveTab("All")
+    setHostSquadId(null)
   }, [])
 
   const totalResults =
@@ -134,5 +138,7 @@ export function useExplore() {
     resetFilters,
     refetch: () => { }, // SWR auto-revalidates via key changes
     totalResults,
+    hostSquadId,
+    setHostSquadId,
   }
 }

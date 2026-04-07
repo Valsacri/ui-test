@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react"
 import useSWR from "swr"
 import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
-import { fetcher } from "@/lib/fetcher"
 import { authService } from "@/lib/services/auth"
 import { activitiesService } from "@/lib/services/activities"
+import { squadService } from "@/lib/services/squad"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { ActivitiesFilterSidebar } from "@/components/sporgates/filters/activities-filter-sidebar"
 import { BottomSheet } from "@/components/sporgates/ux/bottom-sheet"
@@ -31,15 +31,26 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
   const [sortBy, setSortBy] = useState("relevance")
   const isMobile = useIsMobile()
   const [visibleCount, setVisibleCount] = useState(9)
+  const [hostSquadId, setHostSquadId] = useState<string | null>(null)
 
-  // SWR replaces useEffect + useState for data fetching
-  const { data: rawActivities, error, isLoading, mutate } = useSWR('/v1/activities', fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 10000,
-  })
+  const { data: rawActivities, error, isLoading, mutate } = useSWR(
+    ["/v1/activities", hostSquadId],
+    ([, squad]) => activitiesService.getAll(squad ? { hostSquadId: squad } : undefined),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
+    }
+  )
+
+  const currentUser = authService.getCurrentUser()
+  const { data: userSquads = [] } = useSWR(
+    currentUser?.id ? `/v1/squads/user/${currentUser.id}/activities-page` : null,
+    () => squadService.getByUser(currentUser!.id),
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+  const squadsList = Array.isArray(userSquads) ? userSquads : []
 
   // Fetch user participations
-  const currentUser = authService.getCurrentUser()
   const { data: userParticipations } = useSWR(
     currentUser?.id ? `/v1/activities/user/${currentUser.id}/participants` : null,
     () => activitiesService.getUserParticipations(currentUser!.id),
@@ -205,6 +216,30 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
         </div>
       </div>
 
+      {squadsList.length > 0 && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label htmlFor="activities-host-squad" className="text-xs font-medium text-muted-foreground shrink-0">
+            Hosted by squad
+          </label>
+          <select
+            id="activities-host-squad"
+            value={hostSquadId ?? ""}
+            onChange={(e) => {
+              setHostSquadId(e.target.value || null)
+              setVisibleCount(9)
+            }}
+            className="h-10 w-full max-w-md rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary sm:w-auto"
+          >
+            <option value="">All activities</option>
+            {squadsList.map((s: { id: string; name?: string }) => (
+              <option key={s.id} value={s.id}>
+                {s.name || s.id}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {filters.map((filter) => (
           <button
@@ -274,6 +309,7 @@ export function ActivitiesPage({ onNavigate }: ActivitiesPageProps) {
             onClick: () => {
               setActiveFilter("All")
               setSearchQuery("")
+              setHostSquadId(null)
             },
             variant: "secondary",
           }}

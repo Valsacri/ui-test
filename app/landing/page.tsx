@@ -1,5 +1,6 @@
 import { LandingHeader } from "@/components/landing/header"
 import { LandingHero } from "@/components/landing/hero"
+import { LandingPartnersBand } from "@/components/landing/partners-band"
 import { LandingFeatures } from "@/components/landing/features"
 import { LandingSocialProof } from "@/components/landing/social-proof"
 import { LandingCTA } from "@/components/landing/cta"
@@ -17,6 +18,7 @@ export default function LandingPage() {
             <LandingHeader />
             <main>
                 <LandingHero />
+                <LandingPartnersBand />
                 <LandingFeatures />
                 <LandingSocialProof />
                 <LandingCTA />

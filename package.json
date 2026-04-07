@@ -54,6 +54,7 @@
     "html2canvas": "^1.4.1",
     "input-otp": "1.4.1",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.544.0",
     "next": "16.1.6",
@@ -73,6 +74,7 @@
     "swr": "^2.4.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "three": "^0.169.0",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"
   },
@@ -85,11 +87,18 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/sockjs-client": "^1.5.4",
+    "@types/three": "0.169.0",
     "@vitejs/plugin-react": "^4.3.4",
     "happy-dom": "^15.11.7",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "5.7.3",
     "vitest": "^2.1.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "18.3.1",
+      "react-dom": "18.3.1"
+    }
   }
 }

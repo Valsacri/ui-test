@@ -415,7 +415,7 @@ export function PersonDetailPage({ personId, onNavigate }: PersonDetailPageProps
                       </div>
                       <button
                         type="button"
-                        onClick={() => onNavigate("squad-profile", squad.id)}
+                        onClick={() => onNavigate("squad-detail", squad.id)}
                         className="rounded-full border border-primary px-3 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
                       >
                         View

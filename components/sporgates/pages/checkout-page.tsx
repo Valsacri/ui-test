@@ -110,10 +110,10 @@ export function CheckoutPage({ onNavigate }: CheckoutPageProps) {
                     </button>
                     <button
                         type="button"
-                        onClick={() => onNavigate("profile")}
+                        onClick={() => onNavigate("orders")}
                         className="gradient-primary rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
                     >
-                        View Orders
+                        View orders
                     </button>
                 </div>
             </div>

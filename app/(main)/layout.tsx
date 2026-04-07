@@ -11,6 +11,7 @@ import { AuthGuard } from "@/components/sporgates/auth-guard"
 import { ErrorBoundary } from "@/components/sporgates/ux/error-boundary"
 import { BusinessProvider, useBusinessContext } from "@/lib/business-context"
 import { CartProvider } from "@/lib/cart-context"
+import { CartDrawerProvider } from "@/lib/cart-drawer-context"
 import { useAppRouter } from "@/lib/route-map"
 import { notificationsService } from "@/lib/services/notifications"
 import { messagesService } from "@/lib/services/messages"
@@ -49,9 +50,14 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     if (p === "/messages") return "messages"
     if (p.startsWith("/messages/")) return "conversation"
     if (p === "/notifications") return "notifications"
+    if (p === "/orders") return "orders"
+    if (p === "/community/leagues/mine") return "my-leagues"
+    if (p === "/community/leagues") return "league-list"
+    if (p.startsWith("/community/leagues/")) return "league-detail"
     if (p === "/community") return "community"
     if (p.startsWith("/community/squads/dashboard")) return "squad-dashboard"
-    if (p.match(/\/community\/squads\/[^/]+\/profile/)) return "squad-profile"
+    // Legacy route: /community/squads/:id/profile now redirects to squad detail
+    if (p.match(/\/community\/squads\/[^/]+\/profile/)) return "squad-detail"
     if (p.startsWith("/community/squads/")) return "squad-detail"
     if (p.startsWith("/stores/")) return "store-detail"
     if (p === "/profile") return "profile"
@@ -70,6 +76,7 @@ function pathnameToPageRoute(pathname: string): PageRoute {
     if (p === "/business/team") return "business-team"
     if (p === "/business/analytics") return "business-analytics"
     if (p === "/business/campaigns") return "business-campaigns"
+    if (p === "/business/campaign-placement") return "business-campaign-placement"
     if (p === "/business/resources") return "business-resources"
     if (p.startsWith("/business/resources/")) return "business-resource-detail"
     if (p === "/business/partners") return "business-partners"
@@ -105,7 +112,8 @@ const hideRightSidebarPages: PageRoute[] = [
     "business-detail",
     "organizer-portfolio",
     "person-detail",
-    "squad-profile",
+    "squad-detail",
+    "league-detail",
 ]
 
 export default function MainLayout({
@@ -316,6 +324,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                 <StoryReplyModalProvider>
                 <NotificationCountProvider value={onUnreadNotificationsChange}>
                 <MessageCountProvider value={refetchMessagesCount}>
+                <CartDrawerProvider>
                 <div className="min-h-screen bg-background">
                     <ExtendedOnboardingBanner isBusinessMode={isBusinessMode} />
                     <TopBar
@@ -334,7 +343,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                         {showSidebars && (
                             <ExploreSidebar
                                 currentPage={currentPage}
-                                onNavigate={(page) => {
+                                onNavigate={(page, detailId) => {
                                     if (page === "business-portfolio") {
                                         if (isBusinessMode && activeBusinessId) {
                                             navigate(page)
@@ -343,7 +352,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                                         }
                                         return
                                     }
-                                    navigate(page)
+                                    navigate(page, detailId)
                                 }}
                                 isBusinessMode={isBusinessMode}
                             />
@@ -363,6 +372,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                         isBusinessMode={isBusinessMode}
                     />
                 </div>
+                </CartDrawerProvider>
                 </MessageCountProvider>
                 </NotificationCountProvider>
                 </StoryReplyModalProvider>

@@ -12,6 +12,7 @@ import {
   UserCheck,
   MessageSquare,
   CheckCheck,
+  Loader2,
 } from "lucide-react"
 import { cn, formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
 import Image from "next/image"
@@ -27,7 +28,20 @@ import { useAppRouter } from "@/lib/route-map"
 
 interface Notification {
   id: string
-  type: "activity" | "social" | "booking" | "achievement" | "system" | "comment" | "follow" | "follow_back" | "message_reaction"
+  type:
+    | "activity"
+    | "social"
+    | "booking"
+    | "achievement"
+    | "system"
+    | "comment"
+    | "follow"
+    | "follow_back"
+    | "message_reaction"
+    | "squad_invite"
+    | "squad_join_request"
+    | "squad_invite_decided"
+    | "squad_join_request_decided"
   title: string
   message: string
   time: string
@@ -40,6 +54,7 @@ interface Notification {
   postId: string | null
   referenceId: string | null
   referenceType: string | null
+  actionStatus: string | null
 }
 
 const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -52,6 +67,10 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   follow: UserPlus,
   follow_back: UserCheck,
   message_reaction: Heart,
+  squad_invite: UserPlus,
+  squad_join_request: UserPlus,
+  squad_invite_decided: UserPlus,
+  squad_join_request_decided: UserPlus,
 }
 
 const typeColors: Record<string, string> = {
@@ -64,6 +83,10 @@ const typeColors: Record<string, string> = {
   follow: "text-emerald-500",
   follow_back: "text-emerald-500",
   message_reaction: "text-rose-500",
+  squad_invite: "text-indigo-500",
+  squad_join_request: "text-blue-500",
+  squad_invite_decided: "text-indigo-500",
+  squad_join_request_decided: "text-blue-500",
 }
 
 export function NotificationsPage() {
@@ -89,6 +112,10 @@ export function NotificationsPage() {
         if (s === "NEW_FOLLOWER") return "follow"
         if (s === "FOLLOW_BACK") return "follow_back"
         if (s === "MESSAGE_REACTION") return "message_reaction"
+        if (s === "SQUAD_INVITE") return "squad_invite"
+        if (s === "SQUAD_JOIN_REQUEST") return "squad_join_request"
+        if (s === "SQUAD_INVITE_DECIDED") return "squad_invite_decided"
+        if (s === "SQUAD_JOIN_REQUEST_DECIDED") return "squad_join_request_decided"
         return (t as Notification["type"]) || "system"
       }
       return list.map((n: Record<string, unknown>) => ({
@@ -105,12 +132,20 @@ export function NotificationsPage() {
         postId: n.postId != null ? String(n.postId) : (String(n.referenceType || "").toLowerCase() === "post" && n.referenceId ? String(n.referenceId) : null),
         referenceId: n.referenceId != null ? String(n.referenceId) : null,
         referenceType: n.referenceType != null ? String(n.referenceType) : null,
+        actionStatus: n.actionStatus != null ? String(n.actionStatus) : null,
       }))
     },
     { revalidateOnFocus: false, dedupingInterval: 10000 }
   )
 
-  const notifications: Notification[] = rawNotifications || []
+  // Join requests cancelled by the requester are revoked — hide from captain inbox
+  const notifications: Notification[] = (rawNotifications || []).filter(
+    (n: Notification) =>
+      !(
+        n.type === "squad_join_request" &&
+        String(n.actionStatus ?? "").toUpperCase() === "CANCELLED"
+      )
+  )
 
   // Live refresh: main layout subscribes to SSE once and calls swrMutate(`/notifications/user/:id`) — no duplicate stream here (avoids double sound + double handlers).
 
@@ -216,9 +251,22 @@ export function NotificationsPage() {
         notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
       }
     }
+    const isSquadInvite = notif.referenceType?.toUpperCase() === "SQUAD" && notif.referenceId
+    if (isSquadInvite && notif.referenceId) {
+      navigate("squad-detail", notif.referenceId)
+      if (!notif.read) {
+        mutateNotifications(
+          notifications.map((n: Notification) => (n.id === notif.id ? { ...n, read: true } : n)),
+          false
+        )
+        onUnreadNotificationsChange?.((prev) => Math.max(0, prev - 1))
+        notificationsService.markAsRead(notif.id).catch(() => mutateNotifications())
+      }
+    }
   }
 
   const [followedBackIds, setFollowedBackIds] = useState<Set<string>>(new Set())
+  const [inviteActionBusyId, setInviteActionBusyId] = useState<string | null>(null)
 
   const handleFollowBack = async (notif: Notification) => {
     if (!user?.id || !notif.referenceId) return
@@ -228,6 +276,33 @@ export function NotificationsPage() {
       toast.success("Followed back!")
     } catch {
       toast.error("Failed to follow back")
+    }
+  }
+
+  const handleInviteResponse = async (notif: Notification, approve: boolean) => {
+    setInviteActionBusyId(notif.id)
+    mutateNotifications(
+      notifications.map((n: Notification) =>
+        n.id === notif.id
+          ? { ...n, actionStatus: approve ? "ACCEPTED" : "REJECTED", read: true }
+          : n
+      ),
+      false
+    )
+    onUnreadNotificationsChange?.((prev) => Math.max(0, prev - (notif.read ? 0 : 1)))
+    try {
+      if (approve) {
+        await notificationsService.approve(notif.id)
+        toast.success("Squad invite accepted")
+      } else {
+        await notificationsService.reject(notif.id)
+        toast.success("Squad invite rejected")
+      }
+    } catch {
+      toast.error("Could not update invitation")
+      mutateNotifications()
+    } finally {
+      setInviteActionBusyId(null)
     }
   }
 
@@ -317,7 +392,8 @@ export function NotificationsPage() {
             const hasActivity = notif.referenceType?.toUpperCase() === "ACTIVITY" && notif.referenceId
             const hasStoryReply = notif.referenceType?.toUpperCase() === "STORY_REPLY" && notif.referenceId && notif.senderId
             const hasStory = notif.referenceType?.toUpperCase() === "STORY" && notif.referenceId && user?.id
-            const isClickable = hasPost || hasActivity || hasStoryReply || hasStory
+            const hasSquad = notif.referenceType?.toUpperCase() === "SQUAD" && notif.referenceId
+            const isClickable = hasPost || hasActivity || hasStoryReply || hasStory || hasSquad
             return (
               <div
                 key={notif.id}
@@ -406,6 +482,28 @@ export function NotificationsPage() {
                   >
                     Get in touch
                   </button>
+                )}
+
+                {(notif.type === "squad_invite" || notif.type === "squad_join_request") &&
+                  (notif.actionStatus ?? "PENDING").toUpperCase() === "PENDING" && (
+                  <div className="flex shrink-0 self-center gap-2">
+                    <button
+                      type="button"
+                      disabled={inviteActionBusyId === notif.id}
+                      onClick={(e) => { e.stopPropagation(); handleInviteResponse(notif, true) }}
+                      className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+                    >
+                      {inviteActionBusyId === notif.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Accept"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={inviteActionBusyId === notif.id}
+                      onClick={(e) => { e.stopPropagation(); handleInviteResponse(notif, false) }}
+                      className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-60"
+                    >
+                      Reject
+                    </button>
+                  </div>
                 )}
 
                 {/* Unread dot */}

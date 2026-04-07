@@ -7,6 +7,8 @@ import { toast } from "sonner"
 import { useExplore } from "@/hooks/use-explore"
 import { activitiesService } from "@/lib/services/activities"
 import { authService } from "@/lib/services/auth"
+import { squadService } from "@/lib/services/squad"
+import useSWR from "swr"
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { ActivityCard } from "@/components/sporgates/cards/activity-card"
 import { FacilityCard } from "@/components/sporgates/cards/facility-card"
@@ -81,9 +83,20 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
     sidebarFilters,
     applyFilters,
     totalResults,
+    hostSquadId,
+    setHostSquadId,
   } = useExplore()
 
   const [showFilters, setShowFilters] = useState(false)
+  const currentUser = authService.getCurrentUser()
+  const { data: userSquads = [] } = useSWR(
+    currentUser?.id ? `/v1/squads/user/${currentUser.id}/explore` : null,
+    () => squadService.getByUser(currentUser!.id),
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  )
+  const squadsList = Array.isArray(userSquads) ? userSquads : []
+  const showSquadActivityFilter =
+    squadsList.length > 0 && (activeTab === "All" || activeTab === "Activities")
 
   useEffect(() => {
     const q = searchParams.get("q")
@@ -184,6 +197,27 @@ export function ExplorePage({ onNavigate }: ExplorePageProps) {
             </button>
           ))}
         </div>
+
+        {showSquadActivityFilter && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label htmlFor="explore-host-squad" className="text-xs font-medium text-muted-foreground shrink-0">
+              Squad-hosted activities
+            </label>
+            <select
+              id="explore-host-squad"
+              value={hostSquadId ?? ""}
+              onChange={(e) => setHostSquadId(e.target.value || null)}
+              className="h-10 w-full max-w-md rounded-xl border border-border bg-card px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary sm:w-auto"
+            >
+              <option value="">All activities</option>
+              {squadsList.map((s: { id: string; name?: string }) => (
+                <option key={s.id} value={s.id}>
+                  {s.name || s.id}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {showFilters && isMobile && (
           <BottomSheet isOpen={showFilters} onClose={() => setShowFilters(false)} title="Filters">

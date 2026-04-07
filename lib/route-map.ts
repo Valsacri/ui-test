@@ -34,6 +34,9 @@ const routeMap: Record<PageRoute, string> = {
     "squad-detail": "/community/squads/[id]",
     "squad-profile": "/community/squads/[id]/profile",
     "squad-dashboard": "/community/squads/dashboard",
+    "league-list": "/community/leagues",
+    "league-detail": "/community/leagues/[id]",
+    "my-leagues": "/community/leagues/mine",
     "store-detail": "/stores/[id]",
 
     // Profile
@@ -65,6 +68,7 @@ const routeMap: Record<PageRoute, string> = {
     "business-team": "/business/team",
     "business-analytics": "/business/analytics",
     "business-campaigns": "/business/campaigns",
+    "business-campaign-placement": "/business/campaign-placement",
     "business-resources": "/business/resources",
     "business-partners": "/business/partners",
     "business-athletes": "/business/athletes",
@@ -102,6 +106,7 @@ const routeMap: Record<PageRoute, string> = {
     "onboarding-activity": "/onboarding-activity",
     "onboarding-notifications": "/onboarding-notifications",
     "onboarding-confirmation": "/onboarding-confirmation",
+    orders: "/orders",
     checkout: "/checkout",
 }
 

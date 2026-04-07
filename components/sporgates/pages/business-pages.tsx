@@ -23,6 +23,7 @@ import {
   Clock,
   Pause,
   Archive,
+  Shirt,
 } from "lucide-react"
 
 import type { PageRoute } from "@/lib/navigation"
@@ -1349,8 +1350,16 @@ export function BusinessCampaignsPage({ onNavigate }: BusinessSubPageProps) {
           <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
           <p className="text-sm text-muted-foreground">Manage your marketing campaigns</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <CampaignTourHelpButton onClick={startTour} />
+          <button
+            type="button"
+            onClick={() => onNavigate("business-campaign-placement")}
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            <Shirt className="h-4 w-4" />
+            Sponsor placement
+          </button>
           <button
             type="button"
             onClick={handleOpenCreateCampaign}

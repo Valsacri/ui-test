@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
     ArrowLeft,
     Users,
@@ -9,13 +9,17 @@ import {
     Shield,
     Trophy,
     Loader2,
+    Camera,
+    ImageIcon,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
-import { cn } from "@/lib/utils"
+import { cn, resolvePostImageUrl } from "@/lib/utils"
 import { toast } from "sonner"
 import { createSquadSchema, type CreateSquadFormData } from "@/lib/validations/forms"
 import { sportService } from "@/lib/services/sport"
 import { userService } from "@/lib/services/user"
+import { squadService } from "@/lib/services/squad"
+import { authService } from "@/lib/services/auth"
 import {
     Select,
     SelectContent,
@@ -38,9 +42,18 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
         maxMembers: "20",
     })
     const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CreateSquadFormData, string>>>({})
+    const [submitting, setSubmitting] = useState(false)
     const [privacy, setPrivacy] = useState<"public" | "private">("public")
     const [invitedPeople, setInvitedPeople] = useState<string[]>([])
     const [searchQuery, setSearchQuery] = useState("")
+    const [logoFile, setLogoFile] = useState<File | null>(null)
+    const [logoPreview, setLogoPreview] = useState<string | null>(null)
+    const [coverFile, setCoverFile] = useState<File | null>(null)
+    const [coverPreview, setCoverPreview] = useState<string | null>(null)
+    const [uploadingLogo, setUploadingLogo] = useState(false)
+    const [uploadingCover, setUploadingCover] = useState(false)
+    const logoInputRef = useRef<HTMLInputElement>(null)
+    const coverInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         const loadData = async () => {
@@ -64,7 +77,21 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
             !invitedPeople.includes(p.id)
     )
 
-    const handleSubmit = () => {
+    const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setLogoFile(file)
+        setLogoPreview(URL.createObjectURL(file))
+    }
+
+    const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        setCoverFile(file)
+        setCoverPreview(URL.createObjectURL(file))
+    }
+
+    const handleSubmit = async () => {
         setFieldErrors({})
         const result = createSquadSchema.safeParse({
             name: formData.name,
@@ -81,8 +108,64 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
             setFieldErrors(err)
             return
         }
-        toast.success("Squad created successfully!")
-        onNavigate("community")
+        const sport = sports.find((s: { id: string }) => s.id === result.data.sport)
+        const user = authService.getCurrentUser()
+        const captainDisplayName =
+            user && (user as { firstName?: string; lastName?: string }).firstName != null
+                ? `${(user as { firstName?: string }).firstName ?? ""} ${(user as { lastName?: string }).lastName ?? ""}`.trim()
+                : (user as { name?: string })?.name
+        setSubmitting(true)
+        try {
+            let logoUrl: string | undefined
+            let coverImage: string | undefined
+
+            if (logoFile) {
+                setUploadingLogo(true)
+                const res = await squadService.uploadLogo(logoFile)
+                logoUrl = res.url
+                setUploadingLogo(false)
+            }
+            if (coverFile) {
+                setUploadingCover(true)
+                const res = await squadService.uploadCover(coverFile)
+                coverImage = res.url
+                setUploadingCover(false)
+            }
+
+            const squad = await squadService.create({
+                name: result.data.name,
+                description: result.data.description || undefined,
+                sportId: result.data.sport,
+                sportName: sport?.name,
+                captainDisplayName: captainDisplayName || undefined,
+                maxMembers: result.data.maxMembers ?? 20,
+                logoUrl,
+                coverImage,
+            })
+
+            if (invitedPeople.length > 0 && squad?.id) {
+                const addResults = await Promise.allSettled(
+                    invitedPeople.map((userId) => {
+                        const person = people.find((p: any) => p.id === userId)
+                        const userName = person
+                            ? (person.name || `${person.firstName || ""} ${person.lastName || ""}`.trim())
+                            : undefined
+                        return squadService.addMember(squad.id, { userId, userName, role: "Member" })
+                    })
+                )
+                const failed = addResults.filter((r) => r.status === "rejected").length
+                if (failed > 0) toast.info(`${invitedPeople.length - failed} invited, ${failed} failed`)
+            }
+
+            toast.success("Squad created successfully!")
+            onNavigate("community")
+        } catch (e: unknown) {
+            toast.error(e instanceof Error ? e.message : "Could not create squad")
+        } finally {
+            setSubmitting(false)
+            setUploadingLogo(false)
+            setUploadingCover(false)
+        }
     }
 
     return (
@@ -103,12 +186,40 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
                 </div>
             </div>
 
-            {/* Icon & Name */}
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            {/* Cover Image */}
+            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+                <div
+                    className="relative h-32 bg-gradient-to-br from-[#003C66] to-[#005A99] cursor-pointer"
+                    onClick={() => coverInputRef.current?.click()}
+                >
+                    {coverPreview ? (
+                        <img src={coverPreview} alt="Cover preview" className="h-full w-full object-cover" />
+                    ) : (
+                        <div className="flex h-full items-center justify-center gap-2 text-white/70">
+                            <ImageIcon className="h-5 w-5" />
+                            <span className="text-xs font-medium">Add cover image</span>
+                        </div>
+                    )}
+                    <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverSelect} />
+                </div>
+                <div className="p-5">
                 <h3 className="mb-4 text-sm font-bold text-foreground">Squad Identity</h3>
                 <div className="flex items-center gap-5 mb-4">
-                    <div className="gradient-secondary flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg">
-                        <Shield className="h-8 w-8" />
+                    <div
+                        className="relative h-20 w-20 shrink-0 cursor-pointer"
+                        onClick={() => logoInputRef.current?.click()}
+                    >
+                        {logoPreview ? (
+                            <img src={logoPreview} alt="Logo preview" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
+                        ) : (
+                            <div className="gradient-secondary flex h-20 w-20 items-center justify-center rounded-2xl text-white shadow-lg">
+                                <Shield className="h-8 w-8" />
+                            </div>
+                        )}
+                        <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white shadow">
+                            <Camera className="h-3 w-3" />
+                        </div>
+                        <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoSelect} />
                     </div>
                     <div className="flex-1 space-y-3">
                         <div>
@@ -136,14 +247,15 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
                             <SelectValue placeholder="Select a sport" />
                         </SelectTrigger>
                         <SelectContent>
-                            {sports.map((sport) => (
-                                <SelectItem key={sport.id} value={sport.name}>
+                            {sports.map((sport: { id: string; name: string }) => (
+                                <SelectItem key={sport.id} value={sport.id}>
                                     {sport.name}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                     {fieldErrors.sport && <p className="mt-1 text-xs text-red-500">{fieldErrors.sport}</p>}
+                </div>
                 </div>
             </div>
 
@@ -288,10 +400,13 @@ export function CreateSquadPage({ onNavigate }: CreateSquadPageProps) {
                 </button>
                 <button
                     type="button"
-                    onClick={handleSubmit}
-                    className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+                    disabled={submitting}
+                    onClick={() => void handleSubmit()}
+                    className="gradient-primary flex-1 rounded-xl py-3 text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90 disabled:opacity-60"
                 >
-                    Create Squad
+                    {submitting
+                        ? uploadingLogo ? "Uploading logo…" : uploadingCover ? "Uploading cover…" : "Creating…"
+                        : "Create Squad"}
                 </button>
             </div>
         </div>

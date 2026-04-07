@@ -223,4 +223,6 @@ export interface ExploreParams {
     query?: string
     sport?: string
     rating?: string
+    /** When set, loads activities hosted by this squad (GET /v1/activities?hostSquadId=). */
+    hostSquadId?: string
 }

@@ -240,16 +240,25 @@ export function SquadProfilePage({ squadId, onNavigate }: SquadProfilePageProps)
           {memberList.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No members listed</p>
           ) : (
-            memberList.map((member: any) => (
+            memberList.map((member: any, index: number) => (
               <div
-                key={member.name || member.id}
+                key={
+                  member.userId ||
+                  member.id ||
+                  member.user_id ||
+                  `${member.userName || member.name || "member"}-${index}`
+                }
                 className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm"
               >
                 <div className="gradient-primary flex h-11 w-11 items-center justify-center rounded-full text-xs font-bold text-white">
-                  {member.avatar || member.name?.slice(0, 2)?.toUpperCase() || "?"}
+                  {member.avatar ||
+                    (member.userName || member.name)?.slice(0, 2)?.toUpperCase() ||
+                    "?"}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground">{member.name}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {member.userName || member.name || "Member"}
+                  </p>
                   <p className="text-xs text-muted-foreground">{member.role || "Member"}</p>
                 </div>
                 <span className={cn(

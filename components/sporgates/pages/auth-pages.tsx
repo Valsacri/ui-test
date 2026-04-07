@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -118,6 +119,7 @@ interface AuthPageProps {
 }
 
 export function AuthPages({ page, onNavigate }: AuthPageProps) {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [selectedSports, setSelectedSports] = useState<Array<{ id: string; level: string; yearsOfExperience?: number }>>([])
   const [selectedGoals, setSelectedGoals] = useState<string[]>([])
@@ -1517,7 +1519,7 @@ export function AuthPages({ page, onNavigate }: AuthPageProps) {
             </div>
             <button
               type="button"
-              onClick={() => onNavigate("home")}
+              onClick={() => router.push("/landing")}
               className="mb-6 text-xs font-medium text-[#64748b] transition-colors hover:text-[#003C66]"
             >
               ← Back to home

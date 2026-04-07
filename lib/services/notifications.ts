@@ -187,6 +187,16 @@ export const notificationsService = {
         return response.data;
     },
 
+    approve: async (id: string) => {
+        const response = await apiClient.put(`/v1/notifications/${id}/approve`);
+        return response.data;
+    },
+
+    reject: async (id: string) => {
+        const response = await apiClient.put(`/v1/notifications/${id}/reject`);
+        return response.data;
+    },
+
     markAsUnread: async (id: string) => {
         const response = await apiClient.put(`/v1/notifications/${id}/unread`);
         return response.data;

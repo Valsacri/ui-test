@@ -52,7 +52,11 @@ import type {
 export async function fetchActivities(params?: ExploreParams): Promise<ActivityCardData[]> {
   try {
     let response
-    if (params?.query) {
+    if (params?.hostSquadId) {
+      response = await apiClient.get<ActivityDto[]>('/v1/activities', {
+        params: { hostSquadId: params.hostSquadId },
+      })
+    } else if (params?.query) {
       response = await apiClient.get<ActivityDto[]>('/v1/activities/search', {
         params: { query: params.query },
       })
@@ -65,6 +69,22 @@ export async function fetchActivities(params?: ExploreParams): Promise<ActivityC
     }
 
     let results = (response.data || []).map(mapActivity)
+
+    if (params?.hostSquadId && params?.query?.trim()) {
+      const q = params.query.trim().toLowerCase()
+      results = results.filter(
+        (a) =>
+          a.title.toLowerCase().includes(q) ||
+          a.sport.toLowerCase().includes(q) ||
+          a.location.toLowerCase().includes(q) ||
+          a.description.toLowerCase().includes(q)
+      )
+    }
+
+    if (params?.hostSquadId && params?.sport && params.sport !== 'All Sports') {
+      const s = params.sport.toLowerCase()
+      results = results.filter((a) => a.sport.toLowerCase().includes(s))
+    }
 
     if (params?.rating && params.rating !== 'Any') {
       const minRating = parseFloat(params.rating.replace('+', ''))

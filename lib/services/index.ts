@@ -21,3 +21,4 @@ export { feedService } from './feed';
 export { storiesService } from './stories';
 export { campaignsService } from './campaigns';
 export { campaignDeliveryService } from './campaign-delivery';
+export { kitTemplatesService } from './kit-templates';

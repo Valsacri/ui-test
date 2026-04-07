@@ -28,6 +28,9 @@ export type PageRoute =
   | "squad-detail"
   | "squad-profile"
   | "squad-dashboard"
+  | "league-list"
+  | "league-detail"
+  | "my-leagues"
   | "settings"
   | "settings-profile"
   | "settings-privacy"
@@ -48,6 +51,7 @@ export type PageRoute =
   | "business-team"
   | "business-analytics"
   | "business-campaigns"
+  | "business-campaign-placement"
   | "business-resources"
   | "business-partners"
   | "business-athletes"
@@ -83,6 +87,7 @@ export type PageRoute =
   | "onboarding-activity"
   | "onboarding-notifications"
   | "onboarding-confirmation"
+  | "orders"
   | "checkout"
 
 export interface NavigationState {

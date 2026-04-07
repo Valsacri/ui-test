@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TrendingUp, Calendar, MapPin, Star, Clock, Users } from "lucide-react"
+import { TrendingUp, Calendar, MapPin, Star, Clock, Users, ShoppingBag } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { activitiesService } from "@/lib/services/activities"
 import { facilitiesService } from "@/lib/services/facilities"
@@ -9,6 +9,8 @@ import { mapActivity } from "@/lib/mappers/explore-mappers"
 import { mapFacility } from "@/lib/mappers/explore-mappers"
 import type { ActivityCardData, FacilityCardData } from "@/lib/types/explore"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useCart } from "@/lib/cart-context"
+import { useCartDrawer } from "@/lib/cart-drawer-context"
 
 interface FeedSidebarProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -29,6 +31,10 @@ function LoadingTrendingActivityItem() {
 }
 
 export function FeedSidebar({ onNavigate }: FeedSidebarProps) {
+  const { openCart } = useCartDrawer()
+  const cart = useCart()
+  const cartCount = cart?.cartCount ?? 0
+  const cartTotal = cart?.cartTotal ?? 0
   const [activities, setActivities] = useState<ActivityCardData[]>([])
   const [facilities, setFacilities] = useState<FacilityCardData[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -60,6 +66,50 @@ export function FeedSidebar({ onNavigate }: FeedSidebarProps) {
   return (
     <aside className="hidden w-96 shrink-0 border-l border-border bg-card xl:block">
       <div className="sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto p-4">
+        {/* Cart quick access — same client cart as marketplace / checkout */}
+        <div className="mb-6 rounded-xl border border-border bg-muted/50 p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4 text-secondary" />
+            <h3 className="text-sm font-semibold text-foreground">Cart</h3>
+            {cartCount > 0 && (
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-white">
+                {cartCount}
+              </span>
+            )}
+          </div>
+          {cartCount === 0 ? (
+            <p className="text-xs text-muted-foreground">No items yet. Add gear from the marketplace.</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Subtotal <span className="font-semibold text-foreground">${cartTotal.toFixed(2)}</span>
+            </p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => openCart()}
+              className="flex-1 rounded-lg border border-border bg-card py-2 text-center text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              View cart
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate("checkout")}
+              disabled={cartCount === 0}
+              className="flex-1 rounded-lg bg-primary py-2 text-center text-xs font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Checkout
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate("orders")}
+            className="mt-2 w-full text-center text-[11px] font-medium text-primary hover:underline"
+          >
+            Order history
+          </button>
+        </div>
+
         {/* Trending Activities */}
         <div className="mb-6">
           <div className="mb-3 flex items-center gap-2">

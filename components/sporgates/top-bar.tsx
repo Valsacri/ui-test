@@ -16,6 +16,7 @@ import {
   Heart,
   Trophy,
   X,
+  ShoppingCart,
 } from "lucide-react"
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
@@ -32,6 +33,8 @@ import { ConfirmDialog } from "@/components/sporgates/ux/confirm-dialog"
 import { usePostModal } from "@/lib/post-modal-context"
 import { useStoryModal } from "@/lib/story-modal-context"
 import { useStoryReplyModal } from "@/lib/story-reply-modal-context"
+import { useCart } from "@/lib/cart-context"
+import { useCartDrawer } from "@/lib/cart-drawer-context"
 
 // Inline defaults — no BE endpoints for topbar goals/conversations/notifications preview
 const goals = [
@@ -90,6 +93,9 @@ export function TopBar({
   unreadNotifications,
   onUnreadNotificationsChange,
 }: TopBarProps) {
+  const cart = useCart()
+  const cartCount = cart?.cartCount ?? 0
+  const { openCart, closeCart } = useCartDrawer()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showWallet, setShowWallet] = useState(false)
   const [showGoal, setShowGoal] = useState(false)
@@ -228,6 +234,7 @@ export function TopBar({
     setShowMessages(false)
     setShowNotifications(false)
     setShowSearchDropdown(false)
+    closeCart()
   }
 
   // Debounced search suggestions when user types
@@ -265,10 +272,17 @@ export function TopBar({
       .finally(() => setIsSearching(false))
   }, [searchQuery, router])
 
-  // Close dropdowns when clicking outside
+  // Close dropdowns when clicking outside the top-bar action cluster.
+  // Clicks inside the cart drawer panel must NOT run closeAll — the drawer lives outside
+  // `dropdownRef`, so +/- / remove were incorrectly closing the cart.
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target
+      const el = target instanceof Element ? target : null
+      if (el?.closest('[data-cart-drawer="panel"]')) {
+        return
+      }
+      if (dropdownRef.current && !dropdownRef.current.contains(target as Node)) {
         closeAll()
       }
     }
@@ -413,6 +427,28 @@ export function TopBar({
             </div>
           )}
         </div>
+
+        {/* Cart (user mode): right-side drawer — marketplace link lives in sidebar */}
+        {!isBusinessMode && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                closeAll()
+                openCart()
+              }}
+              className="relative rounded-full p-2 transition-colors hover:bg-muted"
+              aria-label="Shopping cart"
+            >
+              <ShoppingCart className="h-5 w-5 text-foreground" />
+              {cartCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-secondary px-0.5 text-[10px] font-bold text-white">
+                  {cartCount > 99 ? "99+" : cartCount}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
 
         {/* Messages Dropdown */}
         <div className="relative">

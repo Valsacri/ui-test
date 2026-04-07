@@ -55,10 +55,14 @@ import {
   BusinessResourcesPage,
   BusinessPartnersPage,
 } from "@/components/sporgates/pages/business-pages"
+import { CampaignPlacementPage } from "@/components/sporgates/pages/campaign-placement-page"
 import { CommunityPage } from "@/components/sporgates/pages/community-page"
 import { SquadDetailPage } from "@/components/sporgates/pages/squad-detail-page"
 import { SquadProfilePage } from "@/components/sporgates/pages/squad-profile-page"
 import { SquadDashboardPage } from "@/components/sporgates/pages/squad-dashboard-page"
+import { LeaguesListPage } from "@/components/sporgates/pages/leagues-list-page"
+import { LeagueDetailPage } from "@/components/sporgates/pages/league-detail-page"
+import { MyLeaguesPage } from "@/components/sporgates/pages/my-leagues-page"
 import { StoreDetailPage } from "@/components/sporgates/pages/store-detail-page"
 import { SettingsDataPermissionsPage } from "@/components/sporgates/pages/settings-data-permissions-page"
 import { SettingsTransactionsPage } from "@/components/sporgates/pages/settings-transactions-page"
@@ -191,6 +195,7 @@ export function AppShell() {
     "organizer-portfolio",
     "person-detail",
     "squad-profile",
+    "league-detail",
     "business-resource-detail",
   ]
   const showRightSidebar = showSidebars && !isBusinessMode && !hideRightSidebarPages.includes(currentPage)
@@ -298,6 +303,8 @@ export function AppShell() {
         return <BusinessAnalyticsPage onNavigate={navigate} />
       case "business-campaigns":
         return <BusinessCampaignsPage onNavigate={navigate} />
+      case "business-campaign-placement":
+        return <CampaignPlacementPage onNavigate={navigate} />
       case "business-resources":
         return <BusinessResourcesPage onNavigate={navigate} />
       case "business-resource-detail": {
@@ -313,9 +320,15 @@ export function AppShell() {
       case "squad-detail":
         return <SquadDetailPage squadId={detailId || "1"} onNavigate={navigate} />
       case "squad-profile":
-        return <SquadProfilePage squadId={detailId || "1"} onNavigate={navigate} />
+        return <SquadDetailPage squadId={detailId || "1"} onNavigate={navigate} />
       case "squad-dashboard":
         return <SquadDashboardPage onNavigate={navigate} />
+      case "league-list":
+        return <LeaguesListPage onNavigate={navigate} />
+      case "league-detail":
+        return <LeagueDetailPage leagueId={detailId || ""} onNavigate={navigate} />
+      case "my-leagues":
+        return <MyLeaguesPage onNavigate={navigate} />
       case "store-detail":
         return <StoreDetailPage businessId={detailId || "1"} onNavigate={navigate} />
       case "settings-data-permissions":
@@ -405,7 +418,7 @@ export function AppShell() {
         {showSidebars && (
           <ExploreSidebar
             currentPage={currentPage}
-            onNavigate={(page) => {
+            onNavigate={(page, detailId) => {
               if (page === "business-portfolio") {
                 navigate("business-portfolio")
                 return
@@ -414,7 +427,7 @@ export function AppShell() {
                 navigate(page, activeBusinessId)
                 return
               }
-              navigate(page)
+              navigate(page, detailId)
             }}
             isBusinessMode={isBusinessMode}
           />

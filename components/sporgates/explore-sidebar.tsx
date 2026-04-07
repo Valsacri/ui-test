@@ -18,18 +18,21 @@ import {
   Package,
   Rss,
   FolderOpen,
+  UsersRound,
+  Receipt,
 } from "lucide-react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 
 interface ExploreSidebarProps {
   currentPage: PageRoute
-  onNavigate: (page: PageRoute) => void
+  onNavigate: (page: PageRoute, detailId?: string) => void
   isBusinessMode: boolean
 }
 
 const userNavItems = [
   { label: "Home", icon: Home, page: "home" as PageRoute },
+  { label: "Community", icon: UsersRound, page: "community" as PageRoute },
   { label: "Explore", icon: Compass, page: "explore" as PageRoute },
   { label: "Activities", icon: CalendarDays, page: "activities" as PageRoute },
   { label: "Facilities", icon: MapPin, page: "facilities" as PageRoute },
@@ -42,6 +45,7 @@ const userNavItems = [
 const userSecondaryItems = [
   { label: "Messages", icon: MessageCircle, page: "messages" as PageRoute },
   { label: "Notifications", icon: Bell, page: "notifications" as PageRoute },
+  { label: "Orders", icon: Receipt, page: "orders" as PageRoute },
   { label: "Profile", icon: Users, page: "profile" as PageRoute },
   { label: "Settings", icon: Settings, page: "settings" as PageRoute },
 ]
@@ -72,6 +76,7 @@ export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: Expl
     if (itemPage === "business-jobs" && current === "business-job-detail") return true
     // For regular jobs, highlight when on list or detail page
     if (itemPage === "jobs" && current === "job-detail") return true
+    if (itemPage === "league-list" && (current === "league-detail" || current === "my-leagues")) return true
     return false
   }
 

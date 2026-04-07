@@ -1,7 +1,14 @@
 import apiClient from '../api';
 
 export const activitiesService = {
-    getAll: async (params?: { city?: string; sportId?: string; status?: string; organizerId?: string }) => {
+    getAll: async (params?: {
+        city?: string;
+        sportId?: string;
+        status?: string;
+        organizerId?: string;
+        hostSquadId?: string;
+        leagueId?: string;
+    }) => {
         const response = await apiClient.get('/v1/activities', { params });
         return response.data;
     },

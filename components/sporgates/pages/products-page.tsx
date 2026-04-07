@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react"
 import useSWR from "swr"
-import { Search, SlidersHorizontal, ShoppingBag, Loader2 } from "lucide-react"
+import { Search, SlidersHorizontal } from "lucide-react"
+import { toast } from "sonner"
 import { fetcher } from "@/lib/fetcher"
 import { ProductCard } from "@/components/sporgates/cards/product-card"
 import { ProductsFilterSidebar } from "@/components/sporgates/filters/products-filter-sidebar"
@@ -11,6 +12,7 @@ import { LoadingGrid, LoadingProductCard } from "@/components/sporgates/ux/loadi
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import { SortFilter } from "@/components/sporgates/filters/sort-filter"
+import { useCart } from "@/lib/cart-context"
 
 interface ProductsPageProps {
   onNavigate: (page: PageRoute, detailId?: string) => void
@@ -19,6 +21,8 @@ interface ProductsPageProps {
 const priceRanges = ["Any Price", "Under $50", "$50-$100", "$100-$200", "Over $200"]
 
 export function ProductsPage({ onNavigate }: ProductsPageProps) {
+  const cart = useCart()
+  const addItem = cart?.addItem
   const [searchQuery, setSearchQuery] = useState("")
   const [visibleCount, setVisibleCount] = useState(9)
   const [showFilters, setShowFilters] = useState(false)
@@ -159,8 +163,27 @@ export function ProductsPage({ onNavigate }: ProductsPageProps) {
             {filteredProducts.slice(0, visibleCount).map((product: any) => (
               <ProductCard
                 key={product.id}
-                product={product}
-                onClick={() => onNavigate("product-detail", product.id)}
+                product={{
+                  ...product,
+                  price: typeof product.price === "number" ? product.price : Number(product.price),
+                  sellerName: product.sellerName ?? product.seller,
+                }}
+                onOpenDetail={() => onNavigate("product-detail", product.id)}
+                onAddToCart={
+                  addItem
+                    ? () => {
+                        if (!product.inStock) return
+                        addItem({
+                          productId: String(product.id),
+                          name: product.name,
+                          price: typeof product.price === "number" ? product.price : Number(product.price),
+                          image: product.image || "",
+                          quantity: 1,
+                        })
+                        toast.success(`Added ${product.name} to cart`)
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
