@@ -418,6 +418,7 @@ export function AppShell() {
         {showSidebars && (
           <ExploreSidebar
             currentPage={currentPage}
+            activeBusinessId={activeBusinessId ?? undefined}
             onNavigate={(page, detailId) => {
               if (page === "business-portfolio") {
                 navigate("business-portfolio")
@@ -440,7 +441,6 @@ export function AppShell() {
       <BottomNav
         currentPage={currentPage}
         onNavigate={navigate}
-        isBusinessMode={isBusinessMode}
       />
     </div>
   )

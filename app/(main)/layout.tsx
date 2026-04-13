@@ -354,7 +354,6 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                                     }
                                     navigate(page, detailId)
                                 }}
-                                isBusinessMode={isBusinessMode}
                             />
                         )}
                         <div className="min-w-0 flex-1 flex justify-center">
@@ -369,7 +368,6 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
                     <BottomNav
                         currentPage={currentPage}
                         onNavigate={navigate}
-                        isBusinessMode={isBusinessMode}
                     />
                 </div>
                 </CartDrawerProvider>

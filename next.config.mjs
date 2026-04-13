@@ -1,4 +1,18 @@
 /** @type {import('next').NextConfig} */
+/**
+ * Backend base URL including servlet context path `/api` (see Sporgates-backend `server.servlet.context-path`).
+ * Rewrites proxy from this Next app to the API; the browser only sees same-origin `/uploads`, `/v1`, `/auth`.
+ * - Production Docker: set INTERNAL_API_URL to the hostname the Next server can reach (e.g. http://api:8080/api).
+ * - Otherwise NEXT_PUBLIC_API_URL must be the public API URL (e.g. https://dev.api.sporgates.com/api).
+ */
+function apiBaseUrl() {
+  const raw =
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://localhost:8080/api'
+  return raw.replace(/\/+$/, '')
+}
+
 const nextConfig = {
   output: 'standalone',
   transpilePackages: ['three'],
@@ -79,7 +93,7 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
+    const apiUrl = apiBaseUrl()
     return [
       // Same-origin proxy for DO Spaces images so WebGL TextureLoader is not blocked by missing CORS on the bucket.
       {

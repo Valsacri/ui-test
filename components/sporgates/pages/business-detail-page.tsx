@@ -14,6 +14,8 @@ import {
   Phone,
   Mail,
   Building2,
+  Camera,
+  Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { businessesService, activitiesService, servicesService, authService, postsService, messagesService } from "@/lib/services"
@@ -23,7 +25,7 @@ import { PostCard } from "@/components/sporgates/cards/post-card"
 import type { PageRoute } from "@/lib/navigation"
 import { cn, formatFeedTime, resolvePostImageUrl } from "@/lib/utils"
 import { DEFAULT_API_BASE_URL } from "@/lib/constants"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import useSWR from "swr"
 import Image from "next/image"
 import { ProfileSkeleton } from "@/components/sporgates/ux/page-skeleton"
@@ -49,6 +51,10 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
   const [activeTab, setActiveTab] = useState("Overview")
   const [following, setFollowing] = useState(false)
   const [messageLoading, setMessageLoading] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const coverFileInputRef = useRef<HTMLInputElement>(null)
+  const avatarFileInputRef = useRef<HTMLInputElement>(null)
   const { openPost } = usePostModal()
   const currentUser = authService.getCurrentUser()
   const userId = currentUser?.id
@@ -155,22 +161,72 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
   const relatedActivities = activities.slice(0, 3)
   const relatedServices = services.slice(0, 2)
 
-  const businessDisplay = business ? {
-    ...business,
-    image: business.cover,
-    location: business.city && business.state ? `${business.city}, ${business.state}` : business.address || "Location unavailable",
-    rating: 5.0,
-    reviews: 0,
-    followers: business.followersCount ?? 0,
-    activities: activities.length,
-    verified: !!business.verifiedAt,
-    type: business.type || "Business"
-  } : null
-
   const apiBase = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL
-  const businessAvatarUrl = business?.avatar
-    ? (business.avatar.startsWith("/") ? `${apiBase}${business.avatar}` : business.avatar)
+  const resolveMediaUrl = (path: string | null | undefined): string | null => {
+    if (!path) return null
+    if (path.startsWith("http")) return path
+    if (path.startsWith("/")) return `${apiBase}${path}`
+    return path
+  }
+
+  const businessDisplay = business
+    ? {
+        ...business,
+        image: resolveMediaUrl(business.cover) ?? "/placeholder.svg",
+        location:
+          business.city && business.state
+            ? `${business.city}, ${business.state}`
+            : business.address || "Location unavailable",
+        rating: 5.0,
+        reviews: 0,
+        followers: business.followersCount ?? 0,
+        activities: activities.length,
+        verified: !!business.verifiedAt,
+        type: business.type || "Business",
+      }
     : null
+
+  const businessAvatarUrl = resolveMediaUrl(business?.avatar)
+
+  const canEditImages = Boolean(userId && business?.owner?.id === userId)
+
+  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file || !canEditImages) return
+    setUploadingCover(true)
+    try {
+      const data = (await businessesService.uploadCover(file)) as { url?: string }
+      const url = data?.url
+      if (!url) throw new Error("missing url")
+      await businessesService.update(businessId, { coverImageUrl: url })
+      await mutateBusiness()
+      toast.success("Cover image updated")
+    } catch {
+      toast.error("Could not update cover image")
+    } finally {
+      setUploadingCover(false)
+    }
+  }
+
+  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file || !canEditImages) return
+    setUploadingAvatar(true)
+    try {
+      const data = (await businessesService.uploadAvatar(file)) as { url?: string }
+      const url = data?.url
+      if (!url) throw new Error("missing url")
+      await businessesService.update(businessId, { avatarUrl: url })
+      await mutateBusiness()
+      toast.success("Profile photo updated")
+    } catch {
+      toast.error("Could not update profile photo")
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
 
   if (loading) {
     return <ProfileSkeleton />
@@ -183,17 +239,6 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
         message="The business you're looking for doesn't exist."
         onRetry={() => onNavigate("businesses")}
       />
-    )
-  }
-
-  if (!businessDisplay) {
-    return (
-      <div className="flex h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <h2 className="text-xl font-bold">Business not found</h2>
-        <button onClick={() => onNavigate("businesses")} className="text-primary hover:underline">
-          Back to Businesses
-        </button>
-      </div>
     )
   }
 
@@ -211,16 +256,25 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
 
       {/* Cover + overlapping avatar + info bar */}
       <div className="rounded-2xl border border-border bg-card shadow-sm">
-        <div className="relative h-56 overflow-hidden rounded-t-2xl md:h-72">
+        <div className="group relative h-56 overflow-hidden rounded-t-2xl md:h-72">
+          <input
+            ref={coverFileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="sr-only"
+            onChange={handleCoverFile}
+            aria-hidden
+            tabIndex={-1}
+          />
           <Image
             src={businessDisplay.image || "/placeholder.svg"}
             alt={businessDisplay.name}
             fill
-            className="object-cover"
+            className={cn("object-cover", uploadingCover && "opacity-70")}
             sizes="(max-width: 768px) 100vw, 66vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
-          <div className="absolute right-4 top-4 flex gap-2">
+          <div className="absolute right-4 top-4 z-20 flex gap-2">
             <button
               type="button"
               className="flex h-10 w-10 items-center justify-center rounded-full bg-card/90 backdrop-blur-sm transition-colors hover:bg-card"
@@ -234,17 +288,43 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
               <Share2 className="h-5 w-5 text-foreground" />
             </button>
           </div>
+          {canEditImages && (
+            <div className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2">
+              <button
+                type="button"
+                onClick={() => coverFileInputRef.current?.click()}
+                disabled={uploadingCover}
+                className="flex items-center gap-2 rounded-full bg-card/95 px-3 py-1.5 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm transition-opacity hover:bg-card disabled:pointer-events-none md:opacity-0 md:group-hover:opacity-100"
+              >
+                {uploadingCover ? (
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                )}
+                {uploadingCover ? "Uploading…" : "Change cover"}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="relative z-10 px-4 md:px-6">
           <div className="-mt-14 flex flex-col items-start gap-2">
-            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-card bg-card shadow-lg ring-1 ring-black/5">
+            <div className="group/avatar relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-card bg-card shadow-lg ring-1 ring-black/5">
+              <input
+                ref={avatarFileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                onChange={handleAvatarFile}
+                aria-hidden
+                tabIndex={-1}
+              />
               {businessAvatarUrl ? (
                 <Image
                   src={businessAvatarUrl}
                   alt={businessDisplay.name}
                   fill
-                  className="object-cover"
+                  className={cn("object-cover", uploadingAvatar && "opacity-70")}
                   sizes="96px"
                   unoptimized
                 />
@@ -252,6 +332,21 @@ export function BusinessDetailPage({ businessId, onNavigate }: BusinessDetailPag
                 <div className="flex h-full w-full items-center justify-center gradient-primary">
                   <Building2 className="h-10 w-10 text-white" aria-hidden />
                 </div>
+              )}
+              {canEditImages && (
+                <button
+                  type="button"
+                  onClick={() => avatarFileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute inset-0 flex items-center justify-center bg-foreground/40 text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:pointer-events-none group-hover/avatar:opacity-100"
+                  title="Change profile photo"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
+                  ) : (
+                    <Camera className="h-8 w-8 drop-shadow" aria-hidden />
+                  )}
+                </button>
               )}
             </div>
             <div className="min-w-0 space-y-0.5 pt-0.5">

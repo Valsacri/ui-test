@@ -114,3 +114,8 @@ export function useBusinessContext() {
     if (!ctx) throw new Error("useBusinessContext must be used within BusinessProvider")
     return ctx
 }
+
+/** Same as context value when inside {@link BusinessProvider}; otherwise `null` (e.g. legacy shells). */
+export function useOptionalBusinessContext(): BusinessContextType | null {
+    return useContext(BusinessContext)
+}

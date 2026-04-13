@@ -20,14 +20,20 @@ import {
   FolderOpen,
   UsersRound,
   Receipt,
+  User,
 } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { useMemo } from "react"
 import type { PageRoute } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
+import { useOptionalBusinessContext } from "@/lib/business-context"
+import { STORAGE_KEYS } from "@/lib/constants"
 
 interface ExploreSidebarProps {
   currentPage: PageRoute
   onNavigate: (page: PageRoute, detailId?: string) => void
-  isBusinessMode: boolean
+  /** Fallback when {@link BusinessProvider} is absent (e.g. legacy AppShell). Prefer context + localStorage. */
+  activeBusinessId?: string | null
 }
 
 const userNavItems = [
@@ -46,7 +52,7 @@ const userSecondaryItems = [
   { label: "Messages", icon: MessageCircle, page: "messages" as PageRoute },
   { label: "Notifications", icon: Bell, page: "notifications" as PageRoute },
   { label: "Orders", icon: Receipt, page: "orders" as PageRoute },
-  { label: "Profile", icon: Users, page: "profile" as PageRoute },
+  { label: "Profile", icon: User, page: "profile" as PageRoute },
   { label: "Settings", icon: Settings, page: "settings" as PageRoute },
 ]
 
@@ -63,11 +69,51 @@ const businessNavItems = [
   { label: "Portfolio", icon: FolderOpen, page: "business-portfolio" as PageRoute },
 ]
 
-export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: ExploreSidebarProps) {
+export function ExploreSidebar({
+  currentPage,
+  onNavigate,
+  activeBusinessId: activeBusinessIdProp,
+}: ExploreSidebarProps) {
+  const pathname = usePathname()
+  const pathNorm = pathname === "/" ? "/" : pathname.replace(/\/$/, "")
+  const businessCtx = useOptionalBusinessContext()
+
+  /** Same source as TopBar dropdown: context first, then props, then localStorage (hydration sync). */
+  const effectiveBusinessId = useMemo(() => {
+    const fromCtx = businessCtx?.activeBusinessId ?? null
+    const fromProp = activeBusinessIdProp ?? null
+    if (fromCtx) return fromCtx
+    if (fromProp) return fromProp
+    if (typeof window === "undefined") return null
+    try {
+      return localStorage.getItem(STORAGE_KEYS.ACTIVE_BUSINESS_ID)
+    } catch {
+      return null
+    }
+  }, [businessCtx?.activeBusinessId, activeBusinessIdProp])
+
+  /** Aligned with TopBar “active profile”: any selected business id ⇒ business nav + business profile link. */
+  const isBusinessMode = !!effectiveBusinessId
+
   const mainItems = isBusinessMode ? businessNavItems : userNavItems
-  const secondaryItems = isBusinessMode
-    ? userSecondaryItems.filter((item) => item.page !== "profile")
-    : userSecondaryItems
+  const secondaryItems = userSecondaryItems
+
+  const isProfileNavActive = () => {
+    if (!effectiveBusinessId) return currentPage === "profile"
+    return pathNorm === `/businesses/${effectiveBusinessId}`
+  }
+
+  const onSecondaryClick = (page: PageRoute) => {
+    if (page === "profile") {
+      if (effectiveBusinessId) {
+        onNavigate("business-detail", effectiveBusinessId)
+      } else {
+        onNavigate("profile")
+      }
+      return
+    }
+    onNavigate(page)
+  }
 
   // Check if current page matches item page, including detail pages
   const isActive = (itemPage: PageRoute, current: PageRoute) => {
@@ -105,22 +151,25 @@ export function ExploreSidebar({ currentPage, onNavigate, isBusinessMode }: Expl
         <div className="my-4 border-t border-border" />
 
         <nav className="space-y-1">
-          {secondaryItems.map((item) => (
-            <button
-              type="button"
-              key={item.label}
-              onClick={() => onNavigate(item.page)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                currentPage === item.page
-                  ? "gradient-primary text-white shadow-md"
-                  : "text-foreground hover:bg-muted"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </button>
-          ))}
+          {secondaryItems.map((item) => {
+            const profileActive = item.page === "profile" && isProfileNavActive()
+            const pageActive =
+              item.page === "profile" ? profileActive : currentPage === item.page
+            return (
+              <button
+                type="button"
+                key={item.label}
+                onClick={() => onSecondaryClick(item.page)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+                  pageActive ? "gradient-primary text-white shadow-md" : "text-foreground hover:bg-muted"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </button>
+            )
+          })}
         </nav>
 
         {!isBusinessMode && (
