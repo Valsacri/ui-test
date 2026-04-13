@@ -31,6 +31,8 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com",
+      // Three.js DRACOLoader uses blob: workers; without worker-src, script-src blocks them.
+      "worker-src 'self' blob: https://www.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' data: https:",
