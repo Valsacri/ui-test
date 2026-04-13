@@ -38,6 +38,26 @@ function resolveJerseyGltfUrl(): string | null {
   }
   return "/models/jersey.glb"
 }
+
+const SPACES_CDN_HOST = "imagesstorage.fra1.digitaloceanspaces.com"
+
+/**
+ * WebGL must upload images with a "clean" origin. If the bucket omits
+ * `Access-Control-Allow-Origin`, the browser blocks the texture. Loading via
+ * `/spaces-cdn/...` (Next rewrite → Spaces) avoids cross-origin CORS in the browser.
+ */
+function resolveLogoTextureUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    if (u.hostname === SPACES_CDN_HOST) {
+      return `/spaces-cdn${u.pathname}${u.search}`
+    }
+  } catch {
+    /* relative or invalid */
+  }
+  return url
+}
+
 const MESH_BIAS_Y = -0.32
 const CANVAS_TRANSLATE_Y_PERCENT = "2%"
 const INITIAL_CAMERA_Z = 3.15
@@ -511,8 +531,9 @@ export const JerseySponsorPreview = forwardRef<JerseySponsorPreviewHandle, Jerse
 
     let cancelled = false
     const texLoader = new THREE.TextureLoader()
+    texLoader.setCrossOrigin("anonymous")
     texLoader.load(
-      logoUrl,
+      resolveLogoTextureUrl(logoUrl),
       (tex) => {
         if (cancelled) {
           tex.dispose()

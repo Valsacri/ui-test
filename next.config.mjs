@@ -81,6 +81,11 @@ const nextConfig = {
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'
     return [
+      // Same-origin proxy for DO Spaces images so WebGL TextureLoader is not blocked by missing CORS on the bucket.
+      {
+        source: '/spaces-cdn/:path*',
+        destination: 'https://imagesstorage.fra1.digitaloceanspaces.com/:path*',
+      },
       {
         source: '/uploads/:path*',
         destination: `${apiUrl}/uploads/:path*`,
