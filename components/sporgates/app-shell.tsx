@@ -430,7 +430,6 @@ export function AppShell() {
               }
               navigate(page, detailId)
             }}
-            isBusinessMode={isBusinessMode}
           />
         )}
         <main className="min-w-0 flex-1 p-4 lg:p-6">
