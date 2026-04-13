@@ -36,7 +36,8 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' data: https:",
-      "connect-src 'self' https: http: ws: wss:",
+      // DRACO/Three may fetch() same-origin blob: URLs during decode.
+      "connect-src 'self' blob: https: http: ws: wss:",
       "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
