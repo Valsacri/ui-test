@@ -24,7 +24,20 @@ export interface JerseySponsorPreviewHandle {
   captureFourViews: () => Promise<{ name: string; label: string; dataUrl: string }[]>
 }
 
-const MODEL_URL = "/models/jersey.glb"
+/**
+ * GLB for the 3D jersey (served from `public/models/jersey.glb`).
+ * Override with `NEXT_PUBLIC_JERSEY_MODEL_URL` (absolute `https://…` or app path like `/models/jersey.glb`).
+ * Set to `fallback` to use the built-in procedural shirt only (no network request).
+ */
+function resolveJerseyGltfUrl(): string | null {
+  const env = process.env.NEXT_PUBLIC_JERSEY_MODEL_URL
+  if (env !== undefined) {
+    const t = env.trim()
+    if (t === "" || t.toLowerCase() === "fallback" || t === "0") return null
+    return t
+  }
+  return "/models/jersey.glb"
+}
 const MESH_BIAS_Y = -0.32
 const CANVAS_TRANSLATE_Y_PERCENT = "2%"
 const INITIAL_CAMERA_Z = 3.15
@@ -409,6 +422,16 @@ export const JerseySponsorPreview = forwardRef<JerseySponsorPreviewHandle, Jerse
     const { shirtGroup, camera, controls } = ctx
     let cancelled = false
 
+    const gltfUrl = resolveJerseyGltfUrl()
+    if (!gltfUrl) {
+      addFallbackShirt(shirtGroup, new THREE.Color(jerseyColor))
+      jerseyRootRef.current = shirtGroup
+      setModelReady(true)
+      return () => {
+        cancelled = true
+      }
+    }
+
     const gltfLoader = new GLTFLoader()
     const dracoLoader = new DRACOLoader()
     dracoLoader.setDecoderPath(DRACO_DECODER)
@@ -451,7 +474,7 @@ export const JerseySponsorPreview = forwardRef<JerseySponsorPreviewHandle, Jerse
     }
 
     gltfLoader.load(
-      MODEL_URL,
+      gltfUrl,
       (gltf) => onLoaded(gltf.scene),
       undefined,
       () => {
