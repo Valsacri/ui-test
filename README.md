@@ -1,6 +1,53 @@
 # Sporgates Frontend
 
-Web application for **Sporgates** — a sports and community platform where users discover activities, facilities, and businesses; manage profiles and squads; and interact via feed, messages, and stories. Includes a full **business dashboard** for organizers to manage activities, resources, bookings, and team.
+Web application for **Sporgates** — a sports event platform focused on the **Supply → Event → Sponsorship → ROI** loop. Users discover items (facilities, services, products), organize events, and sponsors fund them.
+
+---
+
+## MVP Refocus (April 2026)
+
+> The frontend is being stripped down to only support the MVP core loop.
+> All social features (Feed, Stories, Messaging, Jobs, Community) are **frozen** — no new development.
+
+### Route & Page Classification
+
+| Route / Feature | Status | MVP Role |
+|----------------|--------|----------|
+| `(auth)/*` — signin, signup | **CORE** | Keep as-is |
+| `activities/*` — list, detail | **CORE — EXTEND** | Event detail needs items, anchors, budget |
+| `items/*` *(NEW)* | **CORE — NEW** | Unified supply listing + detail + create |
+| `business/` — dashboard | **CORE — EXTEND** | MVP metrics only |
+| `business/create-activity-steps` | **CORE — EXTEND** | Add item picker + anchors + budget |
+| `business/create-campaign` *(NEW)* | **CORE — NEW** | Simplified sponsorship campaign |
+| `business/campaign-dashboard` *(NEW)* | **CORE — NEW** | Campaign + event matching |
+| `notifications/` | **CORE** | Keep as-is |
+| `settings/` | **CORE** | Keep as-is |
+| `profile/` | **CORE** | Keep as-is |
+| `explore/` | **CORE — SIMPLIFY** | Show Events + Items only |
+| `facilities/` | MIGRATE | Data → unified Items | 
+| `services/` | MIGRATE | Data → unified Items |
+| `marketplace/` | MIGRATE | Data → unified Items |
+| `jobs/` | **FROZEN** | No development |
+| `community/` | **FROZEN** | No development |
+| `messages/` | **FROZEN** | No development |
+| Feed / Stories / Posts | **FROZEN** | No development |
+| `people/` | **FROZEN** | No development |
+
+### Navigation (MVP Only)
+
+**User mode sidebar:** Events · Items · Notifications · Settings
+
+**Business mode sidebar:** Dashboard · My Events · My Items · My Campaigns · Profile
+
+### Rules for All Developers
+
+1. **Do NOT build features for FROZEN routes** — no PRs accepted
+2. **Remove social providers** from `layout.tsx` — PostModal, StoryModal, StoryReply
+3. **Remove social links** from sidebar and bottom nav
+4. **All new code must follow** [fullstack-standards.md](../fullstack-standards.md) — no `useEffect` fetching, use API service layer
+5. **Funding is simulated** — no payment UI needed, just status badges
+
+---
 
 ## Tech Stack
 
