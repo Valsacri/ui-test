@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { useRouter } from "next/navigation"
 import { businessesService } from "@/lib/services/businesses"
 import { APP_HOME_PATH, STORAGE_KEYS, DEFAULT_API_BASE_URL } from "@/lib/constants"
+import { getFakeBusinessesForUser, DEFAULT_FAKE_USER, FAKE_BUSINESSES } from "@/lib/fake-data"
 
 interface BusinessItem {
     id: string
@@ -49,22 +50,21 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     }, [])
 
     useEffect(() => {
-        businessesService.getMyBusinesses().then((data: any) => {
-            const list = Array.isArray(data) ? data : (data?.content || [])
-            const mapped: BusinessItem[] = list.map((b: any) => ({
-                id: b.id,
-                name: b.name || "Unnamed Business",
-                type: (b.bio && b.bio.length > 60) ? b.bio.slice(0, 60) + "…" : (b.bio || "Business"),
-                emoji: undefined,
-                avatar: b.avatar
-                    ? (b.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL}${b.avatar}` : b.avatar)
-                    : undefined,
-                location: [b.city, b.state].filter(Boolean).join(", ") || b.address || "",
-                rating: b.rating || 0,
-                followers: b.followers || 0,
-            }))
-            setBusinesses(mapped)
-        }).catch(() => { })
+        // Use fake data instead of API call
+        const fakeBusinesses = getFakeBusinessesForUser(DEFAULT_FAKE_USER.id);
+        const mapped: BusinessItem[] = fakeBusinesses.map((b: any) => ({
+            id: b.id,
+            name: b.name || "Unnamed Business",
+            type: (b.bio && b.bio.length > 60) ? b.bio.slice(0, 60) + "…" : (b.bio || "Business"),
+            emoji: undefined,
+            avatar: b.avatar
+                ? (b.avatar.startsWith("/") ? `${process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_BASE_URL}${b.avatar}` : b.avatar)
+                : undefined,
+            location: [b.city, b.state].filter(Boolean).join(", ") || b.address || "",
+            rating: b.rating || 0,
+            followers: b.followers || 0,
+        }))
+        setBusinesses(mapped)
     }, [])
 
     const switchBusiness = useCallback(

@@ -1,5 +1,6 @@
 import apiClient from '../api';
 import { STORAGE_KEYS, AUTH_COOKIE_NAME } from '../constants';
+import { DEFAULT_FAKE_USER } from '../fake-data';
 
 export interface LoginRequest {
     email: string;
@@ -51,33 +52,67 @@ function clearLegacyTokenStorage() {
 
 clearLegacyTokenStorage();
 
+// Initialize with fake user on app startup
+if (typeof window !== 'undefined') {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+        authService._saveSession({
+            accessToken: 'fake-token-init',
+            userId: DEFAULT_FAKE_USER.id,
+            email: DEFAULT_FAKE_USER.email,
+            firstName: DEFAULT_FAKE_USER.firstName,
+            lastName: DEFAULT_FAKE_USER.lastName,
+            username: DEFAULT_FAKE_USER.username,
+            nextStep: 'NONE',
+        });
+    }
+}
+
 export const authService = {
     login: async (data: LoginRequest): Promise<AuthResponse> => {
-        const response = await apiClient.post<AuthResponse>('/auth/login', data);
-        const d = response.data;
-        if (d.accessToken) {
-            authService._saveSession(d);
-        }
-        return d;
+        // Mock implementation - return fake user
+        const response: AuthResponse = {
+            accessToken: 'fake-token-' + Date.now(),
+            userId: DEFAULT_FAKE_USER.id,
+            email: DEFAULT_FAKE_USER.email,
+            firstName: DEFAULT_FAKE_USER.firstName,
+            lastName: DEFAULT_FAKE_USER.lastName,
+            username: DEFAULT_FAKE_USER.username,
+            nextStep: 'NONE',
+        };
+        authService._saveSession(response);
+        return response;
     },
 
     /** Google Sign-In: ID token is verified server-side; HttpOnly cookies are set like email/password login. */
     loginWithGoogle: async (idToken: string): Promise<AuthResponse> => {
-        const response = await apiClient.post<AuthResponse>('/auth/google', { idToken });
-        const d = response.data;
-        if (d.accessToken) {
-            authService._saveSession(d);
-        }
-        return d;
+        // Mock implementation - return fake user
+        const response: AuthResponse = {
+            accessToken: 'fake-token-' + Date.now(),
+            userId: DEFAULT_FAKE_USER.id,
+            email: DEFAULT_FAKE_USER.email,
+            firstName: DEFAULT_FAKE_USER.firstName,
+            lastName: DEFAULT_FAKE_USER.lastName,
+            username: DEFAULT_FAKE_USER.username,
+            nextStep: 'NONE',
+        };
+        authService._saveSession(response);
+        return response;
     },
 
     register: async (data: RegisterRequest): Promise<AuthResponse> => {
-        const response = await apiClient.post<AuthResponse>('/auth/signup', data);
-        const d = response.data;
-        if (d.accessToken) {
-            authService._saveSession(d);
-        }
-        return d;
+        // Mock implementation - return fake user
+        const response: AuthResponse = {
+            accessToken: 'fake-token-' + Date.now(),
+            userId: DEFAULT_FAKE_USER.id,
+            email: DEFAULT_FAKE_USER.email,
+            firstName: DEFAULT_FAKE_USER.firstName,
+            lastName: DEFAULT_FAKE_USER.lastName,
+            username: DEFAULT_FAKE_USER.username,
+            nextStep: 'NONE',
+        };
+        authService._saveSession(response);
+        return response;
     },
 
     logout: async () => {
@@ -113,35 +148,48 @@ export const authService = {
     },
 
     verifyEmail: async (email: string, code: string): Promise<AuthResponse> => {
-        const response = await apiClient.post<AuthResponse>('/auth/verify-email', { email, code });
-        const data = response.data;
-        if (data?.accessToken) {
-            authService._saveSession(data);
-        }
-        return data;
+        // Mock implementation
+        const response: AuthResponse = {
+            accessToken: 'fake-token-' + Date.now(),
+            userId: DEFAULT_FAKE_USER.id,
+            email: DEFAULT_FAKE_USER.email,
+            firstName: DEFAULT_FAKE_USER.firstName,
+            lastName: DEFAULT_FAKE_USER.lastName,
+            username: DEFAULT_FAKE_USER.username,
+            nextStep: 'NONE',
+        };
+        authService._saveSession(response);
+        return response;
     },
 
     resendVerification: async (email: string): Promise<string> => {
-        const response = await apiClient.post('/auth/resend-verification', { email });
-        return response.data;
+        // Mock implementation
+        return 'Verification email sent (mock)';
     },
 
     forgotPassword: async (email: string): Promise<string> => {
-        const response = await apiClient.post('/auth/forgot-password', { email });
-        return response.data;
+        // Mock implementation
+        return 'Password reset email sent (mock)';
     },
 
     resetPassword: async (token: string, newPassword: string, confirmPassword: string): Promise<string> => {
-        const response = await apiClient.post('/auth/reset-password', { token, newPassword, confirmPassword });
-        return response.data;
+        // Mock implementation
+        return 'Password reset successful (mock)';
     },
 
     refreshToken: async (): Promise<AuthResponse> => {
-        const response = await apiClient.post<AuthResponse>('/auth/refresh', {});
-        if (response.data.accessToken) {
-            authService._saveSession(response.data);
-        }
-        return response.data;
+        // Mock implementation
+        const response: AuthResponse = {
+            accessToken: 'fake-token-' + Date.now(),
+            userId: DEFAULT_FAKE_USER.id,
+            email: DEFAULT_FAKE_USER.email,
+            firstName: DEFAULT_FAKE_USER.firstName,
+            lastName: DEFAULT_FAKE_USER.lastName,
+            username: DEFAULT_FAKE_USER.username,
+            nextStep: 'NONE',
+        };
+        authService._saveSession(response);
+        return response;
     },
 
     /** Persist non-sensitive profile for UI; JWTs remain HttpOnly cookies only. */

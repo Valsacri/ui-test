@@ -28,23 +28,14 @@ export function middleware(request: NextRequest) {
         return NextResponse.rewrite(url)
     }
 
-    // app.sporgates.com (and localhost): at "/" show landing if not logged in, else app home
+    // app.sporgates.com (and localhost): at "/" always go to app home (fake user is always logged in)
     if (isAppOrLocal && pathname === '/') {
-        const authCookie = request.cookies.get(AUTH_COOKIE_NAME)
-        if (!authCookie?.value) {
-            const url = request.nextUrl.clone()
-            url.pathname = '/landing'
-            return NextResponse.rewrite(url)
-        }
         return NextResponse.redirect(new URL(APP_HOME_PATH, request.url))
     }
 
-    // If logged in and they hit /landing on app (or localhost), send to home
+    // If they hit /landing on app (or localhost), send to home (fake user is always logged in)
     if (isAppOrLocal && pathname === '/landing') {
-        const authCookie = request.cookies.get(AUTH_COOKIE_NAME)
-        if (authCookie?.value) {
-            return NextResponse.redirect(new URL(APP_HOME_PATH, request.url))
-        }
+        return NextResponse.redirect(new URL(APP_HOME_PATH, request.url))
     }
 
     // Allow public routes, static assets, and API routes
@@ -60,14 +51,7 @@ export function middleware(request: NextRequest) {
         return NextResponse.next()
     }
 
-    // Check for auth cookie marker — redirect to signin if missing
-    const authCookie = request.cookies.get(AUTH_COOKIE_NAME)
-    if (!authCookie?.value) {
-        const signinUrl = new URL('/signin', request.url)
-        signinUrl.searchParams.set('callbackUrl', pathname)
-        return NextResponse.redirect(signinUrl)
-    }
-
+    // No auth check needed - fake user is always logged in
     return NextResponse.next()
 }
 
