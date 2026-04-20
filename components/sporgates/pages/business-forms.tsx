@@ -2123,6 +2123,8 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
     endDate: "",
     targetAudience: "all",
     description: "",
+    logo: "",
+    targetEvents: [] as string[],
   })
   const [activePhase, setActivePhase] = useState<"pre" | "during" | "post">("pre")
   const [phaseState, setPhaseState] = useState({
@@ -2130,12 +2132,29 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
     during: { printMedia: false, athleteCollab: false, selectedAthlete: undefined as string | undefined, search: "", deliverables: [] as string[] },
     post: { printMedia: false, athleteCollab: false, selectedAthlete: undefined as string | undefined, search: "", deliverables: [] as string[] },
   })
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   const updatePhaseState = (phase: "pre" | "during" | "post", updates: Partial<typeof phaseState.pre>) => {
     setPhaseState((prev) => ({
       ...prev,
       [phase]: { ...prev[phase], ...updates },
     }))
+  }
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const objectUrl = URL.createObjectURL(file)
+    setLogoPreview(objectUrl)
+    setFormData({ ...formData, logo: objectUrl })
+  }
+
+  const toggleTargetEvent = (event: string) => {
+    const newEvents = formData.targetEvents.includes(event)
+      ? formData.targetEvents.filter(e => e !== event)
+      : [...formData.targetEvents, event]
+    setFormData({ ...formData, targetEvents: newEvents })
   }
 
   return (
@@ -2246,6 +2265,58 @@ export function CreateCampaignPage({ onNavigate }: BusinessFormPageProps) {
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   className="h-11 w-full rounded-xl border border-border bg-muted px-4 text-sm outline-none focus:border-primary"
                 />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <h3 className="mb-4 text-sm font-bold text-foreground">Event Visibility Logo</h3>
+          <p className="mb-4 text-xs text-muted-foreground">Upload your business logo to display on events for brand visibility</p>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              {logoPreview && (
+                <div className="h-24 w-24 rounded-xl border border-border overflow-hidden">
+                  <img src={logoPreview} alt="Logo preview" className="h-full w-full object-cover" />
+                </div>
+              )}
+              <div className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+                >
+                  Upload Logo
+                </button>
+                <p className="mt-2 text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2.5 block text-xs font-medium text-foreground">Target Events</label>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {["wedding", "corporate", "festival", "birthday", "holiday", "conference", "trade_show", "sports"].map((event) => (
+                  <button
+                    key={event}
+                    type="button"
+                    onClick={() => toggleTargetEvent(event)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all capitalize",
+                      formData.targetEvents.includes(event)
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-foreground hover:border-primary/40"
+                    )}
+                  >
+                    {event.replace("_", " ")}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

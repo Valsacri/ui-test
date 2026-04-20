@@ -42,6 +42,7 @@ import { servicesService } from "@/lib/services/services"
 import { activitiesService } from "@/lib/services/activities"
 import { businessesService } from "@/lib/services/businesses"
 import { campaignsService } from "@/lib/services/campaigns"
+import { getFakeTeamMembersForBusiness, getFakeResourcesForBusiness } from "@/lib/fake-data"
 import { useBusinessContext } from "@/lib/business-context"
 import {
   CAMPAIGNS_DASHBOARD_TOUR_STEPS,
@@ -492,9 +493,9 @@ export function BusinessTeamPage({ onNavigate }: BusinessSubPageProps) {
   )
 }
 
-export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPageProps & { initialTab?: "facility" | "product" | "service" }) {
+export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPageProps & { initialTab?: "facility" | "product" | "service" | "human" }) {
   const { activeBusinessId } = useBusinessContext()
-  type ResourceType = "facility" | "product" | "service"
+  type ResourceType = "facility" | "product" | "service" | "human"
   type BusinessResource = {
     id: string
     name: string
@@ -606,15 +607,31 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
   const facilities = facilitiesRaw
   const products = productsRaw
   const services = servicesRaw
+  // Get team members from fake data
+  const humanResources = activeBusinessId ? getFakeTeamMembersForBusiness(activeBusinessId).map(member => ({
+    id: member.id,
+    name: member.name,
+    type: "Human",
+    resourceType: "human" as ResourceType,
+    status: "available",
+    bookingsToday: 0,
+    revenue: 0,
+    image: member.avatar || "/api/placeholder/100/100",
+    description: member.role,
+    role: member.role,
+    email: member.email,
+    joinDate: member.joinDate,
+  })) : []
   const loading = false
 
   const tabs: { key: ResourceType; label: string; count: number }[] = [
     { key: "facility", label: "Facilities", count: facilities.length },
     { key: "product", label: "Products", count: products.length },
     { key: "service", label: "Services", count: services.length },
+    { key: "human", label: "Human", count: humanResources.length },
   ]
 
-  const activeResources = activeTab === "facility" ? facilities : activeTab === "product" ? products : services
+  const activeResources = activeTab === "facility" ? facilities : activeTab === "product" ? products : activeTab === "service" ? services : humanResources
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -644,14 +661,14 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
     setDeleteConfirm(null)
   }
 
-  const tabLabels: Record<ResourceType, string> = { facility: "Facility", product: "Product", service: "Service" }
+  const tabLabels: Record<ResourceType, string> = { facility: "Facility", product: "Product", service: "Service", human: "Human" }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Resources</h1>
-          <p className="text-sm text-muted-foreground">Manage your facilities, products, and services</p>
+          <p className="text-sm text-muted-foreground">Manage your facilities, products, services, and team members</p>
         </div>
         <button
           type="button"
@@ -719,14 +736,22 @@ export function BusinessResourcesPage({ onNavigate, initialTab }: BusinessSubPag
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">{resource.name}</p>
-                <p className="text-xs text-muted-foreground">{resource.type}{resource.category ? ` • ${resource.category}` : ""}</p>
+                <p className="text-xs text-muted-foreground">
+                  {activeTab === "human" && "role" in resource ? resource.role : resource.type}
+                  {resource.category ? ` • ${resource.category}` : ""}
+                </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  {resource.pricePerHour != null && (
+                  {activeTab === "human" && "email" in resource && (
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-primary">
+                      <Mail className="mr-1 inline h-3 w-3" />{resource.email}
+                    </span>
+                  )}
+                  {activeTab !== "human" && resource.pricePerHour != null && (
                     <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-primary">
                       ${resource.pricePerHour}/hr
                     </span>
                   )}
-                  {resource.price != null && (
+                  {activeTab !== "human" && resource.price != null && (
                     <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-primary">
                       ${resource.price}
                     </span>

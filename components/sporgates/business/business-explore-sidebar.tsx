@@ -82,13 +82,6 @@ const businessItems = [
     destination: "business-partners",
   },
   {
-    id: "team",
-    icon: Briefcase,
-    label: "Team",
-    description: "Staff & permissions",
-    destination: "business-team",
-  },
-  {
     id: "jobs",
     icon: Briefcase,
     label: "Jobs",
